@@ -12,15 +12,15 @@ export default function AdminJournal() {
   const [formData, setFormData] = useState({
     title: "",
     date: "",
-    category: "",
     image: "",
+    readTime: "",
     excerpt: "",
     content: ""
   });
 
   const handleAddClick = () => {
     setEditingArticle(null);
-    setFormData({ title: "", date: new Date().toISOString().split('T')[0], category: "", image: "", excerpt: "", content: "" });
+    setFormData({ title: "", date: new Date().toISOString().split('T')[0], image: "", readTime: "", excerpt: "", content: "" });
     setIsModalOpen(true);
   };
 
@@ -29,10 +29,10 @@ export default function AdminJournal() {
     setFormData({
       title: article.title,
       date: article.date,
-      category: article.category,
       image: article.image,
+      readTime: article.readTime,
       excerpt: article.excerpt,
-      content: article.content
+      content: Array.isArray(article.content) ? article.content.join("\n\n") : article.content
     });
     setIsModalOpen(true);
   };
@@ -45,10 +45,20 @@ export default function AdminJournal() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Split content textarea into paragraphs array
+    const contentArray = formData.content.split(/\n+/).filter(Boolean);
+    const articleData = {
+      title: formData.title,
+      date: formData.date,
+      image: formData.image,
+      readTime: formData.readTime || "5 min read",
+      excerpt: formData.excerpt,
+      content: contentArray,
+    };
     if (editingArticle) {
-      updateJournalArticle({ ...formData, id: editingArticle.id });
+      updateJournalArticle({ ...articleData, id: editingArticle.id });
     } else {
-      addJournalArticle(formData);
+      addJournalArticle(articleData);
     }
     setIsModalOpen(false);
   };
@@ -70,9 +80,8 @@ export default function AdminJournal() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th width="80">Image</th>
+                <th style={{ width: "80px" }}>Image</th>
                 <th>Title</th>
-                <th>Category</th>
                 <th>Date</th>
                 <th className="text-right">Actions</th>
               </tr>
@@ -84,7 +93,6 @@ export default function AdminJournal() {
                     <img src={article.image} alt={article.title} className="admin-table-img-wide" />
                   </td>
                   <td><strong>{article.title}</strong></td>
-                  <td>{article.category}</td>
                   <td>{new Date(article.date).toLocaleDateString()}</td>
                   <td className="text-right">
                     <div className="admin-table-actions">
@@ -121,20 +129,20 @@ export default function AdminJournal() {
 
           <div className="admin-form-row">
             <div className="admin-form-group">
-              <label>Category</label>
-              <input 
-                type="text" 
-                value={formData.category} 
-                onChange={e => setFormData({...formData, category: e.target.value})} 
-                required 
+              <label>Read Time</label>
+              <input
+                type="text"
+                value={formData.readTime}
+                onChange={e => setFormData({...formData, readTime: e.target.value})}
+                placeholder="e.g. 5 min read"
               />
             </div>
             <div className="admin-form-group">
               <label>Publish Date</label>
-              <input 
-                type="date" 
-                value={formData.date} 
-                onChange={e => setFormData({...formData, date: e.target.value})} 
+              <input
+                type="date"
+                value={formData.date}
+                onChange={e => setFormData({...formData, date: e.target.value})}
                 required
               />
             </div>

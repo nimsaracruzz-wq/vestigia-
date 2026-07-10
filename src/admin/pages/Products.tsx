@@ -68,12 +68,12 @@ export default function Products() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th width="60">Image</th>
+                <th style={{ width: "60px" }}>Image</th>
                 <th>Name</th>
                 <th>Category</th>
                 <th>Price</th>
                 <th>Status</th>
-                <th width="100" className="text-right">Actions</th>
+                <th style={{ width: "100px" }} className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>

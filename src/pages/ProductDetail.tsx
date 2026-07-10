@@ -350,7 +350,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                 className="add-to-cart-cta-btn"
                 type="button"
                 onClick={handleAddToCart}
-                disabled={addedToCartText || (product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0)}
+                disabled={addedToCartText || !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0)}
               >
                 {addedToCartText ? (
                   <span className="btn-success-flex">
