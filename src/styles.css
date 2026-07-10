@@ -3169,7 +3169,79 @@ img {
   .addresses-cards-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Shop page mobile responsive grid layout */
+  .shop-layout-grid {
+    flex-direction: column;
+    gap: 24px;
+  }
+  
+  .shop-sidebar-filters {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(320px, 85vw) !important;
+    height: 100vh;
+    background: #fff;
+    z-index: 250;
+    padding: 24px;
+    box-shadow: 4px 0 30px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  
+  .filter-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 249;
+  }
+  
+  .mobile-filter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    border-bottom: 1px solid #f0e9df;
+    padding-bottom: 12px;
+  }
+  
+  .mobile-filter-header h2 {
+    font-family: Georgia, serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+  }
+  
+  .filter-close-btn {
+    background: transparent;
+    color: #555;
+    display: flex;
+    align-items: center;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background 0.18s;
+  }
+  
+  .filter-close-btn:hover {
+    background: #f0e9df;
+    color: #111;
+  }
+
+  .shop-product-results {
+    width: 100%;
+  }
+
+  .pdp-container,
+  .shop-page-container {
+    padding: 100px 16px 60px;
+  }
 }
+
 
 @media (max-width: 620px) {
   .pdp-thumbnails-grid {
@@ -4327,3 +4399,27 @@ img {
     grid-template-columns: 76px 1fr;
   }
 }
+
+/* ── Wishlist Heart Icon Transitions ─────────────────── */
+.wish-button {
+  transition: background-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+.wish-button:hover {
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.wish-button.saved {
+  background-color: #fff;
+}
+.wish-button svg,
+.wishlist-toggle-cta-btn svg {
+  transition: fill 0.3s ease, color 0.3s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.wishlist-toggle-cta-btn {
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.wishlist-toggle-cta-btn:hover {
+  background-color: #f2eee8;
+  border-color: #c0b9af;
+}
+

@@ -360,14 +360,19 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                   "Add to Bag"
                 )}
               </button>
-              <button
+              <motion.button
                 className={`wishlist-toggle-cta-btn ${isSaved ? "saved" : ""}`}
                 type="button"
                 onClick={() => toggleWishlist(product)}
                 aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                animate={{ scale: isSaved ? [1, 1.3, 1] : 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
               >
-                <Heart size={20} fill={isSaved ? "#111" : "none"} color={isSaved ? "#111" : "currentColor"} />
-              </button>
+                <Heart size={20} fill={isSaved ? "#111" : "none"} color={isSaved ? "#111" : "currentColor"} style={{ transition: "fill 0.3s ease, color 0.3s ease" }} />
+              </motion.button>
+
             </div>
           </div>
 

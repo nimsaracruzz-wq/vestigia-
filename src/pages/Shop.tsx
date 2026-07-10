@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { SlidersHorizontal, ChevronDown, Check } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { products, type Product } from "../data";
 import ProductCard from "../components/common/ProductCard";
@@ -21,12 +21,36 @@ export default function Shop({ onQuickShop }: ShopProps) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("featured");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 980);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 980);
 
   // Sync state if search params change externally
   useEffect(() => {
     setSelectedCategory(categoryParam);
   }, [categoryParam]);
+
+  // Handle window resizing to detect mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 980;
+      setIsMobile(mobile);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Prevent background scrolling when mobile filter drawer is open
+  useEffect(() => {
+    if (isMobile && isSidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobile, isSidebarOpen]);
 
   // Set document metadata title
   useEffect(() => {
@@ -152,105 +176,131 @@ export default function Shop({ onQuickShop }: ShopProps) {
         {/* Filter Sidebar */}
         <AnimatePresence>
           {isSidebarOpen && (
-            <motion.aside
-              className="shop-sidebar-filters"
-              initial={{ width: 0, opacity: 0, x: -20 }}
-              animate={{ width: "260px", opacity: 1, x: 0 }}
-              exit={{ width: 0, opacity: 0, x: -20 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-            >
-              {/* Category Filter */}
-              <div className="filter-group">
-                <h3>Category</h3>
-                <div className="filter-options-column">
-                  {["All", "New", "Clothing", "Accessories", "Sale"].map((cat) => (
+            <>
+              {isMobile && (
+                <motion.div
+                  className="filter-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsSidebarOpen(false)}
+                  aria-hidden="true"
+                />
+              )}
+              <motion.aside
+                className="shop-sidebar-filters"
+                initial={isMobile ? { x: "-100%" } : { width: 0, opacity: 0, x: -20 }}
+                animate={isMobile ? { x: 0 } : { width: "260px", opacity: 1, x: 0 }}
+                exit={isMobile ? { x: "-100%" } : { width: 0, opacity: 0, x: -20 }}
+                transition={{ type: "spring", stiffness: 350, damping: 35 }}
+              >
+                {isMobile && (
+                  <div className="mobile-filter-header">
+                    <h2>Filters</h2>
                     <button
-                      key={cat}
                       type="button"
-                      className={`filter-text-btn ${selectedCategory === cat ? "active" : ""}`}
-                      onClick={() => handleCategoryChange(cat)}
+                      className="filter-close-btn"
+                      onClick={() => setIsSidebarOpen(false)}
+                      aria-label="Close filters"
                     >
-                      {cat}
+                      <X size={20} />
                     </button>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
 
-              {/* Price Filter */}
-              <div className="filter-group">
-                <h3>Max Price (${priceRange})</h3>
-                <div className="price-slider-wrapper">
-                  <input
-                    type="range"
-                    min="40"
-                    max="200"
-                    step="10"
-                    value={priceRange}
-                    onChange={(e) => setPriceRange(Number(e.target.value))}
-                  />
-                  <div className="slider-labels">
-                    <span>$40</span>
-                    <span>$200</span>
+                {/* Category Filter */}
+                <div className="filter-group">
+                  <h3>Category</h3>
+                  <div className="filter-options-column">
+                    {["All", "New", "Clothing", "Accessories", "Sale"].map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        className={`filter-text-btn ${selectedCategory === cat ? "active" : ""}`}
+                        onClick={() => handleCategoryChange(cat)}
+                      >
+                        {cat}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              {/* Color Swatch Filter */}
-              <div className="filter-group">
-                <h3>Color</h3>
-                <div className="color-filter-swatches">
-                  <button
-                    type="button"
-                    className={`clear-color-btn ${selectedColor === null ? "active" : ""}`}
-                    onClick={() => setSelectedColor(null)}
-                    title="All colors"
-                  >
-                    All
-                  </button>
-                  {colors.map((color) => (
+                {/* Price Filter */}
+                <div className="filter-group">
+                  <h3>Max Price (${priceRange})</h3>
+                  <div className="price-slider-wrapper">
+                    <input
+                      type="range"
+                      min="40"
+                      max="200"
+                      step="10"
+                      value={priceRange}
+                      onChange={(e) => setPriceRange(Number(e.target.value))}
+                    />
+                    <div className="slider-labels">
+                      <span>$40</span>
+                      <span>$200</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Color Swatch Filter */}
+                <div className="filter-group">
+                  <h3>Color</h3>
+                  <div className="color-filter-swatches">
                     <button
-                      key={color}
                       type="button"
-                      className={`color-filter-swatch-item ${selectedColor === color ? "active" : ""}`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setSelectedColor(color)}
-                      aria-label={`Filter by color ${color}`}
+                      className={`clear-color-btn ${selectedColor === null ? "active" : ""}`}
+                      onClick={() => setSelectedColor(null)}
+                      title="All colors"
                     >
-                      {selectedColor === color && <Check size={10} color={color === "#ffffff" ? "#000" : "#fff"} />}
+                      All
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sizes Filter */}
-              <div className="filter-group">
-                <h3>Sizes</h3>
-                <div className="sizes-filter-grid">
-                  {sizes.map((size) => {
-                    const isChecked = selectedSizes.includes(size);
-                    return (
+                    {colors.map((color) => (
                       <button
-                        key={size}
+                        key={color}
                         type="button"
-                        className={`size-filter-checkbox-btn ${isChecked ? "active" : ""}`}
-                        onClick={() => handleSizeToggle(size)}
+                        className={`color-filter-swatch-item ${selectedColor === color ? "active" : ""}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setSelectedColor(color)}
+                        aria-label={`Filter by color ${color}`}
                       >
-                        {size}
+                        {selectedColor === color && <Check size={10} color={color === "#ffffff" ? "#000" : "#fff"} />}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Clear button */}
-              <button
-                type="button"
-                className="clear-all-filters-btn"
-                onClick={clearFilters}
-              >
-                Reset All Filters
-              </button>
-            </motion.aside>
+                {/* Sizes Filter */}
+                <div className="filter-group">
+                  <h3>Sizes</h3>
+                  <div className="sizes-filter-grid">
+                    {sizes.map((size) => {
+                      const isChecked = selectedSizes.includes(size);
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          className={`size-filter-checkbox-btn ${isChecked ? "active" : ""}`}
+                          onClick={() => handleSizeToggle(size)}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Clear button */}
+                <button
+                  type="button"
+                  className="clear-all-filters-btn"
+                  onClick={clearFilters}
+                >
+                  Reset All Filters
+                </button>
+              </motion.aside>
+            </>
           )}
         </AnimatePresence>
 
