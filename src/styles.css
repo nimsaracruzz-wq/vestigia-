@@ -518,6 +518,11 @@ img {
   font-weight: 800;
   text-align: right;
   white-space: nowrap;
+  /* Always reserve height for two price lines so all cards align */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 2.8em;
 }
 
 .price span {
