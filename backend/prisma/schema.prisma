@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model AdminUser {
+  id       Int    @id @default(autoincrement())
+  username String @unique
+  password String // hashed
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String
+  price       Float
+  compareAt   Float?
+  badge       String?
+  colors      String   // stored as JSON array string
+  image       String
+  images      String   // stored as JSON array string
+  alt         String
+  sizes       String   // stored as JSON array string
+  description String
+  details     String   // stored as JSON array string
+  care        String   // stored as JSON array string
+  rating      Float    @default(0)
+  
+  reviews     Review[]
+  orderItems  OrderItem[]
+  inventory   Inventory[]
+}
+
+model Inventory {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color     String
+  size      String
+  stock     Int     @default(10)
+
+  @@unique([productId, color, size])
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  author    String
+  rating    Int
+  date      String
+  comment   String
+  status    String   @default("approved") // pending, approved, spam
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id        String      @id // Custom ID like VST-2026-001
+  customer  String
+  email     String
+  date      String
+  status    String      @default("pending")
+  subtotal  Float
+  shipping  Float
+  tax       Float
+  total     Float
+  address   String
+
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product @relation(fields: [productId], references: [id])
+  productName String
+  image       String
+  size        String
+  color       String
+  quantity    Int
+  price       Float
+}
+
+model Customer {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  orders     Int      @default(0)
+  totalSpend Float    @default(0)
+  joined     String
+  lastOrder  String?
+}
+
+model PromoCode {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique
+  discount Float
+  type     String  // "percentage" | "fixed"
+  uses     Int     @default(0)
+  maxUses  Int?
+  active   Boolean @default(true)
+  expiry   String?
+}
+
+model StoreSettings {
+  id                  Int     @id @default(1)
+  storeName           String
+  tagline             String
+  currency            String
+  announcementText    String
+  announcementEnabled Boolean
+  shippingThreshold   Float
+  taxRate             Float
+  adminPassword       String // fallback for testing
+}
+
+model JournalArticle {
+  id       Int      @id @default(autoincrement())
+  title    String
+  date     String
+  readTime String
+  excerpt  String
+  content  String   // JSON array
+  image    String
+}

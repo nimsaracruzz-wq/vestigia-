@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+*.log
+vite.config.d.ts
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+.env
+.env.*
+.DS_Store
