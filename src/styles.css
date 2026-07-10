@@ -3500,6 +3500,7 @@ img {
   display: flex;
   justify-content: space-between;
   padding: 22px clamp(24px, 6vw, 80px);
+  gap: 20px;
 }
 
 .lux-footer__copy {
@@ -3510,9 +3511,16 @@ img {
   margin: 0;
 }
 
+.lux-footer__bottom-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
 .lux-footer__payments {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .lux-footer__payment-badge {
@@ -3544,8 +3552,19 @@ img {
 
   .lux-footer__bottom {
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
     text-align: center;
+    padding: 30px 24px;
+  }
+
+  .lux-footer__bottom-right {
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .lux-footer__payments {
+    justify-content: center;
   }
 }
 
@@ -3556,14 +3575,19 @@ img {
 
   .lux-footer__form {
     flex-direction: column;
+    gap: 10px;
   }
 
   .lux-footer__input {
-    border-right: 1px solid rgba(255, 255, 255, 0.2);
-    border-bottom: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    width: 100%;
   }
 
   .lux-footer__submit {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    width: 100%;
     padding: 13px;
   }
 }

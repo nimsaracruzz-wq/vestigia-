@@ -91,7 +91,7 @@ export default function Footer() {
           &copy; {new Date().getFullYear()} Vestigia. All rights reserved.
         </p>
         
-        <div className="lux-footer__bottom-right" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <div className="lux-footer__bottom-right">
           <CurrencySwitcher />
           
           <div className="lux-footer__payments">
