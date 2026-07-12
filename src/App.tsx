@@ -6,6 +6,7 @@ import { AnimatePresence } from "framer-motion";
 import { CartProvider } from "./context/CartContext";
 import { useCart } from "./context/CartContext";
 import { type Product } from "./data";
+import { UserProvider } from "./context/UserContext";
 
 // Layout components
 import Announcement from "./components/layout/Announcement";
@@ -26,6 +27,8 @@ import Checkout from "./pages/Checkout";
 import Account from "./pages/Account";
 import Lookbook from "./pages/Lookbook";
 import Journal from "./pages/Journal";
+import About from "./pages/About";
+import Story from "./pages/Story";
 
 // Admin pages & context
 import { AdminProvider } from "./admin/AdminContext";
@@ -57,16 +60,20 @@ function MainAppShell() {
   const location = useLocation();
   const { cartOpen, openCart, closeCart } = useCart();
 
+  const isCheckout = location.pathname === "/checkout";
+
   return (
     <div className="site-shell">
-      <Announcement />
-      <Header
-        onCartToggle={openCart}
-        onMenuToggle={() => setMenuOpen(true)}
-        onSearchToggle={() => setSearchOpen(true)}
-      />
+      {!isCheckout && <Announcement />}
+      {!isCheckout && (
+        <Header
+          onCartToggle={openCart}
+          onMenuToggle={() => setMenuOpen(true)}
+          onSearchToggle={() => setSearchOpen(true)}
+        />
+      )}
 
-      <main className="main-content-area">
+      <main className={isCheckout ? "main-content-area checkout-mode" : "main-content-area"}>
         <ScrollToTop />
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
@@ -77,15 +84,17 @@ function MainAppShell() {
             <Route path="/account" element={<Account />} />
             <Route path="/lookbook" element={<Lookbook onQuickShop={setQuickProduct} />} />
             <Route path="/journal" element={<Journal />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/story" element={<Story />} />
           </Routes>
         </AnimatePresence>
       </main>
 
-      <Footer />
+      {!isCheckout && <Footer />}
 
       {/* Global drawers & modals */}
       <CartDrawer open={cartOpen} onClose={closeCart} />
-      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onCartToggle={openCart} />
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
       <QuickShopModal product={quickProduct} onClose={() => setQuickProduct(null)} />
     </div>
@@ -115,14 +124,16 @@ export default function App() {
   return (
     <AdminProvider>
       <CurrencyProvider>
-        <CartProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/admin/*" element={<AdminAppShell />} />
-              <Route path="/*" element={<MainAppShell />} />
-            </Routes>
-          </BrowserRouter>
-        </CartProvider>
+        <UserProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/admin/*" element={<AdminAppShell />} />
+                <Route path="/*" element={<MainAppShell />} />
+              </Routes>
+            </BrowserRouter>
+          </CartProvider>
+        </UserProvider>
       </CurrencyProvider>
     </AdminProvider>
   );

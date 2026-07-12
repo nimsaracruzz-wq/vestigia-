@@ -54,7 +54,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     }
   }, [query]);
 
-  const popularSearches = ["linen", "trouser", "gold", "sandal", "tote"];
+  const popularSearches = ["signature", "origin", "essential", "vestigia", "tee"];
 
   return (
     <AnimatePresence>
@@ -99,7 +99,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                   ref={inputRef}
                   id="site-search"
                   type="text"
-                  placeholder="Search linen, trouser, sandal..."
+                  placeholder="Search signature, origin, essential..."
                   autoComplete="off"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}

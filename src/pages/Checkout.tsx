@@ -4,8 +4,16 @@ import { ChevronRight, CreditCard, Shield, Truck, CheckCircle2, ArrowRight } fro
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
 import { useCurrency } from "../context/CurrencyContext";
+import { useUser } from "../context/UserContext";
 
 type Step = "shipping" | "payment" | "success";
+
+type PhoneCountryOption = {
+  country: string;
+  iso: string;
+  dialCode: string;
+  flag: string;
+};
 
 type ShippingDetails = {
   email: string;
@@ -16,6 +24,8 @@ type ShippingDetails = {
   state: string;
   zip: string;
   phone: string;
+  phoneCountry: string;
+  phoneDialCode: string;
   shippingMethod: "standard" | "express";
 };
 
@@ -37,11 +47,33 @@ export default function Checkout() {
   } = useCart();
 
   const { formatPrice: money } = useCurrency();
+  const { user, isAuthenticated, createAccount, updateUser } = useUser();
 
   const [step, setStep] = useState<Step>("shipping");
   const [promoInput, setPromoInput] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [shippingMethodSelected, setShippingMethodSelected] = useState<"standard" | "express">("standard");
+  const [checkoutMode, setCheckoutMode] = useState<"guest" | "createAccount" | null>(null);
+  const [checkoutPromptError, setCheckoutPromptError] = useState("");
+
+  const PHONE_COUNTRY_OPTIONS: PhoneCountryOption[] = [
+    { country: "United States", iso: "US", dialCode: "+1", flag: "🇺🇸" },
+    { country: "Canada", iso: "CA", dialCode: "+1", flag: "🇨🇦" },
+    { country: "United Kingdom", iso: "GB", dialCode: "+44", flag: "🇬🇧" },
+    { country: "Australia", iso: "AU", dialCode: "+61", flag: "🇦🇺" },
+    { country: "New Zealand", iso: "NZ", dialCode: "+64", flag: "🇳🇿" },
+    { country: "Japan", iso: "JP", dialCode: "+81", flag: "🇯🇵" },
+    { country: "France", iso: "FR", dialCode: "+33", flag: "🇫🇷" },
+    { country: "Germany", iso: "DE", dialCode: "+49", flag: "🇩🇪" },
+    { country: "Spain", iso: "ES", dialCode: "+34", flag: "🇪🇸" },
+    { country: "Italy", iso: "IT", dialCode: "+39", flag: "🇮🇹" },
+    { country: "India", iso: "IN", dialCode: "+91", flag: "🇮🇳" },
+    { country: "Brazil", iso: "BR", dialCode: "+55", flag: "🇧🇷" },
+    { country: "South Africa", iso: "ZA", dialCode: "+27", flag: "🇿🇦" },
+  ];
+
+  const getCountryOption = (iso: string) => PHONE_COUNTRY_OPTIONS.find((option) => option.iso === iso);
+  const getDialCodeByIso = (iso: string) => getCountryOption(iso)?.dialCode ?? "+1";
 
   // Shipping form fields
   const [shippingForm, setShippingForm] = useState<ShippingDetails>({
@@ -53,10 +85,51 @@ export default function Checkout() {
     state: "",
     zip: "",
     phone: "",
+    phoneCountry: "US",
+    phoneDialCode: "+1",
     shippingMethod: "standard",
   });
 
   const [shippingErrors, setShippingErrors] = useState<Partial<ShippingDetails>>({});
+
+  useEffect(() => {
+    if (user) {
+      setShippingForm((prev) => ({
+        ...prev,
+        ...user,
+        phoneCountry: user.phoneCountry || prev.phoneCountry,
+        phoneDialCode: user.phoneDialCode || prev.phoneDialCode,
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) return;
+
+    const detectPhoneCountry = async () => {
+      try {
+        const res = await fetch("https://ipwho.is/");
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!data.success) return;
+
+        const iso = data.country_code;
+        const option = getCountryOption(iso);
+        if (option) {
+          setShippingForm((prev) => ({
+            ...prev,
+            phoneCountry: option.iso,
+            phoneDialCode: option.dialCode,
+          }));
+        }
+      } catch (error) {
+        console.error("Phone country detection failed:", error);
+      }
+    };
+
+    detectPhoneCountry();
+  }, [user]);
 
   // Payment form fields
   const [cardName, setCardName] = useState("");
@@ -106,6 +179,7 @@ export default function Checkout() {
       errors.zip = "Valid zip code is required.";
     }
     if (!shippingForm.phone.trim()) errors.phone = "Phone number is required.";
+    if (!shippingForm.phoneDialCode.trim()) errors.phone = "Please select your phone country code.";
 
     setShippingErrors(errors);
     return Object.keys(errors).length === 0;
@@ -113,7 +187,17 @@ export default function Checkout() {
 
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated && checkoutMode === null) {
+      setCheckoutPromptError("Please choose whether to create an account or continue as guest.");
+      return;
+    }
+    setCheckoutPromptError("");
     if (validateShipping()) {
+      if (isAuthenticated) {
+        updateUser({ ...shippingForm });
+      } else if (checkoutMode === "createAccount") {
+        createAccount({ ...shippingForm });
+      }
       setStep("payment");
     }
   };
@@ -155,6 +239,21 @@ export default function Checkout() {
 
   return (
     <div className="checkout-page-shell">
+      <header className="checkout-minimal-header">
+        <div className="checkout-header-content">
+          <Link to="/shop" className="back-to-shop-link">
+            <span>← Return to cart</span>
+          </Link>
+          <Link to="/" className="checkout-brand-logo">
+            VESTIGIA
+          </Link>
+          <div className="checkout-secure-badge">
+            <Shield size={13} className="lock-icon" />
+            <span>Secure Checkout</span>
+          </div>
+        </div>
+      </header>
+
       <div className="checkout-container">
         
         {/* Left Column: Form steps */}
@@ -163,9 +262,13 @@ export default function Checkout() {
           {/* Form step navigation display */}
           {step !== "success" && (
             <div className="checkout-steps-breadcrumbs">
-              <span className={step === "shipping" ? "active-step" : ""}>Shipping</span>
-              <ChevronRight size={14} />
-              <span className={step === "payment" ? "active-step" : ""}>Payment</span>
+              <span className={step === "shipping" ? "active-step" : "completed-step"} onClick={() => step === "payment" && setStep("shipping")}>
+                <span className="step-num">01</span> Shipping
+              </span>
+              <span className="step-divider">—</span>
+              <span className={step === "payment" ? "active-step" : ""}>
+                <span className="step-num">02</span> Payment
+              </span>
             </div>
           )}
 
@@ -173,12 +276,48 @@ export default function Checkout() {
             {step === "shipping" && (
               <motion.section
                 key="shipping"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
               >
-                <h2>Shipping details</h2>
+                <h2 className="checkout-section-title">Shipping address</h2>
+                {!isAuthenticated && (
+                  <div className="checkout-account-choice">
+                    <p>Checkout faster next time. Create an account or continue as guest.</p>
+                    <div className="checkout-account-choice-actions">
+                      <button
+                        type="button"
+                        className={checkoutMode === "createAccount" ? "account-choice-btn active" : "account-choice-btn"}
+                        onClick={() => setCheckoutMode("createAccount")}
+                      >
+                        Create account
+                      </button>
+                      <button
+                        type="button"
+                        className={checkoutMode === "guest" ? "account-choice-btn active" : "account-choice-btn"}
+                        onClick={() => setCheckoutMode("guest")}
+                      >
+                        Guest checkout
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {isAuthenticated && (
+                  <div className="checkout-account-mode-note">
+                    Logged in as <strong>{user?.email}</strong>. Details pre-filled from your profile.
+                  </div>
+                )}
+                {(!isAuthenticated && checkoutMode !== null) && (
+                  <div className="checkout-account-mode-note checkout-account-mode-note--guest">
+                    {checkoutMode === "createAccount"
+                      ? "Your account will be created automatically using the details below."
+                      : "Proceeding as a guest. You can still create an account later."}
+                  </div>
+                )}
+                {checkoutPromptError && (
+                  <div className="checkout-prompt-error">{checkoutPromptError}</div>
+                )}
                 <form onSubmit={handleShippingSubmit} className="checkout-form-grid">
                   <div className="form-input-box full-width">
                     <label htmlFor="chk-email">Email Address</label>
@@ -188,6 +327,7 @@ export default function Checkout() {
                       className={shippingErrors.email ? "input-error" : ""}
                       value={shippingForm.email}
                       onChange={(e) => setShippingForm({ ...shippingForm, email: e.target.value })}
+                      placeholder="email@example.com"
                     />
                     {shippingErrors.email && <span className="error-text">{shippingErrors.email}</span>}
                   </div>
@@ -200,6 +340,7 @@ export default function Checkout() {
                       className={shippingErrors.firstName ? "input-error" : ""}
                       value={shippingForm.firstName}
                       onChange={(e) => setShippingForm({ ...shippingForm, firstName: e.target.value })}
+                      placeholder="Jane"
                     />
                     {shippingErrors.firstName && <span className="error-text">{shippingErrors.firstName}</span>}
                   </div>
@@ -212,6 +353,7 @@ export default function Checkout() {
                       className={shippingErrors.lastName ? "input-error" : ""}
                       value={shippingForm.lastName}
                       onChange={(e) => setShippingForm({ ...shippingForm, lastName: e.target.value })}
+                      placeholder="Doe"
                     />
                     {shippingErrors.lastName && <span className="error-text">{shippingErrors.lastName}</span>}
                   </div>
@@ -224,6 +366,7 @@ export default function Checkout() {
                       className={shippingErrors.address ? "input-error" : ""}
                       value={shippingForm.address}
                       onChange={(e) => setShippingForm({ ...shippingForm, address: e.target.value })}
+                      placeholder="123 Main St, Apt 4B"
                     />
                     {shippingErrors.address && <span className="error-text">{shippingErrors.address}</span>}
                   </div>
@@ -236,6 +379,7 @@ export default function Checkout() {
                       className={shippingErrors.city ? "input-error" : ""}
                       value={shippingForm.city}
                       onChange={(e) => setShippingForm({ ...shippingForm, city: e.target.value })}
+                      placeholder="New York"
                     />
                     {shippingErrors.city && <span className="error-text">{shippingErrors.city}</span>}
                   </div>
@@ -246,7 +390,7 @@ export default function Checkout() {
                       <input
                         id="chk-state"
                         type="text"
-                        placeholder="CA"
+                        placeholder="NY"
                         className={shippingErrors.state ? "input-error" : ""}
                         value={shippingForm.state}
                         onChange={(e) => setShippingForm({ ...shippingForm, state: e.target.value })}
@@ -261,6 +405,7 @@ export default function Checkout() {
                         className={shippingErrors.zip ? "input-error" : ""}
                         value={shippingForm.zip}
                         onChange={(e) => setShippingForm({ ...shippingForm, zip: e.target.value })}
+                        placeholder="10001"
                       />
                       {shippingErrors.zip && <span className="error-text">{shippingErrors.zip}</span>}
                     </div>
@@ -268,19 +413,44 @@ export default function Checkout() {
 
                   <div className="form-input-box full-width">
                     <label htmlFor="chk-phone">Phone Number</label>
-                    <input
-                      id="chk-phone"
-                      type="tel"
-                      className={shippingErrors.phone ? "input-error" : ""}
-                      value={shippingForm.phone}
-                      onChange={(e) => setShippingForm({ ...shippingForm, phone: e.target.value })}
-                    />
+                    <div className="phone-input-row">
+                      <div className="phone-prefix-select">
+                        <select
+                          id="chk-phone-code"
+                          value={shippingForm.phoneDialCode}
+                          onChange={(e) => {
+                            const selected = PHONE_COUNTRY_OPTIONS.find(
+                              (option) => option.dialCode === e.target.value,
+                            );
+                            setShippingForm({
+                              ...shippingForm,
+                              phoneDialCode: e.target.value,
+                              phoneCountry: selected?.iso ?? shippingForm.phoneCountry,
+                            });
+                          }}
+                        >
+                          {PHONE_COUNTRY_OPTIONS.map((option) => (
+                            <option key={option.iso} value={option.dialCode}>
+                              {option.flag} {option.dialCode}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <input
+                        id="chk-phone"
+                        type="tel"
+                        className={shippingErrors.phone ? "input-error" : ""}
+                        value={shippingForm.phone}
+                        onChange={(e) => setShippingForm({ ...shippingForm, phone: e.target.value })}
+                        placeholder="123 456 7890"
+                      />
+                    </div>
                     {shippingErrors.phone && <span className="error-text">{shippingErrors.phone}</span>}
                   </div>
 
                   {/* Shipping Method Selector */}
                   <div className="shipping-methods-wrapper full-width">
-                    <h3>Shipping Method</h3>
+                    <h3 className="shipping-methods-title">Shipping Method</h3>
                     <div className="shipping-methods-options">
                       <label className={`shipping-method-option-card ${shippingMethodSelected === "standard" ? "active" : ""}`}>
                         <input
@@ -312,8 +482,12 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  <button className="checkout-continue-btn full-width" type="submit">
-                    Continue to Payment
+                  <button
+                    className="checkout-continue-btn full-width"
+                    type="submit"
+                    disabled={!isAuthenticated && checkoutMode === null}
+                  >
+                    Continue to payment
                   </button>
                 </form>
               </motion.section>
@@ -322,21 +496,21 @@ export default function Checkout() {
             {step === "payment" && (
               <motion.section
                 key="payment"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
               >
                 <div className="checkout-step-header">
-                  <h2>Secure payment</h2>
+                  <h2 className="checkout-section-title">Payment method</h2>
                   <button className="back-to-shipping-btn" type="button" onClick={() => setStep("shipping")}>
-                    Edit shipping details
+                    Edit shipping
                   </button>
                 </div>
                 <form onSubmit={handlePaymentSubmit} className="checkout-form-grid">
                   <div className="payment-security-notice full-width">
-                    <Shield size={16} />
-                    <span>All transactions are secure and encrypted.</span>
+                    <Shield size={14} />
+                    <span>Transactions are secure and encrypted.</span>
                   </div>
 
                   <div className="form-input-box full-width">
@@ -346,13 +520,14 @@ export default function Checkout() {
                       type="text"
                       value={cardName}
                       onChange={(e) => setCardName(e.target.value)}
+                      placeholder="Jane Doe"
                     />
                   </div>
 
                   <div className="form-input-box full-width">
                     <label htmlFor="pay-number">Card Number</label>
                     <div className="card-input-with-icon">
-                      <CreditCard size={18} className="card-input-icon" />
+                      <CreditCard size={16} className="card-input-icon" />
                       <input
                         id="pay-number"
                         type="text"
@@ -393,7 +568,7 @@ export default function Checkout() {
                       <input
                         id="pay-cvv"
                         type="password"
-                        placeholder="123"
+                        placeholder="CVV"
                         maxLength={4}
                         value={cardCvv}
                         onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ""))}
@@ -414,22 +589,24 @@ export default function Checkout() {
               <motion.section
                 key="success"
                 className="checkout-success-view"
-                initial={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.98, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", duration: 0.5 }}
+                transition={{ type: "spring", duration: 0.4 }}
               >
-                <CheckCircle2 size={64} className="success-icon-svg" />
-                <h1>Thank you for your order</h1>
-                <p className="order-number-receipt">Order ID: <strong>{orderNumber}</strong></p>
+                <div className="success-icon-wrapper">
+                  <CheckCircle2 size={40} className="success-icon-svg" />
+                </div>
+                <h1>Order confirmed</h1>
+                <p className="order-number-receipt">Receipt ID: <strong>{orderNumber}</strong></p>
                 <p className="success-thank-you-paragraph">
-                  Your order has been placed successfully. A confirmation receipt has been sent to{" "}
+                  Thank you for placing your order with Vestigia. A confirmation containing receipt details and updates has been sent to{" "}
                   <strong>{shippingForm.email || "your email address"}</strong>.
                 </p>
 
                 <div className="order-timeline-card">
-                  <Truck size={20} />
+                  <Truck size={18} className="timeline-icon" />
                   <div>
-                    <h4>Delivery expected:</h4>
+                    <h4>Delivery timeframe</h4>
                     <p>
                       {shippingMethodSelected === "express"
                         ? "Expected delivery: 1-2 business days"
@@ -438,8 +615,8 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                <Link to="/" className="success-back-home-btn">
-                  Continue Shopping <ArrowRight size={16} />
+                <Link to="/shop" className="success-back-home-btn">
+                  Continue Shopping <ArrowRight size={14} />
                 </Link>
               </motion.section>
             )}
@@ -449,7 +626,7 @@ export default function Checkout() {
         {/* Right Column: Checkout Summary Review */}
         {step !== "success" && (
           <aside className="checkout-summary-pane">
-            <h3>Order Summary ({cartCount})</h3>
+            <h3>Order summary ({cartCount})</h3>
             <div className="checkout-summary-items-list">
               {cart.map((item, idx) => (
                 <div key={idx} className="checkout-summary-item-card">
@@ -462,7 +639,7 @@ export default function Checkout() {
                     <p>
                       {item.selectedSize !== "OS" && `Size: ${item.selectedSize}`}
                       {item.selectedSize !== "OS" && item.selectedColor && "  /  "}
-                      {item.selectedColor && "Color selected"}
+                      {item.selectedColor && `Color: ${item.selectedColor}`}
                     </p>
                   </div>
                   <span className="price-tag">{money(item.product.price * item.quantity)}</span>
@@ -520,6 +697,17 @@ export default function Checkout() {
         )}
 
       </div>
+
+      {step !== "success" && (
+        <footer className="checkout-minimal-footer">
+          <div className="footer-links">
+            <a href="#refund">Refund Policy</a>
+            <a href="#privacy">Privacy Policy</a>
+            <a href="#terms">Terms of Service</a>
+          </div>
+          <p className="copyright">© {new Date().getFullYear()} Vestigia. All rights reserved.</p>
+        </footer>
+      )}
     </div>
   );
 }

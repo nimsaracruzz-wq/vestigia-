@@ -5,18 +5,16 @@ import { motion, AnimatePresence } from "framer-motion";
 type MobileMenuProps = {
   open: boolean;
   onClose: () => void;
+  onCartToggle: () => void;
 };
 
-export default function MobileMenu({ open, onClose }: MobileMenuProps) {
+export default function MobileMenu({ open, onClose, onCartToggle }: MobileMenuProps) {
   const menuItems = [
-    { name: "Shop All", path: "/shop" },
-    { name: "New Arrivals", path: "/shop?category=New" },
-    { name: "Clothing", path: "/shop?category=Clothing" },
-    { name: "Accessories", path: "/shop?category=Accessories" },
-    { name: "Sale", path: "/shop?category=Sale" },
-    { name: "Lookbook", path: "/lookbook" },
-    { name: "Journal", path: "/journal" },
-    { name: "My Account", path: "/account" },
+    { name: "Shop", path: "/shop" },
+    { name: "About", path: "/about" },
+    { name: "Story", path: "/story" },
+    { name: "Account", path: "/account" },
+    { name: "Cart", path: "#cart", isCart: true },
   ];
 
   return (
@@ -51,21 +49,40 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
             </div>
 
             <nav className="mobile-nav-links">
-              {menuItems.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  onClick={onClose}
-                  className="mobile-nav-link-item"
-                >
-                  <span>{item.name}</span>
-                  <ChevronRight size={16} />
-                </Link>
-              ))}
+              {menuItems.map((item) => {
+                if (item.isCart) {
+                  return (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onCartToggle();
+                      }}
+                      className="mobile-nav-link-item"
+                      style={{ background: 'transparent', textAlign: 'left', width: '100%', border: 0, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <span>{item.name}</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  );
+                }
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    onClick={onClose}
+                    className="mobile-nav-link-item"
+                  >
+                    <span>{item.name}</span>
+                    <ChevronRight size={16} />
+                  </Link>
+                );
+              })}
             </nav>
 
             <div className="mobile-menu-footer">
-              <p>Vestigia Storefront</p>
+              <p>VESTIGIA Storefront</p>
               <span>Complimentary shipping over $150</span>
             </div>
           </motion.aside>

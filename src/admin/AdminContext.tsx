@@ -71,23 +71,10 @@ export type StoreSettings = {
 const dp = defaultProducts;
 
 const SEED_ORDERS: Order[] = [
-  { id: "VST-2026-001", customer: "Evelyn Wright", email: "evelyn.w@example.com", date: "2026-07-02", status: "delivered", items: [{ productId: 1, productName: "Linen Draped Vest", image: dp[0].image, size: "M", color: "#e8ded1", quantity: 1, price: 128 }], subtotal: 128, shipping: 0, tax: 10.24, total: 138.24, address: "12 Elm Street, New York, NY 10001" },
-  { id: "VST-2026-002", customer: "Marcus Klein", email: "m.klein@example.com", date: "2026-07-01", status: "shipped", items: [{ productId: 2, productName: "Tapered City Trouser", image: dp[1].image, size: "30", color: "#0f1115", quantity: 1, price: 148 }, { productId: 3, productName: "Fine Hoop Set", image: dp[2].image, size: "OS", color: "#d7b56d", quantity: 1, price: 58 }], subtotal: 206, shipping: 0, tax: 16.48, total: 222.48, address: "88 Park Ave, Chicago, IL 60601" },
-  { id: "VST-2026-003", customer: "Daniela Ruiz", email: "d.ruiz@example.com", date: "2026-07-01", status: "processing", items: [{ productId: 6, productName: "Arc Leather Tote", image: dp[5].image, size: "OS", color: "#2b1e18", quantity: 1, price: 176 }, { productId: 7, productName: "Relaxed Poplin Dress", image: dp[6].image, size: "S", color: "#f7f5ef", quantity: 1, price: 156 }], subtotal: 332, shipping: 0, tax: 26.56, total: 358.56, address: "45 Sunset Blvd, Los Angeles, CA 90028" },
-  { id: "VST-2026-004", customer: "Monica Pierce", email: "m.pierce@example.com", date: "2026-07-02", status: "pending", items: [{ productId: 5, productName: "Soft Utility Shirt", image: dp[4].image, size: "L", color: "#ebe5d9", quantity: 1, price: 118 }, { productId: 8, productName: "Sculpted Sandal", image: dp[7].image, size: "8", color: "#e7d4bd", quantity: 1, price: 92 }], subtotal: 210, shipping: 0, tax: 16.8, total: 226.8, address: "320 Oak Lane, Seattle, WA 98101" },
-  { id: "VST-2026-005", customer: "Chloe Moreau", email: "c.moreau@example.com", date: "2026-06-28", status: "delivered", items: [{ productId: 4, productName: "Washed Rib Tank", image: dp[3].image, size: "XS", color: "#ffffff", quantity: 2, price: 64 }], subtotal: 128, shipping: 0, tax: 10.24, total: 138.24, address: "7 Rue de Rivoli, Miami, FL 33101" },
-  { id: "VST-2026-006", customer: "Jessie Davis", email: "j.davis@example.com", date: "2026-06-30", status: "shipped", items: [{ productId: 1, productName: "Linen Draped Vest", image: dp[0].image, size: "XS", color: "#242424", quantity: 1, price: 128 }], subtotal: 128, shipping: 0, tax: 10.24, total: 138.24, address: "19 Cedar Road, Boston, MA 02101" },
-  { id: "VST-2026-007", customer: "Amelia Vance", email: "a.vance@example.com", date: "2026-06-25", status: "delivered", items: [{ productId: 5, productName: "Soft Utility Shirt", image: dp[4].image, size: "M", color: "#161616", quantity: 1, price: 118 }], subtotal: 118, shipping: 15, tax: 9.44, total: 142.44, address: "55 Maple Ave, Denver, CO 80201" },
-  { id: "VST-2026-008", customer: "Thomas Reed", email: "t.reed@example.com", date: "2026-06-24", status: "delivered", items: [{ productId: 2, productName: "Tapered City Trouser", image: dp[1].image, size: "32", color: "#d9d0c4", quantity: 1, price: 148 }], subtotal: 148, shipping: 0, tax: 11.84, total: 159.84, address: "66 Birch Blvd, Portland, OR 97201" },
-  { id: "VST-2026-009", customer: "Lucia Santos", email: "l.santos@example.com", date: "2026-06-22", status: "delivered", items: [{ productId: 3, productName: "Fine Hoop Set", image: dp[2].image, size: "OS", color: "#c7c7c7", quantity: 2, price: 58 }, { productId: 6, productName: "Arc Leather Tote", image: dp[5].image, size: "OS", color: "#c4a47f", quantity: 1, price: 176 }], subtotal: 292, shipping: 0, tax: 23.36, total: 315.36, address: "104 Vine St, San Francisco, CA 94101" },
-  { id: "VST-2026-010", customer: "Hanna Glass", email: "h.glass@example.com", date: "2026-06-20", status: "delivered", items: [{ productId: 8, productName: "Sculpted Sandal", image: dp[7].image, size: "7", color: "#1f1f1f", quantity: 1, price: 92 }], subtotal: 92, shipping: 15, tax: 7.36, total: 114.36, address: "22 Willow St, Nashville, TN 37201" },
-  { id: "VST-2026-011", customer: "Sarah Lin", email: "s.lin@example.com", date: "2026-06-18", status: "delivered", items: [{ productId: 4, productName: "Washed Rib Tank", image: dp[3].image, size: "S", color: "#b7b1a6", quantity: 1, price: 64 }], subtotal: 64, shipping: 15, tax: 5.12, total: 84.12, address: "8 Spruce Circle, Phoenix, AZ 85001" },
-  { id: "VST-2026-012", customer: "Monica Pierce", email: "m.pierce@example.com", date: "2026-06-15", status: "delivered", items: [{ productId: 1, productName: "Linen Draped Vest", image: dp[0].image, size: "S", color: "#9e9a86", quantity: 1, price: 128 }, { productId: 3, productName: "Fine Hoop Set", image: dp[2].image, size: "OS", color: "#d7b56d", quantity: 1, price: 58 }], subtotal: 186, shipping: 0, tax: 14.88, total: 200.88, address: "320 Oak Lane, Seattle, WA 98101" },
-  { id: "VST-2026-013", customer: "James Park", email: "j.park@example.com", date: "2026-06-12", status: "delivered", items: [{ productId: 7, productName: "Relaxed Poplin Dress", image: dp[6].image, size: "M", color: "#7f8675", quantity: 1, price: 156 }], subtotal: 156, shipping: 0, tax: 12.48, total: 168.48, address: "3 Cherry Lane, Austin, TX 78701" },
-  { id: "VST-2026-014", customer: "Evelyn Wright", email: "evelyn.w@example.com", date: "2026-06-08", status: "cancelled", items: [{ productId: 6, productName: "Arc Leather Tote", image: dp[5].image, size: "OS", color: "#111111", quantity: 1, price: 176 }], subtotal: 176, shipping: 0, tax: 14.08, total: 190.08, address: "12 Elm Street, New York, NY 10001" },
-  { id: "VST-2026-015", customer: "Daniela Ruiz", email: "d.ruiz@example.com", date: "2026-06-04", status: "delivered", items: [{ productId: 7, productName: "Relaxed Poplin Dress", image: dp[6].image, size: "XS", color: "#202020", quantity: 1, price: 156 }], subtotal: 156, shipping: 0, tax: 12.48, total: 168.48, address: "45 Sunset Blvd, Los Angeles, CA 90028" },
-  { id: "VST-2026-016", customer: "Jessie Davis", email: "j.davis@example.com", date: "2026-06-01", status: "delivered", items: [{ productId: 2, productName: "Tapered City Trouser", image: dp[1].image, size: "28", color: "#6d766a", quantity: 1, price: 148 }], subtotal: 148, shipping: 0, tax: 11.84, total: 159.84, address: "19 Cedar Road, Boston, MA 02101" },
-  { id: "VST-2026-017", customer: "Marcus Klein", email: "m.klein@example.com", date: "2026-05-28", status: "delivered", items: [{ productId: 5, productName: "Soft Utility Shirt", image: dp[4].image, size: "L", color: "#bcc5b7", quantity: 1, price: 118 }], subtotal: 118, shipping: 15, tax: 9.44, total: 142.44, address: "88 Park Ave, Chicago, IL 60601" },
+  { id: "VST-2026-001", customer: "Evelyn Wright", email: "evelyn.w@example.com", date: "2026-07-02", status: "delivered", items: [{ productId: 1, productName: "VESTIGIA SIGNATURE TEE", image: dp[0].image, size: "M", color: "#f3eedf", quantity: 1, price: 78 }], subtotal: 78, shipping: 15, tax: 6.24, total: 99.24, address: "12 Elm Street, New York, NY 10001" },
+  { id: "VST-2026-002", customer: "Marcus Klein", email: "m.klein@example.com", date: "2026-07-01", status: "shipped", items: [{ productId: 2, productName: "VESTIGIA ORIGIN TEE", image: dp[1].image, size: "M", color: "#1c1a1a", quantity: 1, price: 85 }, { productId: 3, productName: "VESTIGIA ESSENTIAL TEE", image: dp[2].image, size: "S", color: "#8b8882", quantity: 1, price: 68 }], subtotal: 153, shipping: 0, tax: 12.24, total: 165.24, address: "88 Park Ave, Chicago, IL 60601" },
+  { id: "VST-2026-003", customer: "Daniela Ruiz", email: "d.ruiz@example.com", date: "2026-07-01", status: "processing", items: [{ productId: 1, productName: "VESTIGIA SIGNATURE TEE", image: dp[0].image, size: "S", color: "#f3eedf", quantity: 2, price: 78 }], subtotal: 156, shipping: 0, tax: 12.48, total: 168.48, address: "45 Sunset Blvd, Los Angeles, CA 90028" },
+  { id: "VST-2026-004", customer: "Monica Pierce", email: "m.pierce@example.com", date: "2026-07-02", status: "pending", items: [{ productId: 3, productName: "VESTIGIA ESSENTIAL TEE", image: dp[2].image, size: "L", color: "#8b8882", quantity: 1, price: 68 }], subtotal: 68, shipping: 15, tax: 5.44, total: 88.44, address: "320 Oak Lane, Seattle, WA 98101" },
 ];
 
 const SEED_CUSTOMERS: Customer[] = [
@@ -113,10 +100,10 @@ const SEED_PROMOS: PromoCode[] = [
 ];
 
 const DEFAULT_SETTINGS: StoreSettings = {
-  storeName: "Vestigia",
-  tagline: "Refined, minimalist apparel tailored for ease of movement and enduring style.",
+  storeName: "VESTIGIA",
+  tagline: "Designed in Italy. Made in Sri Lanka. Leave your mark.",
   currency: "USD",
-  announcementText: "Free shipping on orders over $150 · New collection just arrived",
+  announcementText: "DESIGNED IN ITALY · MADE IN SRI LANKA",
   announcementEnabled: true,
   shippingThreshold: 150,
   taxRate: 8,
@@ -159,7 +146,36 @@ function load<T>(key: string, fallback: T): T {
 }
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(() => load("vstigia_adm_products", defaultProducts));
+  const loadProducts = (): Product[] => {
+    const saved = load<Product[]>("vstigia_adm_products", defaultProducts);
+    const isOld = saved.length !== 3 || saved.some(p => !p.name.startsWith("VESTIGIA"));
+    const productsToUse = isOld ? defaultProducts : saved;
+    return productsToUse.map((product) => {
+      const seeded = defaultProducts.find((item) => item.id === product.id);
+      if (seeded) {
+        return {
+          ...product,
+          name: seeded.name,
+          category: seeded.category,
+          price: seeded.price,
+          compareAt: seeded.compareAt,
+          badge: seeded.badge,
+          colors: seeded.colors,
+          image: seeded.image,
+          images: seeded.images,
+          alt: seeded.alt,
+          sizes: seeded.sizes,
+          description: seeded.description,
+          details: seeded.details,
+          care: seeded.care,
+          sizeChart: seeded.sizeChart,
+        };
+      }
+      return product;
+    });
+  };
+
+  const [products, setProducts] = useState<Product[]>(() => loadProducts());
   const [orders, setOrders] = useState<Order[]>(() => load("vstigia_adm_orders", SEED_ORDERS));
   const [customers] = useState<Customer[]>(() => load("vstigia_adm_customers", SEED_CUSTOMERS));
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>(() => load("vstigia_adm_promos", SEED_PROMOS));

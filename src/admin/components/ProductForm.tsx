@@ -10,6 +10,17 @@ interface ProductFormProps {
 
 const DEFAULT_COLUMNS = ["Size", "Chest", "Waist", "Length"];
 
+const normalizeColumnKey = (label: string) =>
+  label.trim().toLowerCase().replace(/\s+/g, "_");
+
+function buildRowFromColumns(columns: string[]): SizeChartRow {
+  const row: SizeChartRow = { size: "" };
+  columns.slice(1).forEach((column) => {
+    row[normalizeColumnKey(column)] = "";
+  });
+  return row;
+}
+
 function buildEmptySizeChart(): SizeChart {
   return {
     unit: "in",
@@ -47,30 +58,64 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   const updateColumn = (idx: number, value: string) => {
     setSizeChart(prev => {
       const cols = [...prev.columns];
+      const oldKey = normalizeColumnKey(cols[idx]);
       cols[idx] = value;
-      return { ...prev, columns: cols };
+      const newKey = normalizeColumnKey(value);
+
+      if (idx === 0) {
+        return { ...prev, columns: cols };
+      }
+
+      const rows = prev.rows.map((row) => {
+        const nextRow = { ...row };
+        if (oldKey !== newKey && oldKey in nextRow) {
+          nextRow[newKey] = nextRow[oldKey];
+          delete nextRow[oldKey];
+        }
+        if (!(newKey in nextRow)) {
+          nextRow[newKey] = "";
+        }
+        return nextRow;
+      });
+
+      return { ...prev, columns: cols, rows };
     });
   };
 
   const addColumn = () => {
-    setSizeChart(prev => ({
-      ...prev,
-      columns: [...prev.columns, ""],
-    }));
+    setSizeChart(prev => {
+      const nextColumn = `Measure ${prev.columns.length}`;
+      const nextKey = normalizeColumnKey(nextColumn);
+      return {
+        ...prev,
+        columns: [...prev.columns, nextColumn],
+        rows: prev.rows.map((row) => ({ ...row, [nextKey]: "" })),
+      };
+    });
   };
 
   const removeColumn = (idx: number) => {
     if (idx === 0) return; // never remove "Size" column
-    setSizeChart(prev => ({
-      ...prev,
-      columns: prev.columns.filter((_, i) => i !== idx),
-    }));
+    setSizeChart(prev => {
+      const removedKey = normalizeColumnKey(prev.columns[idx]);
+      return {
+        ...prev,
+        columns: prev.columns.filter((_, i) => i !== idx),
+        rows: prev.rows.map((row) => {
+          const { [removedKey]: _, ...rest } = row as Record<string, string | undefined>;
+          return {
+            ...rest,
+            size: row.size,
+          } as SizeChartRow;
+        }),
+      };
+    });
   };
 
   const addRow = () => {
     setSizeChart(prev => ({
       ...prev,
-      rows: [...prev.rows, { size: "" }],
+      rows: [...prev.rows, buildRowFromColumns(prev.columns)],
     }));
   };
 

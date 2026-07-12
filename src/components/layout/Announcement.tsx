@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const messages = [
-  "Complimentary shipping on orders over $150",
-  "30-day effortless returns & exchanges",
-  "New summer editorial capsule online now",
+  "DESIGNED IN ITALY · MADE IN SRI LANKA",
+  "THE FIRST RELEASE IS NOW AVAILABLE",
+  "SHIPPING INFORMATION AVAILABLE AT CHECKOUT",
 ];
 
 export default function Announcement() {

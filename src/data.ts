@@ -28,6 +28,7 @@ export type Product = {
   id: number;
   name: string;
   category: "New" | "Clothing" | "Accessories" | "Sale";
+  productType?: string;
   price: number;
   compareAt?: number;
   badge?: string;
@@ -44,7 +45,6 @@ export type Product = {
   inventory?: Record<string, number>; // Format: "color_size" -> quantity
   sizeChart?: SizeChart;
 };
-
 
 export type Collection = {
   title: string;
@@ -66,227 +66,128 @@ export type JournalArticle = {
 export const heroProducts: Product[] = [
   {
     id: 1,
-    name: "Linen Draped Vest",
-    category: "New",
-    price: 128,
-    badge: "Quick shop",
-    colors: ["#e8ded1", "#242424", "#9e9a86"],
-    image: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "Model wearing a neutral linen vest",
-    sizes: ["XS", "S", "M", "L", "XL"],
-    description: "Crafted from exceptionally breathable European flax, this draped linen vest offers structured elegance with a weightless feel. Designed with clean tailored lines and a double-breasted button front, it layers effortlessly over silk camisoles or soft rib tanks for an elevated warm-weather ensemble.",
-    details: [
-      "Relaxed tailored fit with an open front option",
-      "Double-breasted tonal button closure",
-      "Welt side pockets and fully lined interior",
-      "100% European Flax Linen"
-    ],
-    care: [
-      "Dry clean recommended",
-      "Or machine wash cold on delicate cycle",
-      "Reshape and lay flat to dry",
-      "Warm iron if needed"
-    ],
-    rating: 4.8,
-    reviews: [
-      { id: 1, author: "Evelyn W.", rating: 5, date: "June 12, 2026", comment: "Absolutely stunning drape. I purchased the natural beige color and it goes with everything." },
-      { id: 2, author: "Marcus K.", rating: 4, date: "May 28, 2026", comment: "Very breathable fabric. Fits slightly oversized so consider sizing down if you prefer a slim silhouette." }
-    ],
-    sizeChart: {
-      unit: "in",
-      columns: ["Size", "Chest", "Waist", "Length"],
-      rows: [
-        { size: "XS", chest: "32–33", waist: "25–26", length: "26" },
-        { size: "S",  chest: "34–35", waist: "27–28", length: "27" },
-        { size: "M",  chest: "36–37", waist: "29–30", length: "27.5" },
-        { size: "L",  chest: "38–40", waist: "31–33", length: "28" },
-        { size: "XL", chest: "41–43", waist: "34–36", length: "28.5" },
-      ],
-      notes: "This style runs slightly oversized. Consider sizing down for a more tailored silhouette."
-    }
-  },
-
-  {
-    id: 2,
-    name: "Tapered City Trouser",
+    name: "VESTIGIA SIGNATURE TEE",
     category: "Clothing",
-    price: 148,
-    colors: ["#0f1115", "#d9d0c4", "#6d766a"],
-    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=85",
+    productType: "Premium Heavyweight Oversized T-Shirt",
+    price: 78,
+    badge: "First Release",
+    colors: ["#f3eedf"], // Cream/Off-white
+    image: "/images/products/signature_front.png",
     images: [
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1000&q=85"
+      "/images/products/signature_front.png",
+      "/images/products/signature_back.png",
+      "/images/products/signature_detail.png",
+      "/images/products/signature_model.png"
     ],
-    alt: "Neutral tailored outfit on a city street",
-    sizes: ["24", "26", "28", "30", "32"],
-    description: "The Tapered City Trouser bridges the gap between structured tailoring and all-day comfort. Featuring a high-rise waist with crisp front creases, it tapers gently through the ankle. Made from a refined, wrinkle-resistant wool-blend flannel that moves with you.",
-    details: [
-      "High-waisted, tapered silhouette",
-      "Zip fly with concealed hook-and-bar closure",
-      "Front slant pockets and rear button-through welt pockets",
-      "60% Wool, 38% Polyester, 2% Elastane"
-    ],
-    care: [
-      "Dry clean only",
-      "Iron low heat with pressing cloth"
-    ],
-    rating: 4.9,
-    reviews: [
-      { id: 1, author: "Sarah L.", rating: 5, date: "June 20, 2026", comment: "Best trousers I own. They don't wrinkle even after a full day at the office." }
-    ]
-  },
-  {
-    id: 3,
-    name: "Fine Hoop Set",
-    category: "Accessories",
-    price: 58,
-    badge: "Bestseller",
-    colors: ["#d7b56d", "#c7c7c7"],
-    image: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "Close portrait with gold hoop jewelry",
-    sizes: ["OS"],
-    description: "A pair of delicate, lightweight hoop earrings designed for daily wear. Made with an elegant 18k gold vermeil or sterling silver finish, this dual-sized set can be layered together or worn separately as minimalist statements.",
-    details: [
-      "Includes two pairs of differing diameters (12mm and 18mm)",
-      "Hypoallergenic hollow-tube design",
-      "Hinge post closure",
-      "18k Gold Vermeil on Sterling Silver base"
-    ],
-    care: [
-      "Avoid contact with water, perfumes, and lotions",
-      "Store in the provided microfiber pouch",
-      "Polishing gently with dry jewelry cloth"
-    ],
-    rating: 4.7,
-    reviews: [
-      { id: 1, author: "Chloe M.", rating: 5, date: "May 15, 2026", comment: "Super light and shiny. They don't irritate my sensitive skin at all." }
-    ]
-  }
-];
-
-export const products: Product[] = [
-  ...heroProducts,
-  {
-    id: 4,
-    name: "Washed Rib Tank",
-    category: "Clothing",
-    price: 64,
-    compareAt: 88,
-    badge: "Sale",
-    colors: ["#ffffff", "#b7b1a6", "#222222"],
-    image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "Model in a minimal rib tank",
+    alt: "VESTIGIA Signature Tee - Premium heavyweight cream cotton oversized T-shirt",
     sizes: ["XS", "S", "M", "L", "XL"],
-    description: "An absolute wardrobe necessity. The Washed Rib Tank is knitted from organically sourced Supima cotton and modal for exceptional softness. With a high neckline, micro-rib texture, and a soft mineral wash finish for vintage texture.",
+    description: "The VESTIGIA Signature Tee establishes the foundation of our first release. Designed with a structured oversized silhouette, considered proportions, and understated brand detailing, it is created as an everyday piece that becomes part of the wearer's own story.",
     details: [
-      "Slim fit body contouring cut",
-      "Micro-rib knit stretch fabric",
-      "High neck and deep armholes",
-      "50% Organic Supima Cotton, 50% Lenzing Modal"
+      "Premium heavyweight cotton construction (280 GSM)",
+      "Structured oversized silhouette",
+      "Contemporary shoulders and ribbed collar",
+      "Minimal charcoal VESTIGIA brand print at center chest",
+      "Proudly made in Sri Lanka",
+      "Designed in Italy"
     ],
     care: [
       "Machine wash cold inside out with similar colors",
-      "Tumble dry low",
-      "Do not bleach"
-    ],
-    rating: 4.6,
-    reviews: [
-      { id: 1, author: "Jessie D.", rating: 4, date: "June 25, 2026", comment: "Very soft but fits tightly. I recommend sizing up if you want a more casual look." }
-    ]
-  },
-  {
-    id: 5,
-    name: "Soft Utility Shirt",
-    category: "New",
-    price: 118,
-    colors: ["#ebe5d9", "#bcc5b7", "#161616"],
-    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "Editorial model in layered neutral clothing",
-    sizes: ["XS", "S", "M", "L", "XL"],
-    description: "The Soft Utility Shirt combines masculine military styling with feminine fabrication. Made of washed sand-washed Tencel silk, it features oversized chest pockets, drop shoulders, and a clean button placket.",
-    details: [
-      "Oversized boyfriend cut design",
-      "Button front with mother-of-pearl buttons",
-      "Functional dual patch chest pockets",
-      "85% Tencel Lyocell, 15% Silk"
-    ],
-    care: [
-      "Hand wash cold water",
-      "Hang to dry",
-      "Cool iron on reverse"
-    ],
-    rating: 4.8,
-    reviews: [
-      { id: 1, author: "Amelia V.", rating: 5, date: "June 03, 2026", comment: "The silk blend makes it feel so luxurious. Looks great tucked or untucked." }
-    ]
-  },
-  {
-    id: 6,
-    name: "Arc Leather Tote",
-    category: "Accessories",
-    price: 176,
-    badge: "Low stock",
-    colors: ["#2b1e18", "#c4a47f", "#111111"],
-    image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "Structured leather tote bag",
-    sizes: ["OS"],
-    description: "Form meets function in the Arc Leather Tote. Sculpted with a curved crescent-shaped base from full-grain Italian pebbled leather, this structured tote carries a 13-inch laptop, water bottle, and all everyday essentials.",
-    details: [
-      "Curved crescent aesthetic profile",
-      "Interior zip pocket and card slot divider",
-      "Magnetic top bridge closure",
-      "100% Genuine Italian Calf Leather, suede lining"
-    ],
-    care: [
-      "Clean with a soft damp cloth and leather conditioner",
-      "Avoid contact with oil, liquids and harsh light"
+      "Hang to dry naturally in shade",
+      "Warm iron on reverse side if needed",
+      "Do not dry clean or bleach"
     ],
     rating: 4.9,
     reviews: [
-      { id: 1, author: "Daniela R.", rating: 5, date: "June 11, 2026", comment: "Beautiful craftsmanship. The leather smells gorgeous and holds its shape perfectly." }
-    ]
+      { id: 1, author: "Lorenzo M.", rating: 5, date: "June 28, 2026", comment: "The weight of the fabric is incredible. It sits perfectly structured and doesn't lose shape after washing." },
+      { id: 2, author: "Aanya P.", rating: 5, date: "July 02, 2026", comment: "Beautifully minimal. The off-white shade is warm and looks very premium." }
+    ],
+    sizeChart: {
+      unit: "in",
+      columns: ["Size", "Chest", "Length", "Shoulders"],
+      rows: [
+        { size: "XS", chest: "42", length: "27.5", shoulders: "20.5" },
+        { size: "S",  chest: "44", length: "28.5", shoulders: "21.5" },
+        { size: "M",  chest: "46", length: "29.5", shoulders: "22.5" },
+        { size: "L",  chest: "48", length: "30.5", shoulders: "23.5" },
+        { size: "XL", chest: "50", length: "31.5", shoulders: "24.5" }
+      ],
+      notes: "This silhouette is designed to be oversized. We recommend ordering your normal size."
+    }
   },
   {
-    id: 7,
-    name: "Relaxed Poplin Dress",
+    id: 2,
+    name: "VESTIGIA ORIGIN TEE",
     category: "Clothing",
-    price: 156,
-    colors: ["#f7f5ef", "#7f8675", "#202020"],
-    image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=85",
+    productType: "Premium Graphic T-Shirt",
+    price: 85,
+    badge: "Exclusive",
+    colors: ["#1c1a1a"], // Charcoal black
+    image: "/images/products/origin_front.png",
     images: [
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=85",
+      "/images/products/origin_front.png",
+      "/images/products/origin_back.png",
+      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1000&q=85",
       "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1000&q=85"
     ],
-    alt: "Model in a relaxed dress",
-    sizes: ["XS", "S", "M", "L"],
-    description: "A breezy dress suited for seaside getaways and warm weekend strolls. Made from premium cotton poplin, it has a flowing tiered silhouette, an adjustable halter drawcord neckline, and deep side-seam pockets.",
+    alt: "VESTIGIA Origin Tee - Premium washed charcoal graphic T-shirt",
+    sizes: ["XS", "S", "M", "L", "XL"],
+    description: "The VESTIGIA Origin Tee reflects the beginning of the brand and the connection between places, cultures, and identity. Contemporary proportions meet restrained graphic expression to create a distinctive piece from the first VESTIGIA release.",
     details: [
-      "Tiered flowy silhouette",
-      "Functional side-seam pockets",
-      "Adjustable drawstring neckline",
-      "100% Organic Long-Staple Cotton Poplin"
+      "Premium midweight combed cotton construction (220 GSM)",
+      "Contemporary relaxed fit",
+      "Restrained line-art coordinates graphic printed on back",
+      "Small VESTIGIA front chest branding",
+      "Proudly made in Sri Lanka",
+      "Designed in Italy"
+    ],
+    care: [
+      "Machine wash cold inside out with similar colors",
+      "Tumble dry low or line dry in shade",
+      "Cool iron on reverse; do not iron directly on print",
+      "Do not bleach"
+    ],
+    rating: 4.8,
+    reviews: [
+      { id: 1, author: "Matteo S.", rating: 5, date: "June 30, 2026", comment: "The coordinate map graphic on the back is beautiful and understated. Fits perfectly relaxed." }
+    ],
+    sizeChart: {
+      unit: "in",
+      columns: ["Size", "Chest", "Length", "Shoulders"],
+      rows: [
+        { size: "XS", chest: "40", length: "27", shoulders: "19.5" },
+        { size: "S",  chest: "42", length: "28", shoulders: "20.5" },
+        { size: "M",  chest: "44", length: "29", shoulders: "21.5" },
+        { size: "L",  chest: "46", length: "30", shoulders: "22.5" },
+        { size: "XL", chest: "48", length: "31", shoulders: "23.5" }
+      ],
+      notes: "This silhouette is designed for a contemporary relaxed fit."
+    }
+  },
+  {
+    id: 3,
+    name: "VESTIGIA ESSENTIAL TEE",
+    category: "Clothing",
+    productType: "Minimal Everyday T-Shirt",
+    price: 68,
+    badge: "Core Collection",
+    colors: ["#8b8882"], // Stone grey
+    image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85",
+    images: [
+      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85"
+    ],
+    alt: "VESTIGIA Essential Tee - Minimal stone grey everyday T-shirt",
+    sizes: ["XS", "S", "M", "L", "XL"],
+    description: "The VESTIGIA Essential Tee focuses on simplicity, proportion, and everyday versatility. Clean lines, a relaxed silhouette, and subtle VESTIGIA detailing create a piece designed to remain relevant beyond a single season.",
+    details: [
+      "Premium lightweight soft-combed cotton (180 GSM)",
+      "Classic relaxed silhouette",
+      "Completely minimal design with raw detailing",
+      "Subtle tone-on-tone print at the back neck collar",
+      "Proudly made in Sri Lanka",
+      "Designed in Italy"
     ],
     care: [
       "Machine wash warm with similar colors",
@@ -295,99 +196,65 @@ export const products: Product[] = [
     ],
     rating: 4.7,
     reviews: [
-      { id: 1, author: "Hanna G.", rating: 4, date: "May 30, 2026", comment: "Extremely breezy and comfortable. Love the pockets! Slightly long for shorter heights." }
-    ]
-  },
-  {
-    id: 8,
-    name: "Sculpted Sandal",
-    category: "Sale",
-    price: 92,
-    compareAt: 132,
-    colors: ["#e7d4bd", "#1f1f1f"],
-    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1000&q=85"
+      { id: 1, author: "Isabella R.", rating: 5, date: "June 25, 2026", comment: "The ultimate layering tee. Extremely soft, breathable fabric, and a clean neckline." }
     ],
-    alt: "Minimal heeled sandal",
-    sizes: ["6", "7", "8", "9", "10"],
-    description: "A structural sandal that complements any minimalist dress or trouser. Features an asymmetric wrap-around leather strap, a squared toe bed, and a stacked architectural wooden kitten heel.",
-    details: [
-      "Stacked 1.8-inch architectural wooden heel",
-      "Square toe silhouette",
-      "Asymmetric hand-stitched leather upper straps",
-      "Leather outsole and cushioned leather footbed"
-    ],
-    care: [
-      "Treat leather upper straps with neutral polish",
-      "Avoid exposure to rain or direct heat sources"
-    ],
-    rating: 4.5,
-    reviews: [
-      { id: 1, author: "Monica P.", rating: 5, date: "June 05, 2026", comment: "Comfortable right out of the box. Walked around the city all day in them." }
-    ]
+    sizeChart: {
+      unit: "in",
+      columns: ["Size", "Chest", "Length", "Shoulders"],
+      rows: [
+        { size: "XS", chest: "38", length: "26.5", shoulders: "18.5" },
+        { size: "S",  chest: "40", length: "27.5", shoulders: "19.5" },
+        { size: "M",  chest: "42", length: "28.5", shoulders: "20.5" },
+        { size: "L",  chest: "44", length: "29.5", shoulders: "21.5" },
+        { size: "XL", chest: "46", length: "30.5", shoulders: "22.5" }
+      ],
+      notes: "This silhouette is designed to be standard and relaxed."
+    }
   }
 ];
 
-export const collections: Collection[] = [
-  {
-    title: "Warm weather layers",
-    kicker: "New arrivals",
-    image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=85",
-    alt: "Editorial fashion portrait in warm sunlight"
-  },
-  {
-    title: "Polished travel essentials",
-    kicker: "The edit",
-    image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1200&q=85",
-    alt: "Model wearing a black top against a bright background"
-  },
-  {
-    title: "Accessories with intent",
-    kicker: "Finishing touches",
-    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1200&q=85",
-    alt: "Gold jewelry arrangement"
-  }
-];
+export const products: Product[] = [...heroProducts];
+
+export const collections: Collection[] = [];
 
 export const journalArticles: JournalArticle[] = [
   {
     id: 1,
-    title: "How to pack a five-piece capsule",
+    title: "The Architecture of Weight: Our 280 GSM Heavyweight Jersey",
     date: "June 28, 2026",
     readTime: "4 min read",
-    excerpt: "Editorial content blocks give merchandising context and keep shoppers moving. Learn the art of minimalist packing for your next destination.",
+    excerpt: "Structure meets drape in our first release. An inquiry into the fabric density that defines the VESTIGIA Signature T-shirt.",
     content: [
-      "The philosophy of a capsule wardrobe rests on a single foundation: versatility. When packing for travel, this rule is amplified. The goal is to achieve maximum utility out of minimal baggage, reducing packing stress and easing movement.",
-      "To pack a perfect five-piece travel wardrobe, select pieces that interact seamlessly. We recommend one tailored pant (like the Tapered City Trouser), one light linen layer (the Linen Draped Vest), a premium knit tank, a versatile dress, and one structured tote to tie the looks together.",
-      "By coordinating tones—keeping to neutral palettes of beige, charcoal, cream, and olive—each piece can be combined into a minimum of eight unique outfits. Transitioning from seaside lunches to formal dinners becomes as simple as switching from flat sandals to a sculpted stacked heel."
+      "At VESTIGIA, we believe that fabric is the architecture of garment creation. For our first release, the Signature Tee, we spent months developing a cotton jersey that carries its own form, providing a clean, structured silhouette without compromising on breathability.",
+      "The result is our 280 GSM heavyweight cotton. GSM, or grams per square meter, is the standard metric for fabric density. While typical retail T-shirts sit between 130 and 160 GSM, our choice of 280 GSM offers an intentional, heavy feel that hangs beautifully from the shoulders and resists distortion over time.",
+      "This density is paired with raw, long-staple cotton fibers spun to minimize hairiness. The knit is tight but breathable, ensuring the garment moves with you through urban environments while retaining the clean lines and visual poise that Italian creative direction demands."
     ],
-    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=85"
+    image: "/images/products/signature_detail.png"
   },
   {
     id: 2,
-    title: "The quiet return of warm metal jewelry",
+    title: "Rome to Colombo: A Design and Craft Exchange",
     date: "June 14, 2026",
     readTime: "3 min read",
-    excerpt: "Gold has entered a new era of dominance. Explore why luxury fashion is shifting back to warm, glowing textures and solid contours.",
+    excerpt: "From design studios in Italy to high-precision apparel production in Sri Lanka, VESTIGIA bridges two distinct worlds of garment expertise.",
     content: [
-      "After years of silver dominating minimalist streetwear circles, gold has quietly reclaimed its position at the apex of premium styling. The return is not flashy or loud, but characterized by soft finishes, brushed textures, and structural shapes.",
-      "The modern approach to gold relies on restraint. Solid, structural pieces like our Fine Hoop Set offer a glowing warmth that complements neutral fabrics (linen, cotton poplin, silk). Rather than stacking excessive chains, the contemporary silhouette favors single, intentional focal points.",
-      "When styling warm metallics, match them with off-whites and natural flax fibers. The reflection of gold against raw fabrics amplifies the organic quality of the outfit, creating an overall impression of effortless luxury."
+      "The design identity of VESTIGIA is born in Italy—shaped by Mediterranean stone textures, quiet minimalist design traditions, and contemporary streetwear proportions. The visual language of the brand values restraint, focusing on clean lines, deep neutral tones, and subtle markings.",
+      "However, the realization of this vision takes place in Sri Lanka. Home to some of the world's most sophisticated and ethical apparel manufacturers, Sri Lanka is a global leader in high-end knitwear and precision garment production.",
+      "By combining Italian creative direction with Sri Lankan manufacturing craftsmanship, we create clothing that exists between cultures, place, and expertise. This collaboration results in premium T-shirts with clean stitching, durable constructions, and an authentic origin story."
     ],
-    image: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1000&q=85"
+    image: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1200&q=85"
   },
   {
     id: 3,
-    title: "Fabric notes: linen, poplin, rib knit",
+    title: "Restraint as a Concept: The Three-Piece Release",
     date: "May 29, 2026",
-    readTime: "6 min read",
-    excerpt: "Understanding the fabrics we drape ourselves in is key. An editorial review of textile weight, breathability, and structure.",
+    readTime: "5 min read",
+    excerpt: "Why we chose to launch VESTIGIA with exactly three T-shirts. An editorial exploration of minimalism, focus, and intentional wardrobing.",
     content: [
-      "Every garment tells a story through its textile composition. At Vestigia, our selection of fabrics is driven by sensory quality, durability, and comfort in warm climates.",
-      "Linen remains the ultimate summer canvas. Extracted from the fibers of the flax plant, it is naturally thermoregulating and hypoallergenic. We embrace linen's natural tendency to crease, viewing it as a mark of relaxed luxury.",
-      "Cotton poplin, on the other hand, provides crisp, structured lines. Woven tightly with a fine warp and thicker weft, it is incredibly lightweight yet retains structural volume. Our Relaxed Poplin Dress utilizes this to create dramatic, airy shapes that stay away from the skin, encouraging cooling airflow."
+      "The modern fashion cycle is fast, cluttered, and overwhelming. Brands release dozens of styles each month, urging shoppers to consume constantly. VESTIGIA rejects this approach.",
+      "We launched our brand with exactly three garments: the Signature Tee, the Origin Tee, and the Essential Tee. This limitation is not a constraint, but an intentional choice. It represents our commitment to focus, restraint, and quality over sheer volume.",
+      "By launching only three T-shirts, we ensure that each piece has been meticulously considered, refined, and tested. Every seam is intentional, every fit is perfected, and every fabric selection is optimized. We offer foundations for a lifetime of wear, designed to remain relevant beyond a single season."
     ],
-    image: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=85"
+    image: "/images/products/signature_model.png"
   }
 ];

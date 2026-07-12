@@ -158,7 +158,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                   <ShoppingBag size={40} strokeWidth={1.2} />
                   <p>Your bag is empty.</p>
                   <Link to="/shop" onClick={onClose} className="cart-drawer__shop-link">
-                    Explore the collection <ArrowRight size={14} />
+                    Shop the First Release <ArrowRight size={14} />
                   </Link>
                 </div>
               ) : (

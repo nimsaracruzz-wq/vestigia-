@@ -38,22 +38,22 @@ export default function Account() {
 
   const mockOrders = [
     {
-      id: "ORD-948274",
-      date: "May 12, 2026",
+      id: "VST-2026-001",
+      date: "June 28, 2026",
       status: "Delivered",
-      total: 218,
+      total: 78,
       items: [
-        { name: "Linen Draped Vest", price: 128, size: "S", color: "#e8ded1" },
-        { name: "Sculpted Sandal", price: 92, size: "8", color: "#e7d4bd" },
+        { name: "VESTIGIA SIGNATURE TEE", price: 78, size: "M", color: "#f3eedf" },
       ],
     },
     {
-      id: "ORD-739281",
-      date: "April 28, 2026",
-      status: "Delivered",
-      total: 148,
+      id: "VST-2026-002",
+      date: "July 01, 2026",
+      status: "Shipped",
+      total: 153,
       items: [
-        { name: "Tapered City Trouser", price: 148, size: "28", color: "#0f1115" },
+        { name: "VESTIGIA ORIGIN TEE", price: 85, size: "M", color: "#1c1a1a" },
+        { name: "VESTIGIA ESSENTIAL TEE", price: 68, size: "S", color: "#8b8882" },
       ],
     },
   ];
@@ -76,7 +76,7 @@ export default function Account() {
     >
       <div className="account-header">
         <p>Welcome back</p>
-        <h1>Alexander Vestigia</h1>
+        <h1>VESTIGIA Customer</h1>
       </div>
 
       <div className="account-layout">

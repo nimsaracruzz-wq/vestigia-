@@ -8,11 +8,17 @@ import { useAdmin } from "../admin/AdminContext";
 import { useCurrency } from "../context/CurrencyContext";
 import ProductCard from "../components/common/ProductCard";
 
+const normalizeChartKey = (label: string) =>
+  label.trim().toLowerCase().replace(/\s+/g, "_");
+
+const getChartValue = (row: Record<string, string | undefined>, label: string) =>
+  row[normalizeChartKey(label)] ?? row[label.toLowerCase()];
+
 // ── Size Chart Modal Component ─────────────────────────────────────────────
 function SizeChartModal({ chart, onClose }: { chart: SizeChart; onClose: () => void }) {
   const [unit, setUnit] = useState<"in" | "cm">(chart.unit);
 
-  const colKeys = chart.columns.slice(1).map(c => c.toLowerCase());
+  const colKeys = chart.columns.slice(1).map(c => normalizeChartKey(c));
 
   return (
     <AnimatePresence>
@@ -73,9 +79,9 @@ function SizeChartModal({ chart, onClose }: { chart: SizeChart; onClose: () => v
                   <td className="size-cell">{row.size}</td>
                   {colKeys.map((key) => (
                     <td key={key}>
-                      {unit === "cm" && row[key]
-                        ? row[key]!.split("–").map(v => Math.round(parseFloat(v) * 2.54)).join("–")
-                        : row[key] ?? "—"}
+                      {unit === "cm" && getChartValue(row, chart.columns[chart.columns.findIndex((col) => normalizeChartKey(col) === key)])
+                        ? getChartValue(row, chart.columns[chart.columns.findIndex((col) => normalizeChartKey(col) === key)])!.split("–").map(v => Math.round(parseFloat(v) * 2.54)).join("–")
+                        : getChartValue(row, chart.columns[chart.columns.findIndex((col) => normalizeChartKey(col) === key)]) ?? "—"}
                     </td>
                   ))}
                 </tr>
@@ -177,10 +183,10 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
     setActiveAccordion((prev) => (prev === tab ? null : tab));
   };
 
-  // Get related products from the same category (excluding current)
+  // Show the other 2 VESTIGIA products (always — never the current product)
   const relatedProducts = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
+    .filter((p) => p.id !== product.id)
+    .slice(0, 2);
 
   const isSaved = isInWishlist(product.id);
 
@@ -241,8 +247,13 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
         {/* Right Column: Information Panel */}
         <div className="pdp-details-column">
           <div className="pdp-details-header">
-            <span className="pdp-category-kicker">{product.category}</span>
-            <h1>{product.name}</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '8px' }}>
+              <span className="pdp-category-kicker">{product.productType || product.category}</span>
+              <span style={{ fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#888', fontWeight: 600 }}>
+                Designed in Italy · Made in Sri Lanka
+              </span>
+            </div>
+            <h1 style={{ marginTop: '8px' }}>{product.name}</h1>
             
             {/* Reviews display */}
             <div className="pdp-ratings-row">
@@ -479,7 +490,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                                 <tr key={row.size}>
                                   <td className="size-cell">{row.size}</td>
                                   {product.sizeChart!.columns.slice(1).map((col) => (
-                                    <td key={col}>{row[col.toLowerCase()] ?? "—"}</td>
+                                    <td key={col}>{getChartValue(row, col) ?? "—"}</td>
                                   ))}
                                 </tr>
                               ))}
@@ -570,7 +581,14 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <section className="pdp-related-section">
-          <h2>You might also like</h2>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', marginBottom: '8px' }}>
+              The First Release
+            </p>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontWeight: 400, fontSize: '1.8rem', margin: 0 }}>
+              THE OTHER TWO PIECES.
+            </h2>
+          </div>
           <div className="product-grid">
             {relatedProducts.map((p) => (
               <ProductCard

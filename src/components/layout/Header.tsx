@@ -46,12 +46,12 @@ export default function Header({ onCartToggle, onMenuToggle, onSearchToggle }: H
 
       <nav className="desktop-nav" aria-label="Primary navigation">
         <Link to="/shop" className={location.pathname === "/shop" ? "active-link" : ""}>Shop</Link>
-        <Link to="/lookbook" className={location.pathname === "/lookbook" ? "active-link" : ""}>Lookbook</Link>
-        <Link to="/journal" className={location.pathname.startsWith("/journal") ? "active-link" : ""}>Journal</Link>
+        <Link to="/about" className={location.pathname === "/about" ? "active-link" : ""}>About</Link>
+        <Link to="/story" className={location.pathname === "/story" ? "active-link" : ""}>Story</Link>
       </nav>
 
-      <Link className="brand" to="/" aria-label="Vestigia home">
-        Vestigia
+      <Link className="brand" to="/" aria-label="VESTIGIA home">
+        VESTIGIA
       </Link>
 
       <div className="header-actions">

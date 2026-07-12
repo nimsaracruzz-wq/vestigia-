@@ -50,36 +50,39 @@ export default function Footer() {
       {/* Main links grid */}
       <div className="lux-footer__main">
         <div className="lux-footer__brand">
-          <span className="lux-footer__wordmark">Vestigia</span>
-          <p className="lux-footer__tagline">
-            Refined apparel for enduring style.
-          </p>
+          <span className="lux-footer__wordmark" style={{ textTransform: 'uppercase', letterSpacing: '0.1em' }}>VESTIGIA</span>
+          <div className="lux-footer__tagline" style={{ fontSize: '0.75rem', lineHeight: '1.6', color: '#bbb', marginTop: '12px' }}>
+            <p style={{ margin: '2px 0', letterSpacing: '0.05em' }}>DESIGNED IN ITALY.</p>
+            <p style={{ margin: '2px 0', letterSpacing: '0.05em' }}>MADE IN SRI LANKA.</p>
+            <p style={{ margin: '8px 0 2px', letterSpacing: '0.15em', fontSize: '0.7rem', color: '#888', fontWeight: 600 }}>LEAVE YOUR MARK.</p>
+          </div>
         </div>
 
         <nav className="lux-footer__nav">
           <div className="lux-footer__nav-col">
             <p className="lux-footer__nav-label">Shop</p>
             <ul className="lux-footer__nav-list">
-              <li><Link to="/shop">All Clothing</Link></li>
-              <li><Link to="/shop?category=New">New Arrivals</Link></li>
-              <li><Link to="/shop?category=Accessories">Accessories</Link></li>
-              <li><Link to="/shop?category=Sale">Sale</Link></li>
+              <li><Link to="/shop">All Products</Link></li>
+              <li><Link to="/product/1">Signature Tee</Link></li>
+              <li><Link to="/product/2">Origin Tee</Link></li>
+              <li><Link to="/product/3">Essential Tee</Link></li>
             </ul>
           </div>
           <div className="lux-footer__nav-col">
-            <p className="lux-footer__nav-label">Brand</p>
+            <p className="lux-footer__nav-label">Information</p>
             <ul className="lux-footer__nav-list">
-              <li><Link to="/lookbook">Lookbook</Link></li>
-              <li><Link to="/journal">Journal</Link></li>
-              <li><Link to="/account">My Account</Link></li>
-            </ul>
-          </div>
-          <div className="lux-footer__nav-col">
-            <p className="lux-footer__nav-label">Support</p>
-            <ul className="lux-footer__nav-list">
+              <li><Link to="/about">About</Link></li>
+              <li><Link to="/story">Our Story</Link></li>
               <li><a href="#shipping">Shipping</a></li>
-              <li><a href="#returns">Returns &amp; Exchanges</a></li>
+              <li><a href="#returns">Returns</a></li>
               <li><a href="#contact">Contact</a></li>
+            </ul>
+          </div>
+          <div className="lux-footer__nav-col">
+            <p className="lux-footer__nav-label">Social</p>
+            <ul className="lux-footer__nav-list">
+              <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+              <li><a href="https://tiktok.com" target="_blank" rel="noopener noreferrer">TikTok</a></li>
             </ul>
           </div>
         </nav>
@@ -88,7 +91,7 @@ export default function Footer() {
       {/* Bottom bar */}
       <div className="lux-footer__bottom">
         <p className="lux-footer__copy">
-          &copy; {new Date().getFullYear()} Vestigia. All rights reserved.
+          &copy; 2026 VESTIGIA. ALL RIGHTS RESERVED.
         </p>
         
         <div className="lux-footer__bottom-right">

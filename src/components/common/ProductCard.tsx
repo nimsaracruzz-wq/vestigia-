@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
@@ -14,12 +15,21 @@ export default function ProductCard({ product, onQuickShop }: ProductCardProps) 
   const { toggleWishlist, isInWishlist } = useCart();
   const { formatPrice: money } = useCurrency();
   const saved = isInWishlist(product.id);
+  const [hovered, setHovered] = useState(false);
+
+  // We show model image (index 3) or back image (index 1) on hover
+  const hoverImage = product.images[3] || product.images[1] || product.image;
+  const currentImage = hovered ? hoverImage : product.image;
 
   return (
-    <article className="product-card">
+    <article 
+      className="product-card"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <div className="product-media">
         <Link to={`/product/${product.id}`} aria-label={`View details for ${product.name}`}>
-          <img src={product.image} alt={product.alt} loading="lazy" />
+          <img src={currentImage} alt={product.alt} loading="lazy" style={{ transition: 'all 0.3s ease' }} />
         </Link>
         {product.badge && <span className="badge">{product.badge}</span>}
         <motion.button
@@ -35,14 +45,16 @@ export default function ProductCard({ product, onQuickShop }: ProductCardProps) 
           <Heart size={18} fill={saved ? "#111" : "none"} color={saved ? "#111" : "currentColor"} style={{ transition: "fill 0.3s ease, color 0.3s ease" }} />
         </motion.button>
         <button className="quick-button" type="button" onClick={onQuickShop}>
-          Quick shop
+          Quick Add
         </button>
       </div>
 
 
       <div className="product-info">
         <div>
-          <p className="product-card-category">{product.category}</p>
+          <p className="product-card-category" style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#888', letterSpacing: '0.05em' }}>
+            {product.productType || "Premium Tee"}
+          </p>
           <h3>
             <Link to={`/product/${product.id}`}>{product.name}</Link>
           </h3>
