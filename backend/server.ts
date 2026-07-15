@@ -49,6 +49,18 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(uploadDir));
 
+app.get('/', (_req, res) => {
+  res.json({
+    message: 'VESTIGIA Backend API is active',
+    status: 'healthy',
+    endpoints: {
+      products: '/api/products',
+      orders: '/api/orders',
+      settings: '/api/settings'
+    }
+  });
+});
+
 const parseJson = <T>(value: string | null | undefined, fallback: T): T => {
   if (!value) return fallback;
   try {
