@@ -11,13 +11,18 @@ export default function Dashboard() {
     .reduce((sum, o) => sum + o.total, 0);
 
   const ordersToday = orders.filter(o => o.date === new Date().toISOString().split('T')[0]).length;
-  // If no orders today (since mock dates are hardcoded to July 1/2), just show a mock stat or recent
   const recentOrdersCount = orders.filter(o => o.status === "pending" || o.status === "processing").length;
 
   const lowStockProducts = products.filter(p => p.badge === "Low stock");
 
-  // Mock chart data (last 7 days simulated revenue)
-  const chartData = [1200, 1900, 800, 2400, 1600, 3100, 2200];
+  const chartData = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const dayKey = date.toISOString().split("T")[0];
+    return orders
+      .filter((order) => String(order.date).startsWith(dayKey) && order.status !== "cancelled")
+      .reduce((sum, order) => sum + order.total, 0);
+  });
 
   return (
     <div className="admin-page">

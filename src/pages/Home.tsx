@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { products, type Product } from "../data";
+import { type Product } from "../data";
+import { useAdmin } from "../admin/AdminContext";
 import ProductCard from "../components/common/ProductCard";
 
 type HomeProps = {
@@ -10,10 +11,14 @@ type HomeProps = {
 };
 
 export default function Home({ onQuickShop }: HomeProps) {
+  const { products } = useAdmin();
+
   // Update document title for SEO
   useEffect(() => {
     document.title = "VESTIGIA — Designed in Italy. Made in Sri Lanka.";
   }, []);
+
+  const featuredProduct = products[0];
 
   const slideUp = {
     initial: { opacity: 0, y: 30 },
@@ -43,9 +48,10 @@ export default function Home({ onQuickShop }: HomeProps) {
         <button
           className="hotspot hotspot-one"
           type="button"
-          onClick={() => onQuickShop(products[0])}
+          onClick={() => featuredProduct && onQuickShop(featuredProduct)}
           style={{ left: '48%', top: '55%' }}
-          aria-label={`Quick shop ${products[0].name}`}
+          aria-label={featuredProduct ? `Quick shop ${featuredProduct.name}` : "Quick shop featured product"}
+          disabled={!featuredProduct}
         >
           <Plus size={18} />
         </button>

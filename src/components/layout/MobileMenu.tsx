@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { X, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAdmin } from "../../admin/AdminContext";
+import { useCurrency } from "../../context/CurrencyContext";
 
 type MobileMenuProps = {
   open: boolean;
@@ -9,6 +11,9 @@ type MobileMenuProps = {
 };
 
 export default function MobileMenu({ open, onClose, onCartToggle }: MobileMenuProps) {
+  const { settings } = useAdmin();
+  const { formatPrice: money } = useCurrency();
+
   const menuItems = [
     { name: "Shop", path: "/shop" },
     { name: "About", path: "/about" },
@@ -83,7 +88,11 @@ export default function MobileMenu({ open, onClose, onCartToggle }: MobileMenuPr
 
             <div className="mobile-menu-footer">
               <p>VESTIGIA Storefront</p>
-              <span>Complimentary shipping over $150</span>
+              <span>
+                {settings.complimentaryShippingEnabled
+                  ? `Complimentary shipping over ${money(settings.shippingThreshold)}`
+                  : "Complimentary shipping currently disabled"}
+              </span>
             </div>
           </motion.aside>
         </>

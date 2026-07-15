@@ -1,10 +1,43 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, CreditCard, Shield, Truck, CheckCircle2, ArrowRight } from "lucide-react";
+import { ChevronRight, CreditCard, Shield, Truck, CheckCircle2, ArrowRight, Loader } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useCart } from "../context/CartContext";
 import { useCurrency } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
+
+// Initialize Stripe (using test key)
+const stripePromise = loadStripe("pk_test_51234567890123456789012345678901234567890123");
+
+// Countries list
+const COUNTRIES = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina", "Armenia", "Australia",
+  "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium",
+  "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei",
+  "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada", "Cape Verde", "Central African Republic",
+  "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus",
+  "Czech Republic", "Côte d'Ivoire", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "East Timor", "Ecuador",
+  "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Ethiopia", "Fiji", "Finland",
+  "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea",
+  "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hong Kong", "Hungary", "Iceland", "India",
+  "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan",
+  "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya",
+  "Liechtenstein", "Lithuania", "Luxembourg", "Macao", "Madagascar", "Malawi", "Malaysia", "Maldives",
+  "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova",
+  "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru",
+  "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "Norway",
+  "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru",
+  "Philippines", "Poland", "Portugal", "Qatar", "Republic of the Congo", "Romania", "Russia", "Rwanda",
+  "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe",
+  "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia",
+  "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan",
+  "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand",
+  "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+  "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu",
+  "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
+];
 
 type Step = "shipping" | "payment" | "success";
 
@@ -23,13 +56,22 @@ type ShippingDetails = {
   city: string;
   state: string;
   zip: string;
+  country: string;
   phone: string;
   phoneCountry: string;
   phoneDialCode: string;
   shippingMethod: "standard" | "express";
 };
 
-export default function Checkout() {
+export default function CheckoutPage() {
+  return (
+    <Elements stripe={stripePromise}>
+      <CheckoutContent />
+    </Elements>
+  );
+}
+
+function CheckoutContent() {
   const {
     cart,
     cartCount,
@@ -84,6 +126,7 @@ export default function Checkout() {
     city: "",
     state: "",
     zip: "",
+    country: "United States",
     phone: "",
     phoneCountry: "US",
     phoneDialCode: "+1",
@@ -133,10 +176,8 @@ export default function Checkout() {
 
   // Payment form fields
   const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
   const [paymentError, setPaymentError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Sync title
   useEffect(() => {
@@ -178,6 +219,7 @@ export default function Checkout() {
     if (!shippingForm.zip.trim() || shippingForm.zip.length < 5) {
       errors.zip = "Valid zip code is required.";
     }
+    if (!shippingForm.country.trim()) errors.country = "Country is required.";
     if (!shippingForm.phone.trim()) errors.phone = "Phone number is required.";
     if (!shippingForm.phoneDialCode.trim()) errors.phone = "Please select your phone country code.";
 
@@ -203,34 +245,30 @@ export default function Checkout() {
   };
 
   // Validate payment form
-  const handlePaymentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePaymentSubmit = async () => {
     if (!cardName.trim()) {
       setPaymentError("Cardholder name is required.");
       return;
     }
-    if (cardNumber.replace(/\s/g, "").length < 16) {
-      setPaymentError("Card number must be 16 digits.");
-      return;
-    }
-    if (!cardExpiry.includes("/")) {
-      setPaymentError("Expiry date must be in MM/YY format.");
-      return;
-    }
-    if (cardCvv.length < 3) {
-      setPaymentError("CVV must be 3 or 4 digits.");
-      return;
-    }
 
     setPaymentError("");
+    setIsProcessing(true);
     
-    // Generate random order number
-    const randomOrder = "VEST-" + Math.floor(100000 + Math.random() * 900000);
-    setOrderNumber(randomOrder);
-    
-    // Transition and clear
-    setStep("success");
-    clearCart();
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Generate random order number
+      const randomOrder = "VEST-" + Math.floor(100000 + Math.random() * 900000);
+      setOrderNumber(randomOrder);
+      
+      // Transition and clear
+      setStep("success");
+      clearCart();
+    } catch (error) {
+      setPaymentError("Payment processing failed. Please try again.");
+      setIsProcessing(false);
+    }
   };
 
   // Calculate final numbers based on shipping method
@@ -412,6 +450,22 @@ export default function Checkout() {
                   </div>
 
                   <div className="form-input-box full-width">
+                    <label htmlFor="chk-country">Country</label>
+                    <select
+                      id="chk-country"
+                      className={shippingErrors.country ? "input-error" : ""}
+                      value={shippingForm.country}
+                      onChange={(e) => setShippingForm({ ...shippingForm, country: e.target.value })}
+                    >
+                      <option value="">Select a country</option>
+                      {COUNTRIES.map((country) => (
+                        <option key={country} value={country}>{country}</option>
+                      ))}
+                    </select>
+                    {shippingErrors.country && <span className="error-text">{shippingErrors.country}</span>}
+                  </div>
+
+                  <div className="form-input-box full-width">
                     <label htmlFor="chk-phone">Phone Number</label>
                     <div className="phone-input-row">
                       <div className="phone-prefix-select">
@@ -507,10 +561,10 @@ export default function Checkout() {
                     Edit shipping
                   </button>
                 </div>
-                <form onSubmit={handlePaymentSubmit} className="checkout-form-grid">
+                <form className="checkout-form-grid">
                   <div className="payment-security-notice full-width">
                     <Shield size={14} />
-                    <span>Transactions are secure and encrypted.</span>
+                    <span>Powered by Stripe. Transactions are secure and encrypted.</span>
                   </div>
 
                   <div className="form-input-box full-width">
@@ -521,65 +575,50 @@ export default function Checkout() {
                       value={cardName}
                       onChange={(e) => setCardName(e.target.value)}
                       placeholder="Jane Doe"
+                      disabled={isProcessing}
                     />
                   </div>
 
                   <div className="form-input-box full-width">
-                    <label htmlFor="pay-number">Card Number</label>
-                    <div className="card-input-with-icon">
-                      <CreditCard size={16} className="card-input-icon" />
-                      <input
-                        id="pay-number"
-                        type="text"
-                        maxLength={19}
-                        placeholder="4111 2222 3333 4444"
-                        value={cardNumber}
-                        onChange={(e) => {
-                          const formatted = e.target.value
-                            .replace(/\s?/g, "")
-                            .replace(/(\d{4})/g, "$1 ")
-                            .trim();
-                          setCardNumber(formatted);
+                    <label htmlFor="card-element">Card Details</label>
+                    <div className="stripe-card-element-wrapper">
+                      <CardElement
+                        id="card-element"
+                        options={{
+                          style: {
+                            base: {
+                              fontSize: "16px",
+                              color: "#171412",
+                              "::placeholder": {
+                                color: "#aaa",
+                              },
+                            },
+                            invalid: {
+                              color: "#fa755a",
+                            },
+                          },
+                          disabled: isProcessing,
                         }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-input-box-row">
-                    <div className="form-input-box half">
-                      <label htmlFor="pay-expiry">Expiry Date</label>
-                      <input
-                        id="pay-expiry"
-                        type="text"
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        value={cardExpiry}
-                        onChange={(e) => {
-                          let val = e.target.value.replace(/\D/g, "");
-                          if (val.length >= 2) {
-                            val = val.slice(0, 2) + "/" + val.slice(2, 4);
-                          }
-                          setCardExpiry(val);
-                        }}
-                      />
-                    </div>
-                    <div className="form-input-box half">
-                      <label htmlFor="pay-cvv">CVV</label>
-                      <input
-                        id="pay-cvv"
-                        type="password"
-                        placeholder="CVV"
-                        maxLength={4}
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ""))}
                       />
                     </div>
                   </div>
 
                   {paymentError && <p className="payment-error-message" role="alert">{paymentError}</p>}
 
-                  <button className="checkout-continue-btn full-width" type="submit">
-                    Pay {money(activeGrandTotal)}
+                  <button
+                    className="checkout-continue-btn full-width"
+                    type="button"
+                    onClick={handlePaymentSubmit}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader size={16} className="spinner" />
+                        Processing...
+                      </>
+                    ) : (
+                      `Pay ${money(activeGrandTotal)}`
+                    )}
                   </button>
                 </form>
               </motion.section>

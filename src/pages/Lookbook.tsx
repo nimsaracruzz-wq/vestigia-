@@ -3,12 +3,15 @@ import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import { heroProducts, type Product } from "../data";
+import { useAdmin } from "../admin/AdminContext";
 
 type LookbookProps = {
   onQuickShop: (product: Product) => void;
 };
 
 export default function Lookbook({ onQuickShop }: LookbookProps) {
+  const { products } = useAdmin();
+
   useEffect(() => {
     document.title = "Lookbook | Summer 2026 Capsule | Vestigia";
   }, []);
@@ -19,6 +22,8 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
     viewport: { once: true, margin: "-100px" },
     transition: { duration: 0.6 },
   };
+
+  const lookbookProducts = [0, 1, 2].map((index) => products[index] ?? heroProducts[index]);
 
   return (
     <motion.div
@@ -46,16 +51,16 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
           <button
             className="hotspot hotspot-one"
             type="button"
-            onClick={() => onQuickShop(heroProducts[0])}
-            aria-label={`Shop ${heroProducts[0].name}`}
+            onClick={() => onQuickShop(lookbookProducts[0])}
+            aria-label={`Shop ${lookbookProducts[0].name}`}
           >
             <Plus size={18} />
           </button>
           <button
             className="hotspot hotspot-two"
             type="button"
-            onClick={() => onQuickShop(heroProducts[1])}
-            aria-label={`Shop ${heroProducts[1].name}`}
+            onClick={() => onQuickShop(lookbookProducts[1])}
+            aria-label={`Shop ${lookbookProducts[1].name}`}
           >
             <Plus size={18} />
           </button>
@@ -67,13 +72,13 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
             Crisp linen vests met with flowing, tapered trousers in shades of natural sand, stone, and bone. Built for the heat of the city, styled with effortless ease.
           </p>
           <div className="scene-products-list">
-            <Link to={`/product/${heroProducts[0].id}`} className="scene-product-link">
-              <span>01. {heroProducts[0].name}</span>
-              <strong>$128</strong>
+            <Link to={`/product/${lookbookProducts[0].id}`} className="scene-product-link">
+              <span>01. {lookbookProducts[0].name}</span>
+              <strong>${lookbookProducts[0].price.toFixed(2)}</strong>
             </Link>
-            <Link to={`/product/${heroProducts[1].id}`} className="scene-product-link">
-              <span>02. {heroProducts[1].name}</span>
-              <strong>$148</strong>
+            <Link to={`/product/${lookbookProducts[1].id}`} className="scene-product-link">
+              <span>02. {lookbookProducts[1].name}</span>
+              <strong>${lookbookProducts[1].price.toFixed(2)}</strong>
             </Link>
           </div>
         </motion.div>
@@ -97,8 +102,8 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
           <button
             className="hotspot hotspot-three"
             type="button"
-            onClick={() => onQuickShop(heroProducts[2])}
-            aria-label={`Shop ${heroProducts[2].name}`}
+            onClick={() => onQuickShop(lookbookProducts[2])}
+            aria-label={`Shop ${lookbookProducts[2].name}`}
           >
             <Plus size={18} />
           </button>
@@ -110,9 +115,9 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
             Finishing details that carry intent. Dual-sized lightweight gold vermeil hoops capturing the warm reflection of summer solstice sunlight.
           </p>
           <div className="scene-products-list">
-            <Link to={`/product/${heroProducts[2].id}`} className="scene-product-link">
-              <span>03. {heroProducts[2].name}</span>
-              <strong>$58</strong>
+            <Link to={`/product/${lookbookProducts[2].id}`} className="scene-product-link">
+              <span>03. {lookbookProducts[2].name}</span>
+              <strong>${lookbookProducts[2].price.toFixed(2)}</strong>
             </Link>
           </div>
         </motion.div>

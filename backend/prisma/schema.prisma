@@ -32,6 +32,7 @@ model Product {
   description String
   details     String   // stored as JSON array string
   care        String   // stored as JSON array string
+  sizeChart   String?  // stored as JSON string
   rating      Float    @default(0)
   
   reviews     Review[]
@@ -119,6 +120,7 @@ model StoreSettings {
   announcementText    String
   announcementEnabled Boolean
   shippingThreshold   Float
+  complimentaryShippingEnabled Boolean @default(true)
   taxRate             Float
   adminPassword       String // fallback for testing
 }

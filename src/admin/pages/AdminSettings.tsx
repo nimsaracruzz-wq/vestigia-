@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAdmin } from "../AdminContext";
 
 export default function AdminSettings() {
   const { settings, updateSettings } = useAdmin();
   const [formData, setFormData] = useState(settings);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setFormData(settings);
+  }, [settings]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,9 +95,18 @@ export default function AdminSettings() {
               <h2>Checkout Settings</h2>
             </div>
             <div className="admin-panel-content">
+              <div className="admin-form-group flex items-center gap-2 mb-4">
+                <input
+                  type="checkbox"
+                  id="complimentaryShippingEnabled"
+                  checked={formData.complimentaryShippingEnabled}
+                  onChange={e => setFormData({...formData, complimentaryShippingEnabled: e.target.checked})}
+                />
+                <label htmlFor="complimentaryShippingEnabled" className="m-0">Enable complimentary shipping message</label>
+              </div>
               <div className="admin-form-row">
                 <div className="admin-form-group">
-                  <label>Free Shipping Threshold ($)</label>
+                  <label>Complimentary Shipping Threshold ({formData.currency})</label>
                   <input 
                     type="number" 
                     value={formData.shippingThreshold}

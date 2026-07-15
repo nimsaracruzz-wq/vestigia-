@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { products, type Product } from "../../data";
+import { type Product } from "../../data";
 import { useCurrency } from "../../context/CurrencyContext";
+import { useAdmin } from "../../admin/AdminContext";
 
 type SearchOverlayProps = {
   open: boolean;
@@ -15,6 +16,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const [results, setResults] = useState<Product[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const { formatPrice: money } = useCurrency();
+  const { products } = useAdmin();
 
   // Focus input on open, reset on close
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     } else {
       setResults([]);
     }
-  }, [query]);
+  }, [query, products]);
 
   const popularSearches = ["signature", "origin", "essential", "vestigia", "tee"];
 

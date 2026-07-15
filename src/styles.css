@@ -525,11 +525,17 @@ img {
   min-height: 2.8em;
 }
 
-.price span {
+.price .compare-at {
   color: #928a82;
   display: block;
   font-weight: 600;
   text-decoration: line-through;
+}
+
+.price .current-price {
+  color: #171412;
+  display: block;
+  font-weight: 800;
 }
 
 .product-footer {
@@ -1186,6 +1192,7 @@ img {
   }
 
   .size-row {
+    /* VESTIGIA redesign: always 5 columns on mobile, overridden below in redesign styles */
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -2122,6 +2129,28 @@ img {
   border-color: #c0392b;
   background: #fdfefe;
 }
+.form-input-box select {
+  background: #ffffff;
+  border: 1px solid #e2e2e2;
+  border-radius: 4px;
+  height: 48px;
+  padding: 0 14px;
+  font-size: 0.9rem;
+  color: #111111;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.form-input-box select:focus {
+  outline: none;
+  border-color: #111111;
+  box-shadow: 0 0 0 2px rgb(17 17 17 / 0.08);
+}
+.form-input-box select.input-error {
+  border-color: #c0392b;
+  background: #fdfefe;
+}
 .error-text {
   color: #c0392b;
   font-size: 0.72rem;
@@ -2290,6 +2319,10 @@ img {
   border-radius: 4px;
   margin-top: 15px;
   transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 .checkout-continue-btn:hover:not(:disabled) {
   background: #2a2a2a;
@@ -2297,6 +2330,40 @@ img {
 .checkout-continue-btn:disabled {
   background: #cccccc;
   cursor: not-allowed;
+}
+.checkout-continue-btn .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Stripe Card Element Styles */
+.stripe-card-element-wrapper {
+  border: 1px solid #ddd5cc;
+  border-radius: 4px;
+  padding: 12px 14px;
+  background: #fff;
+  font-size: 0.9rem;
+}
+
+.stripe-card-element-wrapper .StripeElement {
+  color: #171412;
+}
+
+.stripe-card-element-wrapper .StripeElement--focus {
+  border-color: #171412;
+  box-shadow: 0 0 0 2px rgba(23, 20, 18, 0.1);
+}
+
+.stripe-card-element-wrapper .StripeElement--invalid {
+  border-color: #fa755a;
 }
 
 /* Payment security notice */
@@ -2979,6 +3046,112 @@ img {
   text-transform: uppercase;
 }
 
+/* Account - Address Form Modal */
+.address-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+}
+.address-form-modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.address-form-modal h3 {
+  font-family: Georgia, serif;
+  font-size: 1.3rem;
+  margin: 0 0 24px;
+  color: #171412;
+}
+.address-form-modal form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.address-form-modal .form-input-box.full-width {
+  grid-column: span 2;
+}
+.address-form-modal .form-input-box label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6a645c;
+  margin-bottom: 6px;
+}
+.address-form-modal .form-input-box input,
+.address-form-modal .form-input-box select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd5cc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #171412;
+  font-family: inherit;
+}
+.address-form-modal .form-input-box select:focus {
+  outline: none;
+  border-color: #171412;
+  box-shadow: 0 0 0 2px rgba(23, 20, 18, 0.1);
+}
+.address-form-modal .form-input-box select option {
+  background: #fff;
+  color: #171412;
+  padding: 8px;
+}
+.form-checkbox-box {
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+.form-checkbox-box input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+.form-checkbox-box label {
+  font-size: 0.85rem;
+  color: #6a645c;
+  margin: 0;
+}
+.form-actions-row {
+  grid-column: span 2;
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+.form-submit-btn,
+.form-cancel-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.form-submit-btn {
+  background: #171412;
+  color: #fff;
+}
+.form-cancel-btn {
+  background: #f2eee8;
+  color: #171412;
+}
+
 /* ==========================================
    LOOKBOOK PAGE STYLES
    ========================================== */
@@ -3467,6 +3640,26 @@ img {
   .checkout-container,
   .account-layout {
     grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .account-sidebar-navigation {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .account-sidebar-navigation button {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .account-sidebar-navigation button span {
+    display: none;
+  }
+  
+  .account-sidebar-navigation button svg {
+    margin: auto;
   }
   
   .checkout-main-content {
@@ -3592,22 +3785,10 @@ img {
     grid-template-columns: 1fr;
   }
   
-  .pdp-action-buttons {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .wishlist-toggle-cta-btn {
-    width: auto;
-    min-width: 48px;
-    max-width: 56px;
-    align-self: flex-start;
-    border-radius: 50%;
-  }
+  /* Note: .pdp-action-buttons, .wishlist-toggle-cta-btn, and .pdp-selections-box
+     are now governed by the VESTIGIA mobile redesign styles (max-width: 767px) below */
   
-  .pdp-selections-box {
-    padding: 16px;
-  }
-  
+
   .lookbook-scene-section {
     grid-template-columns: 1fr;
   }
@@ -3623,6 +3804,101 @@ img {
   }
   .scene-caption-block {
     padding: 30px 16px;
+  }
+}
+
+/* ==========================================
+   MOBILE PHONE RESPONSIVENESS (≤640px)
+   ========================================== */
+@media (max-width: 640px) {
+  /* Account page mobile improvements */
+  .account-page-container {
+    padding: 60px clamp(12px, 4vw, 20px) 40px;
+  }
+  
+  .account-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+  }
+  
+  .account-header h1 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+  }
+  
+  .account-sidebar-navigation {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  
+  .account-sidebar-navigation button {
+    padding: 12px 14px;
+    justify-content: flex-start;
+  }
+  
+  .account-sidebar-navigation button span {
+    display: inline;
+  }
+  
+  /* Profile form mobile stacking */
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+  
+  .profile-form-grid .save-profile-btn {
+    grid-column: 1;
+  }
+  
+  /* Address modal mobile */
+  .address-form-modal {
+    padding: 24px;
+  }
+  
+  .address-form-modal form {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .address-form-modal .form-input-box.full-width,
+  .form-checkbox-box,
+  .form-actions-row {
+    grid-column: 1;
+  }
+  
+  /* Wishlist grid mobile */
+  .wishlist-items-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .wishlist-item-card {
+    gap: 10px;
+  }
+  
+  /* Order cards mobile */
+  .order-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .order-badge-and-price {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 10px;
+  }
+  
+  .order-card-item-row {
+    flex-direction: column;
+  }
+  
+  /* Add address button mobile */
+  .add-new-address-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
   }
 }
 
@@ -4773,4 +5049,454 @@ img {
   background-color: #f2eee8;
   border-color: #c0b9af;
 }
+
+/* ==========================================
+   VESTIGIA MOBILE PDP REDESIGN
+   ========================================== */
+
+/* Dividers styling */
+.pdp-divider {
+  display: none;
+}
+
+.mobile-model-info {
+  display: none;
+}
+
+.mobile-pdp-availability {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* Flat selections box on mobile */
+  .pdp-selections-box {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 4px !important; /* using approximately 20px page padding (container has 16px, plus 4px is 20px) */
+    margin-bottom: 24px !important;
+    box-shadow: none !important;
+  }
+
+  /* Dividers only on mobile */
+  .pdp-divider {
+    display: block;
+    height: 1px;
+    background: #eae5dd; /* subtle neutral divider line */
+    margin: 16px 0;
+    border: none;
+  }
+
+  /* Option row adjustments */
+  .pdp-option-row {
+    margin-bottom: 12px !important;
+  }
+
+  /* General Labels */
+  .pdp-option-row .option-label {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: #8c8276 !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* SECTION 1 - COLOR */
+  .color-option-row {
+    display: block;
+  }
+  .color-swatches-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+  }
+  .color-swatches-container .swatches {
+    display: flex;
+    gap: 10px;
+  }
+  .color-swatches-container .swatch-btn {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    outline: none !important;
+  }
+  .color-swatches-container .swatch-btn:hover {
+    transform: none !important;
+  }
+  .color-swatches-container .swatch-btn.active {
+    outline: 1px solid #111 !important;
+    outline-offset: 2px !important;
+    transform: none !important;
+  }
+  .selected-color-name {
+    display: inline-block !important;
+    font-size: 0.55rem !important;
+    font-weight: 500 !important;
+    color: #111 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+  }
+
+  /* SECTION 2 - SIZE */
+  .pdp-size-label-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 10px !important;
+  }
+  .pdp-size-label-row .option-label {
+    margin-bottom: 0 !important;
+  }
+  .size-guide-trigger {
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: #111 !important;
+    text-decoration: underline !important;
+    background: transparent !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 0 !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+  }
+  .size-guide-trigger svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  /* One Row Size Grid */
+  .size-row {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 6px !important;
+    margin: 10px 0 0 !important;
+  }
+  .size-row button {
+    height: 46px !important;
+    min-height: 46px !important;
+    border-radius: 2px !important; /* rectangular with subtle radius */
+    font-weight: 500 !important;
+    font-size: 0.85rem !important;
+    background: #fdfaf6 !important; /* soft ivory */
+    border: 1px solid #ddd5cc !important; /* neutral border */
+    color: #111 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 150ms ease !important;
+    cursor: pointer !important;
+    outline: none !important;
+  }
+  .size-row button:focus-visible {
+    outline: 1px solid #111 !important;
+    outline-offset: 2px !important;
+  }
+  .size-row button:hover {
+    background: #fcf8f0 !important;
+    border-color: #c4b9aa !important;
+  }
+  .size-row button.active {
+    background: #111 !important;
+    color: #fff !important;
+    border-color: #111 !important;
+  }
+  
+  /* Sold out size styling */
+  .size-row button:disabled {
+    background: #faf7f2 !important;
+    color: #b0a99f !important;
+    border-color: #eae5dd !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+    position: relative !important;
+  }
+  
+  /* Diagonal line for sold out size */
+  .size-row button:disabled::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(to top right, transparent 48%, #b0a99f 49%, #b0a99f 51%, transparent 52%) !important;
+    pointer-events: none !important;
+  }
+
+  /* Model Info */
+  .mobile-model-info {
+    display: block !important;
+    font-size: 0.75rem !important;
+    color: #8c8276 !important;
+    margin-top: 10px !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  /* SECTION 3 - QUANTITY */
+  .quantity-option-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 0 !important;
+  }
+  .quantity-option-row .option-label {
+    margin-bottom: 0 !important;
+  }
+
+  /* Bordered stepper style */
+  .quantity-option-row .quantity {
+    display: flex !important;
+    align-items: center !important;
+    width: 124px !important;
+    height: 44px !important;
+    border: 1px solid #ddd5cc !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+  .quantity-option-row .quantity button {
+    background: transparent !important;
+    border: none !important;
+    width: 40px !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #111 !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    transition: opacity 0.15s ease !important;
+    outline: none !important;
+  }
+  .quantity-option-row .quantity button:focus-visible {
+    outline: 1px solid #111 !important;
+  }
+  .quantity-option-row .quantity button:active {
+    opacity: 0.6 !important;
+  }
+  .quantity-option-row .quantity button:disabled {
+    opacity: 0.25 !important;
+    cursor: not-allowed !important;
+  }
+  .quantity-option-row .quantity span {
+    flex: 1 !important;
+    text-align: center !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    color: #111 !important;
+  }
+  .quantity-option-row .quantity button:first-of-type {
+    border-right: 1px solid #ddd5cc !important;
+  }
+  .quantity-option-row .quantity button:last-of-type {
+    border-left: 1px solid #ddd5cc !important;
+  }
+
+  /* SECTION 4 - ACTIONS */
+  .pdp-action-buttons {
+    display: flex !important;
+    flex-direction: row !important; /* Force side by side on mobile */
+    align-items: center !important;
+    gap: 8px !important;
+    margin-top: 16px !important;
+  }
+
+  /* Wishlist Button */
+  .wishlist-toggle-cta-btn {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    max-width: 52px !important;
+    aspect-ratio: 1 !important;
+    border-radius: 2px !important; /* Square with subtle radius */
+    border: 1px solid #111 !important;
+    background: transparent !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    transition: all 150ms ease !important;
+    outline: none !important;
+    align-self: auto !important; /* Override vertical-align reset */
+  }
+  .wishlist-toggle-cta-btn:focus-visible {
+    outline: 1px solid #111 !important;
+    outline-offset: 2px !important;
+  }
+  .wishlist-toggle-cta-btn:active {
+    transform: translateY(1px) !important;
+    opacity: 0.8 !important;
+  }
+  .wishlist-toggle-cta-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Add to Bag Button */
+  .add-to-cart-cta-btn {
+    flex-grow: 1 !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    background: #111 !important;
+    color: #fff !important;
+    border-radius: 2px !important; /* rectangular subtle radius */
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.08em !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 150ms ease !important;
+    outline: none !important;
+  }
+  .add-to-cart-cta-btn:focus-visible {
+    outline: 1px solid #111 !important;
+    outline-offset: 2px !important;
+  }
+  .add-to-cart-cta-btn:active {
+    transform: translateY(1px) !important;
+    opacity: 0.9 !important;
+  }
+  .add-to-cart-cta-btn:disabled {
+    background: #eae5dd !important;
+    color: #a1998e !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+  }
+
+  /* Availability Indicator */
+  .mobile-pdp-availability {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-top: 12px !important;
+    padding-left: 2px !important;
+  }
+  .availability-dot {
+    font-size: 0.5rem !important;
+    color: #8c8276 !important;
+  }
+  .availability-text {
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: #8c8276 !important;
+  }
+}
+
+/* ── STICKY MOBILE PURCHASE BAR ───────────────────────────────── */
+.mobile-sticky-purchase-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fdfcf9; /* ivory background */
+  border-top: 1px solid #eae5dd;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  height: 72px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0s linear 0.3s;
+  transform: translateY(100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mobile-sticky-purchase-bar.show {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0s linear 0s;
+}
+
+.sticky-bar-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  padding: 0 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.sticky-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sticky-price {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #111;
+}
+
+.sticky-size {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #8c8276;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.sticky-add-to-bag-btn {
+  background: #111;
+  color: #fff;
+  border: none;
+  height: 44px;
+  padding: 0 20px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  outline: none;
+}
+
+.sticky-add-to-bag-btn:active {
+  transform: translateY(1px);
+  opacity: 0.9;
+}
+
+.sticky-add-to-bag-btn:disabled {
+  background: #eae5dd;
+  color: #a1998e;
+  cursor: not-allowed;
+}
+
+/* Ensure padding-bottom on the page body so sticky bar doesn't overlap details */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 72px;
+  }
+}
+
+/* ── PREFERS REDUCED MOTION ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .size-row button,
+  .wishlist-toggle-cta-btn,
+  .wishlist-toggle-cta-btn svg,
+  .add-to-cart-cta-btn,
+  .sticky-add-to-bag-btn,
+  .mobile-sticky-purchase-bar {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
 

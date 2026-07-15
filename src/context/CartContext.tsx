@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { type Product } from "../data";
+import { useAdmin } from "../admin/AdminContext";
 
 export type CartItem = {
   product: Product;
@@ -36,6 +37,8 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { settings } = useAdmin();
+
   // Load initial cart and wishlist from localStorage
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
@@ -91,8 +94,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const discountAmount = cartTotalBeforeDiscount * discountRate;
   const cartTotal = cartTotalBeforeDiscount - discountAmount;
 
-  // Free shipping over 150
-  const shippingCost = cartTotal >= 150 || cartTotal === 0 ? 0 : 15;
+  const shippingCost =
+    cartTotal === 0
+      ? 0
+      : settings.complimentaryShippingEnabled && cartTotal >= settings.shippingThreshold
+        ? 0
+        : 15;
   const taxCost = cartTotal * 0.08; // 8% sales tax
   const grandTotal = cartTotal + shippingCost + taxCost;
 

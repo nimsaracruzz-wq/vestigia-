@@ -210,6 +210,142 @@ export const heroProducts: Product[] = [
       ],
       notes: "This silhouette is designed to be standard and relaxed."
     }
+  },
+  {
+    id: 4,
+    name: "VESTIGIA CLASSIC TROUSERS",
+    category: "Clothing",
+    productType: "Premium Cotton-Linen Trousers",
+    price: 120,
+    badge: "New Arrival",
+    colors: ["#1c1a1a", "#8b8882"],
+    image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1000&q=85",
+    images: [
+      "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=1000&q=85"
+    ],
+    alt: "VESTIGIA Classic Trousers - Premium tailored cotton-linen trousers in charcoal black and stone grey",
+    sizes: ["XS", "S", "M", "L", "XL"],
+    description: "Tailored trousers designed for contemporary elegance and comfort. Featuring a clean front crease, subtle side slit pockets, and crafted from a premium cotton-linen blend fabric that breathes naturally.",
+    details: [
+      "Premium cotton-linen blend (220 GSM)",
+      "Tailored slim-straight fit",
+      "Clean flat-front waistband with belt loops",
+      "Concealed hook and zip closure",
+      "Proudly made in Sri Lanka",
+      "Designed in Italy"
+    ],
+    care: [
+      "Dry clean recommended",
+      "Machine wash cold delicate cycle if necessary",
+      "Iron low heat on reverse side",
+      "Do not tumble dry"
+    ],
+    rating: 4.6,
+    reviews: [
+      { id: 1, author: "Sofia G.", rating: 5, date: "July 08, 2026", comment: "The blend of cotton and linen is excellent. Keeps structured but feels incredibly light." }
+    ],
+    sizeChart: {
+      unit: "in",
+      columns: ["Size", "Waist", "Inseam", "Hips"],
+      rows: [
+        { size: "XS", waist: "28", inseam: "30", hips: "36" },
+        { size: "S",  waist: "30", inseam: "30.5", hips: "38" },
+        { size: "M",  waist: "32", inseam: "31", hips: "40" },
+        { size: "L",  waist: "34", inseam: "31.5", hips: "42" },
+        { size: "XL", waist: "36", inseam: "32", hips: "44" }
+      ],
+      notes: "Runs true to size. If between sizes, we recommend ordering one size up."
+    }
+  },
+  {
+    id: 5,
+    name: "VESTIGIA OVERSIZED HOODIE",
+    category: "Clothing",
+    productType: "Heavyweight Double-Faced Hoodie",
+    price: 110,
+    badge: "Core Collection",
+    colors: ["#8b8882", "#f3eedf"],
+    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=1000&q=85",
+    images: [
+      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1000&q=85"
+    ],
+    alt: "VESTIGIA Oversized Hoodie - Premium double-faced heavyweight hoodie in stone grey and cream",
+    sizes: ["XS", "S", "M", "L", "XL"],
+    description: "A premium double-faced heavyweight hoodie with drop shoulders, clean finish seams, and zero exterior drawcords. Engineered for comfort and architectural form, maintaining its structured shape throughout the day.",
+    details: [
+      "Ultra-heavyweight cotton fleece (450 GSM)",
+      "Double-lined hood without drawcords",
+      "Kangaroo pocket with concealed side entries",
+      "Ribbed cuffs and waistband",
+      "Proudly made in Sri Lanka",
+      "Designed in Italy"
+    ],
+    care: [
+      "Machine wash cold inside out on gentle cycle",
+      "Dry flat in shade",
+      "Do not tumble dry",
+      "Warm iron if needed"
+    ],
+    rating: 4.9,
+    reviews: [
+      { id: 1, author: "Marco K.", rating: 5, date: "July 10, 2026", comment: "Outstanding thickness. The hood stands up perfectly. Truly a premium piece." }
+    ],
+    sizeChart: {
+      unit: "in",
+      columns: ["Size", "Chest", "Length", "Sleeve"],
+      rows: [
+        { size: "XS", chest: "44", length: "26.5", sleeve: "31.5" },
+        { size: "S",  chest: "46", length: "27.5", sleeve: "32.5" },
+        { size: "M",  chest: "48", length: "28.5", sleeve: "33.5" },
+        { size: "L",  chest: "50", length: "29.5", sleeve: "34.5" },
+        { size: "XL", chest: "52", length: "30.5", sleeve: "35.5" }
+      ],
+      notes: "Designed for a generous oversized fit. Size down for a more standard fit."
+    }
+  },
+  {
+    id: 6,
+    name: "VESTIGIA ORIGIN CAP",
+    category: "Accessories",
+    productType: "Organic Cotton Monogram Cap",
+    price: 45,
+    badge: "Essential",
+    colors: ["#1c1a1a"],
+    image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=1000&q=85",
+    images: [
+      "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1534215754734-18e55d13e346?auto=format&fit=crop&w=1000&q=85"
+    ],
+    alt: "VESTIGIA Origin Cap - Organic cotton monogram cap in charcoal black",
+    sizes: ["OS"],
+    description: "Constructed from organic cotton twill, the Origin Cap features an adjustable metal buckle strap and a clean embroidered brand monogram on the front panel. A timeless accessory designed to complete any minimal outfit.",
+    details: [
+      "100% organic cotton twill",
+      "6-panel structured construction",
+      "Embroidered tone-on-tone VESTIGIA monogram front graphic",
+      "Adjustable metal buckle backstrap",
+      "Proudly made in Sri Lanka",
+      "Designed in Italy"
+    ],
+    care: [
+      "Hand wash cold only",
+      "Do not bleach or dry clean",
+      "Reshape while damp and dry flat in shade"
+    ],
+    rating: 4.7,
+    reviews: [
+      { id: 1, author: "Lucas V.", rating: 4.7, date: "July 12, 2026", comment: "Great fit and build quality. The monogram is very subtle, which I love." }
+    ],
+    sizeChart: {
+      unit: "in",
+      columns: ["Size", "Circumference", "Brim Width"],
+      rows: [
+        { size: "OS", circumference: "21.5 - 24.0", brimWidth: "2.75" }
+      ],
+      notes: "One size fits most with adjustable metal backstrap."
+    }
   }
 ];
 

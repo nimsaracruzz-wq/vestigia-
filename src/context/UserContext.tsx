@@ -11,6 +11,22 @@ type UserProfile = {
   city: string;
   state: string;
   zip: string;
+  country: string;
+  addresses?: Address[];
+};
+
+export type Address = {
+  id: string;
+  label?: string;
+  name: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  phone?: string;
+  isDefault?: boolean;
 };
 
 interface UserContextType {
@@ -19,6 +35,9 @@ interface UserContextType {
   createAccount: (profile: UserProfile) => void;
   updateUser: (profile: UserProfile) => void;
   logout: () => void;
+  addAddress: (address: Omit<Address, "id">) => void;
+  removeAddress: (id: string) => void;
+  setDefaultAddress: (id: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -50,11 +69,40 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUser = (profile: UserProfile) => {
-    setUser(profile);
+    // Preserve addresses when updating profile
+    setUser((prev) => ({ ...(prev || {}), ...profile, addresses: profile.addresses || prev?.addresses }));
   };
 
   const logout = () => {
     setUser(null);
+  };
+
+  const addAddress = (address: Omit<Address, "id">) => {
+    setUser((prev) => {
+      const id = `addr_${Date.now()}`;
+      const newAddr: Address = { id, ...address, isDefault: Boolean(address.isDefault) };
+      const existing = prev?.addresses ?? [];
+      // if new address is default, clear others
+      const addresses: Address[] = address.isDefault
+        ? [...existing.map((a) => ({ ...a, isDefault: false })), newAddr]
+        : [...existing, newAddr];
+      const next = { ...(prev || {}), addresses } as UserProfile;
+      return next;
+    });
+  };
+
+  const removeAddress = (id: string) => {
+    setUser((prev) => {
+      const addresses = (prev?.addresses ?? []).filter((a) => a.id !== id);
+      return { ...(prev || {}), addresses } as UserProfile;
+    });
+  };
+
+  const setDefaultAddress = (id: string) => {
+    setUser((prev) => {
+      const addresses = (prev?.addresses ?? []).map((a) => ({ ...a, isDefault: a.id === id }));
+      return { ...(prev || {}), addresses } as UserProfile;
+    });
   };
 
   return (
@@ -65,6 +113,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         createAccount,
         updateUser,
         logout,
+        addAddress,
+        removeAddress,
+        setDefaultAddress,
       }}
     >
       {children}

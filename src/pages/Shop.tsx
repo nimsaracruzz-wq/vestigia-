@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { products, type Product } from "../data";
+import { type Product } from "../data";
+import { useAdmin } from "../admin/AdminContext";
 import ProductCard from "../components/common/ProductCard";
 
 type ShopProps = {
@@ -9,6 +10,8 @@ type ShopProps = {
 };
 
 export default function Shop({ onQuickShop }: ShopProps) {
+  const { products } = useAdmin();
+
   // Set document title for SEO
   useEffect(() => {
     document.title = "Shop — The First Release — VESTIGIA";

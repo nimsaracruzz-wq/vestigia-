@@ -4,6 +4,7 @@ import { Minus, Plus, X, Tag, ShoppingBag, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../../context/CartContext";
 import { useCurrency } from "../../context/CurrencyContext";
+import { useAdmin } from "../../admin/AdminContext";
 
 type CartDrawerProps = {
   open: boolean;
@@ -45,6 +46,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     removeFromCart,
   } = useCart();
   const { formatPrice: money } = useCurrency();
+  const { settings } = useAdmin();
 
   const [promoInput, setPromoInput] = useState("");
 
@@ -74,9 +76,9 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     }
   };
 
-  const FREE_SHIPPING_THRESHOLD = 150;
-  const progressPercent = Math.min(100, (cartTotalBeforeDiscount / FREE_SHIPPING_THRESHOLD) * 100);
-  const remaining = FREE_SHIPPING_THRESHOLD - cartTotalBeforeDiscount;
+  const freeShippingThreshold = settings.shippingThreshold;
+  const progressPercent = freeShippingThreshold > 0 ? Math.min(100, (cartTotalBeforeDiscount / freeShippingThreshold) * 100) : 100;
+  const remaining = Math.max(0, freeShippingThreshold - cartTotalBeforeDiscount);
 
   return (
     <AnimatePresence>
@@ -124,7 +126,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
 
             {/* Free shipping progress */}
             <AnimatePresence>
-              {cart.length > 0 && (
+              {cart.length > 0 && settings.complimentaryShippingEnabled && (
                 <motion.div
                   className="cart-drawer__shipping-bar"
                   initial={{ opacity: 0, height: 0 }}

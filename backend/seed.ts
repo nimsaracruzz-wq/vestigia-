@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client';
-import { products, journalArticles } from './data';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { products, journalArticles } from './data.ts';
 
-const prisma = new PrismaClient();
+const adapter = new PrismaBetterSqlite3({ url: './dev.db' });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Start seeding...');
@@ -34,6 +36,12 @@ async function main() {
 
   // 3. Seed Products
   for (const product of products) {
+    const existingProduct = await prisma.product.findFirst({ where: { name: product.name } });
+
+    if (existingProduct) {
+      continue;
+    }
+
     // Create product
     const createdProduct = await prisma.product.create({
       data: {

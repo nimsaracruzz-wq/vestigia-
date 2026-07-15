@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Minus, Plus, Heart, Star, ChevronDown, ArrowLeft, Check, Ruler, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,15 @@ const normalizeChartKey = (label: string) =>
 
 const getChartValue = (row: Record<string, string | undefined>, label: string) =>
   row[normalizeChartKey(label)] ?? row[label.toLowerCase()];
+
+const getColorName = (hex: string) => {
+  const mapping: Record<string, string> = {
+    "#f3eedf": "IVORY",
+    "#1c1a1a": "CHARCOAL",
+    "#8b8882": "STONE GREY",
+  };
+  return mapping[hex.toLowerCase()] || hex.toUpperCase();
+};
 
 // ── Size Chart Modal Component ─────────────────────────────────────────────
 function SizeChartModal({ chart, onClose }: { chart: SizeChart; onClose: () => void }) {
@@ -122,6 +131,9 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [addedToCartText, setAddedToCartText] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   // Accordion state
   const [activeAccordion, setActiveAccordion] = useState<string | null>("details");
@@ -144,6 +156,29 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
     }
   }, [product]);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowStickyBar(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      {
+        threshold: 0,
+        rootMargin: "0px",
+      }
+    );
+
+    const currentRef = actionsRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [product]);
+
   if (!product) {
     return (
       <div className="product-not-found-container">
@@ -156,8 +191,6 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
     );
   }
 
-
-
   const handleQuantityChange = (change: number) => {
     setQuantity((prev) => Math.max(1, prev + change));
   };
@@ -165,6 +198,10 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   const handleAddToCart = () => {
     if (!selectedSize) {
       setError("Please select a size before adding to cart.");
+      const sizeSection = document.getElementById("mobile-pdp-size-section");
+      if (sizeSection) {
+        sizeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
     setError("");
@@ -282,27 +319,32 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
 
           <div className="pdp-selections-box">
             {/* Colors Selectors */}
-            <div className="pdp-option-row">
-              <span className="option-label">Color:</span>
-              <div className="swatches large">
-                {product.colors.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`swatch-btn ${selectedColor === color ? "active" : ""}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setSelectedColor(color)}
-                    aria-label={`Select color ${color}`}
-                  />
-                ))}
+            <div className="pdp-option-row color-option-row">
+              <span className="option-label">Color</span>
+              <div className="color-swatches-container">
+                <div className="swatches large">
+                  {product.colors.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`swatch-btn ${selectedColor === color ? "active" : ""}`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => setSelectedColor(color)}
+                      aria-label={`Select color ${color}`}
+                    />
+                  ))}
+                </div>
+                <span className="selected-color-name">{getColorName(selectedColor)}</span>
               </div>
             </div>
 
+            <div className="pdp-divider" />
+
             {/* Sizes Selectors */}
             {product.sizes.length > 0 && product.sizes[0] !== "OS" && (
-              <div className="pdp-option-row">
+              <div className="pdp-option-row size-option-row" id="mobile-pdp-size-section">
                 <div className="pdp-size-label-row">
-                  <span className="option-label">Size:</span>
+                  <span className="option-label">Size</span>
                   {product.sizeChart && (
                     <button
                       type="button"
@@ -337,14 +379,19 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                     );
                   })}
                 </div>
+                <div className="mobile-model-info">
+                  Model is 183 cm and wears size M.
+                </div>
               </div>
             )}
 
+            <div className="pdp-divider" />
+
             {/* Quantity Stepper */}
-            <div className="pdp-option-row quantity-row">
-              <span className="option-label">Quantity:</span>
+            <div className="pdp-option-row quantity-option-row">
+              <span className="option-label">Quantity</span>
               <div className="quantity">
-                <button type="button" onClick={() => handleQuantityChange(-1)} aria-label="Decrease quantity">
+                <button type="button" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} aria-label="Decrease quantity">
                   <Minus size={14} />
                 </button>
                 <span>{quantity}</span>
@@ -354,9 +401,11 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
               </div>
             </div>
 
+            <div className="pdp-divider" />
+
             {error && <p className="pdp-error-alert" role="alert">{error}</p>}
 
-            <div className="pdp-action-buttons">
+            <div className="pdp-action-buttons" ref={actionsRef}>
               <button
                 className="add-to-cart-cta-btn"
                 type="button"
@@ -367,6 +416,8 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                   <span className="btn-success-flex">
                     <Check size={16} /> Added
                   </span>
+                ) : !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0) ? (
+                  "Out of Stock"
                 ) : (
                   "Add to Bag"
                 )}
@@ -384,6 +435,15 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                 <Heart size={20} fill={isSaved ? "#111" : "none"} color={isSaved ? "#111" : "currentColor"} style={{ transition: "fill 0.3s ease, color 0.3s ease" }} />
               </motion.button>
 
+            </div>
+
+            <div className="mobile-pdp-availability">
+              <span className="availability-dot">●</span>
+              <span className="availability-text">
+                {!!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0)
+                  ? "OUT OF STOCK"
+                  : "IN STOCK — READY TO SHIP"}
+              </span>
             </div>
           </div>
 
@@ -548,35 +608,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
         </div>
       </div>
 
-      {/* Reviews Tab */}
-      <section className="pdp-reviews-section">
-        <h2>Customer Reviews</h2>
-        {product.reviews.length === 0 ? (
-          <p>No reviews yet. Be the first to review this product.</p>
-        ) : (
-          <div className="reviews-list-grid">
-            {product.reviews.map((review) => (
-              <div key={review.id} className="review-card">
-                <div className="review-card-header">
-                  <strong>{review.author}</strong>
-                  <span>{review.date}</span>
-                </div>
-                <div className="stars-list">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={12}
-                      fill={i < review.rating ? "#111" : "none"}
-                      color="#111"
-                    />
-                  ))}
-                </div>
-                <p>{review.comment}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
@@ -600,6 +632,26 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
           </div>
         </section>
       )}
+
+      {/* Sticky Mobile Purchase Bar */}
+      <div className={`mobile-sticky-purchase-bar ${showStickyBar ? "show" : ""}`}>
+        <div className="sticky-bar-content">
+          <div className="sticky-bar-info">
+            <span className="sticky-price">{formatPrice(product.price)}</span>
+            <span className="sticky-size">
+              {selectedSize ? `SIZE ${selectedSize}` : "SELECT SIZE"}
+            </span>
+          </div>
+          <button
+            className="sticky-add-to-bag-btn"
+            type="button"
+            onClick={handleAddToCart}
+            disabled={addedToCartText || !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0)}
+          >
+            {addedToCartText ? "ADDED" : !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0) ? "OUT OF STOCK" : "ADD TO BAG"}
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }

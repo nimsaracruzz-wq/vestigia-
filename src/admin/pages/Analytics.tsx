@@ -3,17 +3,34 @@ import { BarChart } from "../components/DashboardShared";
 import { DonutChart } from "../components/DonutChart";
 
 export default function Analytics() {
-  const { orders } = useAdmin();
+  const { orders, products } = useAdmin();
 
-  // Mock revenue chart data (30 days)
-  const revenueData = Array.from({ length: 30 }, () => Math.floor(Math.random() * 5000) + 1000);
+  const revenueData = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (29 - index));
+    const dayKey = date.toISOString().split("T")[0];
+    return orders
+      .filter((order) => String(order.date).startsWith(dayKey) && order.status !== "cancelled")
+      .reduce((sum, order) => sum + order.total, 0);
+  });
 
-  // Mock category data
-  const categoryData = [
-    { label: "Clothing", value: 14500, color: "#111" },
-    { label: "Accessories", value: 4200, color: "#777" },
-    { label: "Sale", value: 2100, color: "#ccc" },
-  ];
+  const categoryTotals: Record<string, number> = {};
+  const productCategoryById = new Map(products.map((product) => [product.id, product.category]));
+
+  orders.forEach((order) => {
+    if (order.status === "cancelled") return;
+    order.items.forEach((item) => {
+      const category = productCategoryById.get(item.productId) ?? "Other";
+      categoryTotals[category] = (categoryTotals[category] ?? 0) + item.price * item.quantity;
+    });
+  });
+
+  const categoryPalette = ["#111", "#666", "#999", "#ccc"];
+  const categoryData = Object.entries(categoryTotals).map(([label, value], index) => ({
+    label,
+    value,
+    color: categoryPalette[index % categoryPalette.length],
+  }));
 
   // Top products calculation from real (simulated) orders
   const productSales: Record<string, { qty: number, rev: number }> = {};

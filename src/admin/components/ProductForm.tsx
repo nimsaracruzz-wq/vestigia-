@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { type Product, type SizeChart, type SizeChartRow } from "../../data";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -31,6 +31,10 @@ function buildEmptySizeChart(): SizeChart {
 }
 
 export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState(initialData?.image || "");
+  const [imageError, setImageError] = useState("");
+
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     category: initialData?.category || "Clothing",
@@ -47,6 +51,18 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   const [sizeChart, setSizeChart] = useState<SizeChart>(
     initialData?.sizeChart ?? buildEmptySizeChart()
   );
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(formData.image);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreview(previewUrl);
+
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [imageFile, formData.image]);
 
   // ── form field changes ──────────────────────────────────────────────────
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -138,6 +154,12 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   // ── submit ──────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!imageFile && !formData.image.trim()) {
+      setImageError("Please upload a product image.");
+      return;
+    }
+
+    setImageError("");
     onSubmit({
       ...formData,
       price: Number(formData.price),
@@ -152,6 +174,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       reviews: initialData?.reviews || [],
       id: initialData?.id,
       sizeChart: hasSizeChart ? sizeChart : undefined,
+      imageFile,
     });
   };
 
@@ -190,8 +213,21 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       </div>
 
       <div className="admin-form-group">
-        <label>Image URL</label>
-        <input type="url" name="image" value={formData.image} onChange={handleChange} required />
+        <label>Product Image</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0] ?? null;
+            setImageFile(file);
+          }}
+        />
+        {imagePreview && (
+          <div className="admin-image-preview">
+            <img src={imagePreview} alt="Product preview" />
+          </div>
+        )}
+        {imageError && <span className="error-text">{imageError}</span>}
       </div>
 
       <div className="admin-form-row">

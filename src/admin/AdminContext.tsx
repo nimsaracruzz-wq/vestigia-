@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import {
-  products as defaultProducts,
-  journalArticles as defaultJournal,
   type Product,
   type JournalArticle,
 } from "../data";
@@ -62,42 +60,10 @@ export type StoreSettings = {
   announcementText: string;
   announcementEnabled: boolean;
   shippingThreshold: number;
+  complimentaryShippingEnabled: boolean;
   taxRate: number;
   adminPassword: string;
 };
-
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-
-const dp = defaultProducts;
-
-const SEED_ORDERS: Order[] = [
-  { id: "VST-2026-001", customer: "Evelyn Wright", email: "evelyn.w@example.com", date: "2026-07-02", status: "delivered", items: [{ productId: 1, productName: "VESTIGIA SIGNATURE TEE", image: dp[0].image, size: "M", color: "#f3eedf", quantity: 1, price: 78 }], subtotal: 78, shipping: 15, tax: 6.24, total: 99.24, address: "12 Elm Street, New York, NY 10001" },
-  { id: "VST-2026-002", customer: "Marcus Klein", email: "m.klein@example.com", date: "2026-07-01", status: "shipped", items: [{ productId: 2, productName: "VESTIGIA ORIGIN TEE", image: dp[1].image, size: "M", color: "#1c1a1a", quantity: 1, price: 85 }, { productId: 3, productName: "VESTIGIA ESSENTIAL TEE", image: dp[2].image, size: "S", color: "#8b8882", quantity: 1, price: 68 }], subtotal: 153, shipping: 0, tax: 12.24, total: 165.24, address: "88 Park Ave, Chicago, IL 60601" },
-  { id: "VST-2026-003", customer: "Daniela Ruiz", email: "d.ruiz@example.com", date: "2026-07-01", status: "processing", items: [{ productId: 1, productName: "VESTIGIA SIGNATURE TEE", image: dp[0].image, size: "S", color: "#f3eedf", quantity: 2, price: 78 }], subtotal: 156, shipping: 0, tax: 12.48, total: 168.48, address: "45 Sunset Blvd, Los Angeles, CA 90028" },
-  { id: "VST-2026-004", customer: "Monica Pierce", email: "m.pierce@example.com", date: "2026-07-02", status: "pending", items: [{ productId: 3, productName: "VESTIGIA ESSENTIAL TEE", image: dp[2].image, size: "L", color: "#8b8882", quantity: 1, price: 68 }], subtotal: 68, shipping: 15, tax: 5.44, total: 88.44, address: "320 Oak Lane, Seattle, WA 98101" },
-];
-
-const SEED_CUSTOMERS: Customer[] = [
-  { id: 1, name: "Evelyn Wright", email: "evelyn.w@example.com", orders: 4, totalSpend: 641, joined: "2026-01-15", lastOrder: "2026-07-02" },
-  { id: 2, name: "Marcus Klein", email: "m.klein@example.com", orders: 3, totalSpend: 483, joined: "2026-02-03", lastOrder: "2026-07-01" },
-  { id: 3, name: "Chloe Moreau", email: "c.moreau@example.com", orders: 2, totalSpend: 234, joined: "2026-03-11", lastOrder: "2026-06-28" },
-  { id: 4, name: "Daniela Ruiz", email: "d.ruiz@example.com", orders: 5, totalSpend: 892, joined: "2025-11-20", lastOrder: "2026-07-01" },
-  { id: 5, name: "James Park", email: "j.park@example.com", orders: 1, totalSpend: 168, joined: "2026-06-01", lastOrder: "2026-06-12" },
-  { id: 6, name: "Amelia Vance", email: "a.vance@example.com", orders: 1, totalSpend: 142, joined: "2026-01-30", lastOrder: "2026-06-25" },
-  { id: 7, name: "Hanna Glass", email: "h.glass@example.com", orders: 1, totalSpend: 114, joined: "2026-04-14", lastOrder: "2026-06-20" },
-  { id: 8, name: "Monica Pierce", email: "m.pierce@example.com", orders: 3, totalSpend: 654, joined: "2025-09-05", lastOrder: "2026-07-02" },
-  { id: 9, name: "Sarah Lin", email: "s.lin@example.com", orders: 1, totalSpend: 84, joined: "2026-05-20", lastOrder: "2026-06-18" },
-  { id: 10, name: "Jessie Davis", email: "j.davis@example.com", orders: 3, totalSpend: 436, joined: "2025-12-10", lastOrder: "2026-06-30" },
-  { id: 11, name: "Thomas Reed", email: "t.reed@example.com", orders: 1, totalSpend: 160, joined: "2026-03-22", lastOrder: "2026-06-24" },
-  { id: 12, name: "Lucia Santos", email: "l.santos@example.com", orders: 1, totalSpend: 315, joined: "2026-02-14", lastOrder: "2026-06-22" },
-];
-
-const SEED_PROMOS: PromoCode[] = [
-  { id: 1, code: "VESTIGIA20", discount: 20, type: "percentage", uses: 47, maxUses: null, active: true, expiry: null },
-  { id: 2, code: "WELCOME10", discount: 10, type: "percentage", uses: 103, maxUses: 200, active: true, expiry: "2026-12-31" },
-  { id: 3, code: "SUMMER15", discount: 15, type: "percentage", uses: 82, maxUses: 100, active: false, expiry: "2026-06-30" },
-  { id: 4, code: "FREESHIP", discount: 15, type: "fixed", uses: 31, maxUses: null, active: true, expiry: null },
-];
 
 const DEFAULT_SETTINGS: StoreSettings = {
   storeName: "VESTIGIA",
@@ -106,6 +72,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
   announcementText: "DESIGNED IN ITALY · MADE IN SRI LANKA",
   announcementEnabled: true,
   shippingThreshold: 150,
+  complimentaryShippingEnabled: true,
   taxRate: 8,
   adminPassword: "admin123",
 };
@@ -132,11 +99,13 @@ interface AdminContextType {
   updateJournalArticle: (a: JournalArticle) => void;
   deleteJournalArticle: (id: number) => void;
   isAuthenticated: boolean;
-  login: (password: string) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
+
+const API_BASE_URL = "http://127.0.0.1:4000/api";
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -145,80 +114,252 @@ function load<T>(key: string, fallback: T): T {
   } catch { return fallback; }
 }
 
-export function AdminProvider({ children }: { children: ReactNode }) {
-  const loadProducts = (): Product[] => {
-    const saved = load<Product[]>("vstigia_adm_products", defaultProducts);
-    const isOld = saved.length !== 3 || saved.some(p => !p.name.startsWith("VESTIGIA"));
-    const productsToUse = isOld ? defaultProducts : saved;
-    return productsToUse.map((product) => {
-      const seeded = defaultProducts.find((item) => item.id === product.id);
-      if (seeded) {
-        return {
-          ...product,
-          name: seeded.name,
-          category: seeded.category,
-          price: seeded.price,
-          compareAt: seeded.compareAt,
-          badge: seeded.badge,
-          colors: seeded.colors,
-          image: seeded.image,
-          images: seeded.images,
-          alt: seeded.alt,
-          sizes: seeded.sizes,
-          description: seeded.description,
-          details: seeded.details,
-          care: seeded.care,
-          sizeChart: seeded.sizeChart,
-        };
-      }
-      return product;
-    });
-  };
+async function apiRequest(path: string, options: RequestInit = {}) {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: isFormData
+      ? { ...(options.headers ?? {}) }
+      : {
+          "Content-Type": "application/json",
+          ...(options.headers ?? {}),
+        },
+    ...options,
+  });
 
-  const [products, setProducts] = useState<Product[]>(() => loadProducts());
-  const [orders, setOrders] = useState<Order[]>(() => load("vstigia_adm_orders", SEED_ORDERS));
-  const [customers] = useState<Customer[]>(() => load("vstigia_adm_customers", SEED_CUSTOMERS));
-  const [promoCodes, setPromoCodes] = useState<PromoCode[]>(() => load("vstigia_adm_promos", SEED_PROMOS));
-  const [settings, setSettings] = useState<StoreSettings>(() => load("vstigia_adm_settings", DEFAULT_SETTINGS));
-  const [journal, setJournal] = useState<JournalArticle[]>(() => load("vstigia_adm_journal", defaultJournal));
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+}
+
+function buildProductFormData(product: any) {
+  const formData = new FormData();
+
+  formData.append("name", String(product.name ?? ""));
+  formData.append("category", String(product.category ?? "Clothing"));
+  formData.append("price", String(product.price ?? 0));
+  formData.append("compareAt", product.compareAt !== undefined && product.compareAt !== null ? String(product.compareAt) : "");
+  formData.append("badge", String(product.badge ?? ""));
+  formData.append("image", String(product.image ?? ""));
+  formData.append("alt", String(product.alt ?? product.name ?? ""));
+  formData.append("description", String(product.description ?? ""));
+  formData.append("sizes", JSON.stringify(product.sizes ?? []));
+  formData.append("colors", JSON.stringify(product.colors ?? []));
+  formData.append("images", JSON.stringify(product.images ?? []));
+  formData.append("details", JSON.stringify(product.details ?? []));
+  formData.append("care", JSON.stringify(product.care ?? []));
+  formData.append("rating", String(product.rating ?? 0));
+  formData.append("sizeChart", product.sizeChart ? JSON.stringify(product.sizeChart) : "");
+
+  if (product.imageFile instanceof File) {
+    formData.append("imageFile", product.imageFile);
+  }
+
+  if (product.inventory) {
+    formData.append("inventory", JSON.stringify(product.inventory));
+  }
+
+  return formData;
+}
+
+export function AdminProvider({ children }: { children: ReactNode }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>(() => ({
+    ...DEFAULT_SETTINGS,
+  }));
+  const [journal, setJournal] = useState<JournalArticle[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => load("vstigia_adm_auth", false));
 
-  useEffect(() => { localStorage.setItem("vstigia_adm_products", JSON.stringify(products)); }, [products]);
-  useEffect(() => { localStorage.setItem("vstigia_adm_orders", JSON.stringify(orders)); }, [orders]);
-  useEffect(() => { localStorage.setItem("vstigia_adm_promos", JSON.stringify(promoCodes)); }, [promoCodes]);
-  useEffect(() => { localStorage.setItem("vstigia_adm_settings", JSON.stringify(settings)); }, [settings]);
-  useEffect(() => { localStorage.setItem("vstigia_adm_journal", JSON.stringify(journal)); }, [journal]);
+  useEffect(() => {
+    const sync = async () => {
+      try {
+        const [
+          remoteProducts,
+          remoteSettings,
+          remoteOrders,
+          remoteCustomers,
+          remotePromos,
+          remoteJournal,
+        ] = await Promise.all([
+          apiRequest("/products"),
+          apiRequest("/settings"),
+          apiRequest("/orders"),
+          apiRequest("/customers"),
+          apiRequest("/promos"),
+          apiRequest("/journal"),
+        ]);
+
+        if (Array.isArray(remoteProducts)) {
+          setProducts(remoteProducts as Product[]);
+        }
+
+        if (remoteSettings) {
+          setSettings(remoteSettings as StoreSettings);
+        }
+
+        if (Array.isArray(remoteOrders)) {
+          setOrders(remoteOrders as Order[]);
+        }
+
+        if (Array.isArray(remoteCustomers)) {
+          setCustomers(remoteCustomers as Customer[]);
+        }
+
+        if (Array.isArray(remotePromos)) {
+          setPromoCodes(remotePromos as PromoCode[]);
+        }
+
+        if (Array.isArray(remoteJournal)) {
+          setJournal(remoteJournal as JournalArticle[]);
+        }
+      } catch {
+        // Keep local fallback if the API is unavailable.
+      }
+    };
+
+    void sync();
+  }, []);
+
   useEffect(() => { localStorage.setItem("vstigia_adm_auth", JSON.stringify(isAuthenticated)); }, [isAuthenticated]);
 
-  const addProduct = (p: Omit<Product, "id">) => setProducts(prev => [...prev, { ...p, id: Math.max(...prev.map(x => x.id), 0) + 1 }]);
-  const updateProduct = (p: Product) => setProducts(prev => prev.map(x => x.id === p.id ? p : x));
-  const deleteProduct = (id: number) => setProducts(prev => prev.filter(x => x.id !== id));
+  const addProduct = (p: Omit<Product, "id">) => {
+    const nextProduct = { ...p, id: Math.max(...products.map((item) => item.id), 0) + 1 };
+    setProducts(prev => [...prev, nextProduct]);
+    void apiRequest("/products", {
+      method: "POST",
+      body: buildProductFormData(nextProduct),
+    }).then((created) => {
+      if (created) {
+        setProducts((prev) => prev.map((item) => (item.id === nextProduct.id ? created as Product : item)));
+      }
+    }).catch(() => undefined);
+  };
+
+  const updateProduct = (p: Product) => {
+    setProducts(prev => prev.map(x => x.id === p.id ? p : x));
+    void apiRequest(`/products/${p.id}`, {
+      method: "PUT",
+      body: buildProductFormData(p),
+    }).catch(() => undefined);
+  };
+
+  const deleteProduct = (id: number) => {
+    setProducts(prev => prev.filter(x => x.id !== id));
+    void apiRequest(`/products/${id}`, { method: "DELETE" }).catch(() => undefined);
+  };
 
   const updateProductInventory = (id: number, inventory: Record<string, number>) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, inventory } : p));
+    const product = products.find((item) => item.id === id);
+    if (product) {
+      void apiRequest(`/products/${id}`, {
+        method: "PUT",
+        body: buildProductFormData({ ...product, inventory }),
+      }).catch(() => undefined);
+    }
   };
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus) =>
+  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    void apiRequest(`/orders/${orderId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    }).catch(() => undefined);
+  };
 
-  const addPromoCode = (p: Omit<PromoCode, "id" | "uses">) =>
-    setPromoCodes(prev => [...prev, { ...p, id: Math.max(...prev.map(x => x.id), 0) + 1, uses: 0 }]);
-  const togglePromoCode = (id: number) => setPromoCodes(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
-  const deletePromoCode = (id: number) => setPromoCodes(prev => prev.filter(p => p.id !== id));
+  const addPromoCode = (p: Omit<PromoCode, "id" | "uses">) => {
+    void apiRequest("/promos", {
+      method: "POST",
+      body: JSON.stringify(p),
+    }).then((created) => {
+      if (created) {
+        setPromoCodes((prev) => [...prev, created as PromoCode]);
+      }
+    }).catch(() => undefined);
+  };
 
-  const updateSettings = (s: StoreSettings) => setSettings(s);
+  const togglePromoCode = (id: number) => {
+    const promo = promoCodes.find((item) => item.id === id);
+    if (!promo) return;
+
+    const nextPromo = { ...promo, active: !promo.active };
+    setPromoCodes((prev) => prev.map((item) => (item.id === id ? nextPromo : item)));
+    void apiRequest(`/promos/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(nextPromo),
+    }).catch(() => undefined);
+  };
+
+  const deletePromoCode = (id: number) => {
+    setPromoCodes(prev => prev.filter(p => p.id !== id));
+    void apiRequest(`/promos/${id}`, { method: "DELETE" }).catch(() => undefined);
+  };
+
+  const updateSettings = (s: StoreSettings) => {
+    setSettings(s);
+    void apiRequest("/settings", {
+      method: "PUT",
+      body: JSON.stringify(s),
+    }).catch(() => undefined);
+  };
 
   const addJournalArticle = (a: Omit<JournalArticle, "id">) =>
-    setJournal(prev => [{ ...a, id: Math.max(...prev.map(x => x.id), 0) + 1 }, ...prev]);
-  const updateJournalArticle = (a: JournalArticle) => setJournal(prev => prev.map(x => x.id === a.id ? a : x));
-  const deleteJournalArticle = (id: number) => setJournal(prev => prev.filter(x => x.id !== id));
+    void apiRequest("/journal", {
+      method: "POST",
+      body: JSON.stringify(a),
+    }).then((created) => {
+      if (created) {
+        setJournal((prev) => [created as JournalArticle, ...prev]);
+      }
+    }).catch(() => undefined);
 
-  const login = (pwd: string) => {
-    if (pwd === settings.adminPassword || pwd === DEFAULT_SETTINGS.adminPassword) {
-      setIsAuthenticated(true);
-      return true;
+  const updateJournalArticle = (a: JournalArticle) => {
+    setJournal(prev => prev.map(x => x.id === a.id ? a : x));
+    void apiRequest(`/journal/${a.id}`, {
+      method: "PUT",
+      body: JSON.stringify(a),
+    }).catch(() => undefined);
+  };
+
+  const deleteJournalArticle = (id: number) => {
+    setJournal(prev => prev.filter(x => x.id !== id));
+    void apiRequest(`/journal/${id}`, { method: "DELETE" }).catch(() => undefined);
+  };
+
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      if (data?.success) {
+        setIsAuthenticated(true);
+        return true;
+      }
+
+      return false;
+    } catch {
+      if (username === "admin" && (password === settings.adminPassword || password === DEFAULT_SETTINGS.adminPassword)) {
+        setIsAuthenticated(true);
+        return true;
+      }
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
