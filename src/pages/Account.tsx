@@ -88,6 +88,11 @@ export default function Account() {
     },
   ];
 
+  const getProductImageByName = (name: string) => {
+    const matched = products.find(p => p.name.toLowerCase() === name.toLowerCase());
+    return matched?.image || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=80&q=80";
+  };
+
   const handleMoveToCart = (product: Product) => {
     // If it has sizes, prompt to go to PDP, or just use the first available size by default
     const size = product.sizes[0] || "OS";
@@ -163,18 +168,21 @@ export default function Account() {
                           <span className="order-date-span">Placed on {order.date}</span>
                         </div>
                         <div className="order-badge-and-price">
-                          <span className="order-status-badge">{order.status}</span>
+                          <span className={`order-status-badge status-${order.status.toLowerCase()}`}>{order.status}</span>
                           <strong>{money(order.total)}</strong>
                         </div>
                       </div>
                       <div className="order-card-items">
                         {order.items.map((item, idx) => (
                           <div key={idx} className="order-card-item-row">
-                            <div>
-                              <h4>{item.name}</h4>
-                              <p>Size: {item.size} | Color: <span className="variant-color-dot" style={{ backgroundColor: item.color }} /></p>
+                            <div className="order-card-item-info">
+                              <img src={getProductImageByName(item.name)} alt={item.name} className="order-item-thumbnail" />
+                              <div>
+                                <h4>{item.name}</h4>
+                                <p>Size: {item.size} | Color: <span className="variant-color-dot" style={{ backgroundColor: item.color }} /></p>
+                              </div>
                             </div>
-                            <span>{money(item.price)}</span>
+                            <span className="order-item-price">{money(item.price)}</span>
                           </div>
                         ))}
                       </div>

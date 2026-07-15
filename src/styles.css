@@ -3137,13 +3137,48 @@ img {
   gap: 14px;
 }
 .order-status-badge {
-  background: #e1f5fe;
-  color: #0288d1;
-  font-size: 0.72rem;
-  font-weight: 800;
+  font-size: 0.68rem;
+  font-weight: 600;
   text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 999px;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: inline-block;
+}
+.order-status-badge.status-delivered {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.order-status-badge.status-shipped {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+.order-status-badge.status-processing,
+.order-status-badge.status-pending {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+.order-status-badge.status-cancelled {
+  background: #ffebee;
+  color: #c62828;
+}
+.order-card-item-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.order-item-thumbnail {
+  width: 48px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #fbfbfa;
+  border: 1px solid #eaeaea;
+}
+.order-item-price {
+  font-weight: 600;
+  color: #171412;
+  font-size: 0.88rem;
 }
 .order-card-items {
   padding: 20px;
