@@ -322,7 +322,7 @@ function CheckoutContent() {
         </div>
       </header>
 
-      <div className="checkout-container">
+      <div className={`checkout-container ${step === "success" ? "success-mode" : ""}`}>
         
         {/* Left Column: Form steps */}
         <div className="checkout-main-content">
