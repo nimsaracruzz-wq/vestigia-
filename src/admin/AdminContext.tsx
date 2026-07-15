@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import {
+  products as initialProducts,
+  journalArticles as initialJournal,
   type Product,
   type JournalArticle,
 } from "../data";
@@ -168,14 +170,14 @@ function buildProductFormData(product: any) {
 }
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => initialProducts);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [settings, setSettings] = useState<StoreSettings>(() => ({
     ...DEFAULT_SETTINGS,
   }));
-  const [journal, setJournal] = useState<JournalArticle[]>([]);
+  const [journal, setJournal] = useState<JournalArticle[]>(() => initialJournal);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => load("vstigia_adm_auth", false));
 
   useEffect(() => {
