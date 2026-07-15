@@ -666,7 +666,7 @@ function CheckoutContent() {
                   <div className="success-icon-wrapper">
                     <CheckCircle2 size={32} className="success-icon-svg" />
                   </div>
-                  <h1>Grazie, {shippingForm.firstName}.</h1>
+                  <h1>Thank you, {shippingForm.firstName}.</h1>
                   <p className="success-subheading">Your order is confirmed and is now being processed.</p>
                   <p className="order-number-receipt">Receipt ID: <strong>{orderNumber}</strong></p>
                 </div>
