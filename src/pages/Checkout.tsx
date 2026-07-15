@@ -11,6 +11,15 @@ import { useUser } from "../context/UserContext";
 // Initialize Stripe (using test key)
 const stripePromise = loadStripe("pk_test_51234567890123456789012345678901234567890123");
 
+const getColorName = (hex: string) => {
+  const mapping: Record<string, string> = {
+    "#f3eedf": "IVORY",
+    "#1c1a1a": "CHARCOAL",
+    "#8b8882": "STONE GREY",
+  };
+  return mapping[hex.toLowerCase()] || hex.toUpperCase();
+};
+
 // Countries list
 const COUNTRIES = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina", "Armenia", "Australia",
@@ -97,6 +106,16 @@ function CheckoutContent() {
   const [shippingMethodSelected, setShippingMethodSelected] = useState<"standard" | "express">("standard");
   const [checkoutMode, setCheckoutMode] = useState<"guest" | "createAccount" | null>(null);
   const [checkoutPromptError, setCheckoutPromptError] = useState("");
+  
+  const [successCart, setSuccessCart] = useState<any[]>([]);
+  const [receiptSummary, setReceiptSummary] = useState({
+    subtotal: 0,
+    discount: 0,
+    shipping: 0,
+    tax: 0,
+    total: 0,
+    promoCode: ""
+  });
 
   const PHONE_COUNTRY_OPTIONS: PhoneCountryOption[] = [
     { country: "United States", iso: "US", dialCode: "+1", flag: "🇺🇸" },
@@ -258,6 +277,17 @@ function CheckoutContent() {
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Save items and calculations for success screen before clearing
+      setSuccessCart([...cart]);
+      setReceiptSummary({
+        subtotal: cartTotalBeforeDiscount,
+        discount: discountAmount,
+        shipping: activeShippingCost,
+        tax: taxCost,
+        total: activeGrandTotal,
+        promoCode: promoCode || ""
+      });
+
       // Generate random order number
       const randomOrder = "VEST-" + Math.floor(100000 + Math.random() * 900000);
       setOrderNumber(randomOrder);
@@ -628,35 +658,161 @@ function CheckoutContent() {
               <motion.section
                 key="success"
                 className="checkout-success-view"
-                initial={{ scale: 0.98, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", duration: 0.4 }}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
               >
-                <div className="success-icon-wrapper">
-                  <CheckCircle2 size={40} className="success-icon-svg" />
+                <div className="success-hero-section">
+                  <div className="success-icon-wrapper">
+                    <CheckCircle2 size={32} className="success-icon-svg" />
+                  </div>
+                  <h1>Grazie, {shippingForm.firstName}.</h1>
+                  <p className="success-subheading">Your order is confirmed and is now being processed.</p>
+                  <p className="order-number-receipt">Receipt ID: <strong>{orderNumber}</strong></p>
                 </div>
-                <h1>Order confirmed</h1>
-                <p className="order-number-receipt">Receipt ID: <strong>{orderNumber}</strong></p>
-                <p className="success-thank-you-paragraph">
-                  Thank you for placing your order with Vestigia. A confirmation containing receipt details and updates has been sent to{" "}
-                  <strong>{shippingForm.email || "your email address"}</strong>.
-                </p>
 
-                <div className="order-timeline-card">
-                  <Truck size={18} className="timeline-icon" />
-                  <div>
-                    <h4>Delivery timeframe</h4>
-                    <p>
-                      {shippingMethodSelected === "express"
-                        ? "Expected delivery: 1-2 business days"
-                        : "Expected delivery: 3-5 business days"}
-                    </p>
+                <div className="success-details-layout">
+                  {/* Left Column: Tracking and Info */}
+                  <div className="success-info-col">
+                    {/* Status Timeline */}
+                    <div className="success-card timeline-card">
+                      <h3>Order Status</h3>
+                      <div className="status-timeline">
+                        <div className="timeline-step completed">
+                          <div className="timeline-marker">
+                            <span className="dot"></span>
+                          </div>
+                          <div className="timeline-content">
+                            <h4>Order Confirmed</h4>
+                            <p>We've received your order and payment.</p>
+                          </div>
+                        </div>
+                        <div className="timeline-step active">
+                          <div className="timeline-marker">
+                            <span className="dot"></span>
+                          </div>
+                          <div className="timeline-content">
+                            <h4>Processing</h4>
+                            <p>Preparing items for dispatch.</p>
+                          </div>
+                        </div>
+                        <div className="timeline-step upcoming">
+                          <div className="timeline-marker">
+                            <span className="dot"></span>
+                          </div>
+                          <div className="timeline-content">
+                            <h4>Shipped</h4>
+                            <p>Expected delivery: {shippingMethodSelected === "express" ? "1-2" : "3-5"} business days.</p>
+                          </div>
+                        </div>
+                        <div className="timeline-step upcoming">
+                          <div className="timeline-marker">
+                            <span className="dot"></span>
+                          </div>
+                          <div className="timeline-content">
+                            <h4>Delivered</h4>
+                            <p>Arrival at your address.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery & Billing Details Grid */}
+                    <div className="success-card details-grid-card">
+                      <h3>Delivery Details</h3>
+                      <div className="details-grid">
+                        <div className="grid-item">
+                          <span>Shipping Address</span>
+                          <p>
+                            {shippingForm.firstName} {shippingForm.lastName}<br />
+                            {shippingForm.address}<br />
+                            {shippingForm.city}, {shippingForm.state} {shippingForm.zip}<br />
+                            {shippingForm.country}
+                          </p>
+                        </div>
+                        <div className="grid-item">
+                          <span>Delivery Method</span>
+                          <p>
+                            {shippingMethodSelected === "express" ? "Express Delivery" : "Standard Delivery"}<br />
+                            Est: {shippingMethodSelected === "express" ? "1-2 business days" : "3-5 business days"}
+                          </p>
+                        </div>
+                        <div className="grid-item">
+                          <span>Contact Info</span>
+                          <p>
+                            {shippingForm.email}<br />
+                            {shippingForm.phone}
+                          </p>
+                        </div>
+                        <div className="grid-item">
+                          <span>Payment Method</span>
+                          <p>
+                            Credit Card<br />
+                            ending in **** (Secure)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Order Items Summary & Totals */}
+                  <div className="success-summary-col">
+                    <div className="success-card items-summary-card">
+                      <h3>Purchased Items ({successCart.reduce((sum, item) => sum + item.quantity, 0)})</h3>
+                      <div className="purchased-items-list">
+                        {successCart.map((item, idx) => (
+                          <div key={idx} className="purchased-item-card">
+                            <img src={item.product.image} alt={item.product.alt} className="item-thumbnail" />
+                            <div className="item-meta">
+                              <h4>{item.product.name}</h4>
+                              <p className="item-variant">
+                                {item.selectedSize !== "OS" && `Size: ${item.selectedSize}`}
+                                {item.selectedSize !== "OS" && item.selectedColor && " / "}
+                                {item.selectedColor && `Color: ${getColorName(item.selectedColor)}`}
+                              </p>
+                              <span className="item-qty">Qty: {item.quantity}</span>
+                            </div>
+                            <span className="item-price">{money(item.product.price * item.quantity)}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="receipt-calculation-breakdown">
+                        <div className="calc-row">
+                          <span>Subtotal</span>
+                          <span>{money(receiptSummary.subtotal)}</span>
+                        </div>
+                        {receiptSummary.discount > 0 && (
+                          <div className="calc-row discount">
+                            <span>Discount ({receiptSummary.promoCode})</span>
+                            <span>-{money(receiptSummary.discount)}</span>
+                          </div>
+                        )}
+                        <div className="calc-row">
+                          <span>Shipping</span>
+                          <span>{receiptSummary.shipping === 0 ? "Complimentary" : money(receiptSummary.shipping)}</span>
+                        </div>
+                        <div className="calc-row">
+                          <span>Taxes (8%)</span>
+                          <span>{money(receiptSummary.tax)}</span>
+                        </div>
+                        <div className="calc-row grand-total-row">
+                          <span>Total Paid</span>
+                          <strong>{money(receiptSummary.total)}</strong>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <Link to="/shop" className="success-back-home-btn">
-                  Continue Shopping <ArrowRight size={14} />
-                </Link>
+                <div className="success-action-buttons">
+                  <Link to="/shop" className="btn-primary-success">
+                    Continue Shopping
+                  </Link>
+                  <button type="button" onClick={() => window.print()} className="btn-secondary-success">
+                    Print Receipt
+                  </button>
+                </div>
               </motion.section>
             )}
           </AnimatePresence>
