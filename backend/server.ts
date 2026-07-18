@@ -849,6 +849,18 @@ app.get('/api/products', async (_req, res) => {
   }
 });
 
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    res.json({ url: `/uploads/${req.file.filename}` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
 app.post('/api/products', upload.single('imageFile'), async (req, res) => {
   try {
     const payload = getProductPayload(req.body, req.file ?? undefined);

@@ -31,9 +31,92 @@ function buildEmptySizeChart(): SizeChart {
 }
 
 export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState(initialData?.image || "");
+  const [photos, setPhotos] = useState<string[]>(() => {
+    const list: string[] = [];
+    if (initialData?.image) list.push(initialData.image);
+    if (initialData?.images) {
+      initialData.images.forEach(img => {
+        if (img && !list.includes(img)) {
+          list.push(img);
+        }
+      });
+    }
+    return list.slice(0, 6);
+  });
+  const [mainPhoto, setMainPhoto] = useState<string>(initialData?.image || "");
+  const [isUploading, setIsUploading] = useState(false);
   const [imageError, setImageError] = useState("");
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (photos.length >= 6) {
+      setImageError("Maximum 6 photos allowed.");
+      return;
+    }
+
+    setIsUploading(true);
+    setImageError("");
+
+    try {
+      const data = new FormData();
+      data.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: data
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      const resJson = await response.json();
+      const uploadedUrl = resJson.url;
+
+      setPhotos(prev => {
+        const next = [...prev, uploadedUrl];
+        if (!mainPhoto) {
+          setMainPhoto(uploadedUrl);
+        }
+        return next;
+      });
+    } catch (err: any) {
+      console.error(err);
+      setImageError("Error uploading image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const movePhoto = (index: number, direction: "left" | "right") => {
+    setPhotos(prev => {
+      const next = [...prev];
+      const targetIndex = direction === "left" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => {
+      const removedUrl = prev[index];
+      const next = prev.filter((_, i) => i !== index);
+      if (mainPhoto === removedUrl) {
+        setMainPhoto(next[0] || "");
+      }
+      return next;
+    });
+  };
+
+  const setAsMain = (url: string) => {
+    setMainPhoto(url);
+  };
 
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
@@ -55,18 +138,6 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   const [sizeChart, setSizeChart] = useState<SizeChart>(
     initialData?.sizeChart ?? buildEmptySizeChart()
   );
-
-  useEffect(() => {
-    if (!imageFile) {
-      setImagePreview(formData.image);
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(imageFile);
-    setImagePreview(previewUrl);
-
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [imageFile, formData.image]);
 
   // ── form field changes ──────────────────────────────────────────────────
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -158,10 +229,12 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   // ── submit ──────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imageFile && !formData.image.trim()) {
-      setImageError("Please upload a product image.");
+    if (photos.length === 0) {
+      setImageError("Please upload at least one product photo.");
       return;
     }
+
+    const primaryImage = mainPhoto || photos[0];
 
     setImageError("");
     onSubmit({
@@ -170,7 +243,8 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       compareAt: formData.compareAt ? Number(formData.compareAt) : undefined,
       sizes: formData.sizes.split(",").map(s => s.trim()).filter(Boolean),
       colors: formData.colors.split(",").map(c => c.trim()).filter(Boolean),
-      images: initialData?.images || [formData.image],
+      image: primaryImage,
+      images: photos,
       alt: formData.alt || formData.name,
       details: initialData?.details || [],
       care: initialData?.care || [],
@@ -178,7 +252,6 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       reviews: initialData?.reviews || [],
       id: initialData?.id,
       sizeChart: hasSizeChart ? sizeChart : undefined,
-      imageFile,
     });
   };
 
@@ -216,22 +289,176 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         </div>
       </div>
 
-      <div className="admin-form-group">
-        <label>Product Image</label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files?.[0] ?? null;
-            setImageFile(file);
-          }}
-        />
-        {imagePreview && (
-          <div className="admin-image-preview">
-            <img src={imagePreview} alt="Product preview" />
-          </div>
-        )}
-        {imageError && <span className="error-text">{imageError}</span>}
+      <div className="admin-form-group" style={{ marginBottom: "24px" }}>
+        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+          Product Photos (Max 6, Reorder & Select Main)
+        </label>
+        
+        {/* Photos Grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+          gap: "14px",
+          marginBottom: "12px"
+        }}>
+          {photos.map((url, index) => {
+            const isMain = url === mainPhoto;
+            return (
+              <div key={index} style={{
+                position: "relative",
+                border: isMain ? "2px solid #111" : "1px solid #ddd",
+                borderRadius: "8px",
+                padding: "4px",
+                background: "#fff",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center"
+              }}>
+                <img
+                  src={url}
+                  alt={`Product pic ${index + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "120px",
+                    objectFit: "cover",
+                    borderRadius: "6px",
+                    marginBottom: "6px"
+                  }}
+                />
+                
+                {/* Main badge */}
+                {isMain && (
+                  <span style={{
+                    position: "absolute",
+                    top: "10px",
+                    left: "10px",
+                    background: "#111",
+                    color: "#fff",
+                    fontSize: "9px",
+                    fontWeight: "700",
+                    padding: "3px 6px",
+                    borderRadius: "4px",
+                    textTransform: "uppercase"
+                  }}>
+                    Main
+                  </span>
+                )}
+
+                {/* Actions overlay / bottom */}
+                <div style={{
+                  display: "flex",
+                  width: "100%",
+                  justifyContent: "space-between",
+                  gap: "4px"
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setAsMain(url)}
+                    disabled={isMain}
+                    style={{
+                      flex: 1,
+                      fontSize: "9px",
+                      padding: "4px 2px",
+                      background: isMain ? "#eee" : "#111",
+                      color: isMain ? "#888" : "#fff",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: isMain ? "not-allowed" : "pointer",
+                      fontWeight: "600"
+                    }}
+                  >
+                    Main
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(index)}
+                    style={{
+                      padding: "4px 6px",
+                      background: "#fee2e2",
+                      color: "#dc2626",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer"
+                    }}
+                    title="Delete photo"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+
+                {/* Move controls */}
+                <div style={{
+                  display: "flex",
+                  width: "100%",
+                  marginTop: "6px",
+                  gap: "4px"
+                }}>
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => movePhoto(index, "left")}
+                    style={{
+                      flex: 1,
+                      fontSize: "9px",
+                      padding: "3px",
+                      background: "#f3f4f6",
+                      border: "1px solid #ddd",
+                      borderRadius: "4px",
+                      cursor: index === 0 ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === photos.length - 1}
+                    onClick={() => movePhoto(index, "right")}
+                    style={{
+                      flex: 1,
+                      fontSize: "9px",
+                      padding: "3px",
+                      background: "#f3f4f6",
+                      border: "1px solid #ddd",
+                      borderRadius: "4px",
+                      cursor: index === photos.length - 1 ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Upload slot (if < 6 photos) */}
+          {photos.length < 6 && (
+            <label style={{
+              border: "2px dashed #ccc",
+              borderRadius: "8px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "195px",
+              cursor: isUploading ? "wait" : "pointer",
+              background: "#fafafa"
+            }}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                style={{ display: "none" }}
+              />
+              <Plus size={20} color="#888" />
+              <span style={{ fontSize: "11px", color: "#666", marginTop: "6px" }}>
+                {isUploading ? "Uploading..." : "Add Photo"}
+              </span>
+            </label>
+          )}
+        </div>
+        
+        {imageError && <span className="error-text" style={{ color: "#dc2626", fontSize: "12px" }}>{imageError}</span>}
       </div>
 
       <div className="admin-form-group">
