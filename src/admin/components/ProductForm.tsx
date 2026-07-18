@@ -9,6 +9,7 @@ interface ProductFormProps {
 }
 
 const DEFAULT_COLUMNS = ["Size", "Chest", "Waist", "Length"];
+const API_BASE_URL = "http://127.0.0.1:4000/api";
 
 const normalizeColumnKey = (label: string) =>
   label.trim().toLowerCase().replace(/\s+/g, "_");
@@ -63,7 +64,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       const data = new FormData();
       data.append("file", file);
 
-      const response = await fetch("/api/upload", {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
         body: data
       });
