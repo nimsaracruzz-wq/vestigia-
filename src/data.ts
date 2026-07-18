@@ -44,6 +44,9 @@ export type Product = {
   reviews: Review[];
   inventory?: Record<string, number>; // Format: "color_size" -> quantity
   sizeChart?: SizeChart;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
 };
 
 export type Collection = {

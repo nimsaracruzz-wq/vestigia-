@@ -1,4 +1,5 @@
 import 'dotenv/config';
+// Force reload to load updated Prisma client types
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -7,6 +8,16 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import multer from 'multer';
 import { products as seedProducts } from './data.ts';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { sendPasswordResetEmail, sendOtpEmail, sendOrderConfirmationEmail, sendOrderStatusEmail } from './utils/mailer.ts';
+import Stripe from 'stripe';
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
+
 
 const app = express();
 const adapter = new PrismaBetterSqlite3({ url: './dev.db' });
@@ -86,6 +97,9 @@ const serializeProduct = (product: {
   details: string;
   care: string;
   rating: number;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoKeywords?: string | null;
   reviews?: Array<{ id: number; author: string; rating: number; date: string; comment: string; status: string }>;
   inventory?: Array<{ color: string; size: string; stock: number }>;
 }) => ({
@@ -103,8 +117,10 @@ const serializeProduct = (product: {
 
 const serializeOrder = (order: {
   id: string;
+  invoiceNumber?: string | null;
   customer: string;
   email: string;
+  phone?: string | null;
   date: string;
   status: string;
   subtotal: number;
@@ -112,6 +128,10 @@ const serializeOrder = (order: {
   tax: number;
   total: number;
   address: string;
+  notes?: string | null;
+  trackingNumber?: string | null;
+  courier?: string | null;
+  stripePaymentIntentId?: string | null;
   items: Array<{
     productId: number;
     productName: string;
@@ -123,16 +143,68 @@ const serializeOrder = (order: {
   }>;
 }) => order;
 
-const serializeCustomer = (customer: {
-  id: number;
-  name: string;
-  email: string;
-  orders: number;
-  totalSpend: number;
-  joined: string;
-  lastOrder: string | null;
-}) => ({
-  ...customer,
+async function processStripeRefund(order: { id: string; total: number; stripePaymentIntentId?: string | null; notes?: string | null }) {
+  const paymentIntentId = order.stripePaymentIntentId;
+  if (!paymentIntentId) {
+    console.log(`[Stripe Refund] No Stripe transaction ID found for order ${order.id}. Skipping API call.`);
+    return { success: false, error: 'No Stripe transaction ID found on order.' };
+  }
+
+  console.log(`[Stripe Refund] Initiating refund for order ${order.id} (Transaction: ${paymentIntentId}) for amount: €${order.total}`);
+
+  // If it's a mock ID, process as mock success
+  if (paymentIntentId.startsWith('pi_mock_')) {
+    console.log(`[Stripe Refund MOCK] Successfully processed mock refund for ${paymentIntentId} (Amount: €${order.total})`);
+    return { success: true, mock: true };
+  }
+
+  // If Stripe is not initialized, mock it but log warning
+  if (!stripe) {
+    console.warn(`[Stripe Refund WARNING] Stripe secret key not configured, but transaction ${paymentIntentId} is not mock. Falling back to mock refund.`);
+    return { success: true, mock: true };
+  }
+
+  try {
+    const refund = await stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      amount: Math.round(order.total * 100), // Stripe expects cents
+    });
+    console.log(`[Stripe Refund SUCCESS] Stripe Refund created: ${refund.id}`);
+    return { success: true, refundId: refund.id, mock: false };
+  } catch (error: any) {
+    console.error(`[Stripe Refund ERROR] Stripe refund failed:`, error.message || error);
+    return { success: false, error: error.message || String(error) };
+  }
+}
+
+
+// ─── Sequential Order Number Generator ────────────────────────────────────────
+async function generateOrderId(): Promise<{ orderId: string; invoiceNumber: string }> {
+  const year = new Date().getFullYear();
+  const counter = await prisma.orderCounter.upsert({
+    where: { id: 1 },
+    update: {
+      count: { increment: 1 },
+      year,
+    },
+    create: { id: 1, year, count: 1 },
+  });
+  // Reset count if year changed
+  const count = counter.year === year ? counter.count : 1;
+  const padded = String(count).padStart(4, '0');
+  return {
+    orderId: `VST-${year}-${padded}`,
+    invoiceNumber: `INV-${year}-${padded}`,
+  };
+}
+
+const serializeCustomer = (customer: any) => ({
+  id: customer.id,
+  name: customer.name,
+  email: customer.email,
+  orders: customer.orders,
+  totalSpend: customer.totalSpend,
+  joined: customer.joined,
   lastOrder: customer.lastOrder ?? customer.joined,
 });
 
@@ -178,6 +250,9 @@ const mapProductInput = (body: any) => ({
     ? (typeof body.sizeChart === 'string' ? body.sizeChart : JSON.stringify(body.sizeChart))
     : null,
   rating: Number(body.rating ?? 0),
+  seoTitle: body.seoTitle ? String(body.seoTitle) : null,
+  seoDescription: body.seoDescription ? String(body.seoDescription) : null,
+  seoKeywords: body.seoKeywords ? String(body.seoKeywords) : null,
 });
 
 const parseInventoryField = (value: unknown) => {
@@ -243,6 +318,9 @@ const getProductPayload = (body: any, file?: Express.Multer.File) => ({
   care: parseArrayField(body.care),
   sizeChart: body.sizeChart,
   rating: body.rating,
+  seoTitle: body.seoTitle,
+  seoDescription: body.seoDescription,
+  seoKeywords: body.seoKeywords,
 });
 
 const syncInventory = async (productId: number, inventory: Record<string, number> | undefined) => {
@@ -341,6 +419,347 @@ const seedDatabase = async () => {
   }
 };
 
+const serializeCustomerProfile = (customer: any) => {
+  if (!customer) return null;
+  return {
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone ?? '',
+    addresses: parseJson<any[]>(customer.addresses, []),
+    orders: customer.orders,
+    totalSpend: customer.totalSpend,
+    joined: customer.joined,
+    lastOrder: customer.lastOrder ?? customer.joined,
+  };
+};
+
+const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({ error: 'Authentication token required' });
+    return;
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'vestigia_jwt_secret_token_key_12345!', (err: any, decoded: any) => {
+    if (err) {
+      res.status(403).json({ error: 'Invalid or expired token' });
+      return;
+    }
+    (req as any).user = decoded;
+    next();
+  });
+};
+
+// --- CUSTOMER PORTAL AUTHENTICATION & MANAGEMENT ---
+app.post('/api/customers/register', async (req, res) => {
+  try {
+    const { name, email, password, phone } = req.body ?? {};
+    if (!name || !email || !password) {
+      res.status(400).json({ error: 'Name, email and password are required' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if customer already exists
+    const existing = await prisma.customer.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      if (existing.password) {
+        res.status(400).json({ error: 'A customer with this email is already registered' });
+        return;
+      }
+      
+      // If customer exists from a guest checkout, complete registration by setting password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const updated = await prisma.customer.update({
+        where: { email: normalizedEmail },
+        data: {
+          name,
+          password: hashedPassword,
+          phone: phone || existing.phone,
+        },
+      });
+
+      const token = jwt.sign({ id: updated.id, email: updated.email }, process.env.JWT_SECRET || 'vestigia_jwt_secret_token_key_12345!', { expiresIn: '7d' });
+      res.status(200).json({ token, user: serializeCustomerProfile(updated) });
+      return;
+    }
+
+    // Create new customer
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const created = await prisma.customer.create({
+      data: {
+        name,
+        email: normalizedEmail,
+        password: hashedPassword,
+        phone: phone || '',
+        joined: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        addresses: JSON.stringify([]),
+      },
+    });
+
+    const token = jwt.sign({ id: created.id, email: created.email }, process.env.JWT_SECRET || 'vestigia_jwt_secret_token_key_12345!', { expiresIn: '7d' });
+    res.status(201).json({ token, user: serializeCustomerProfile(created) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+app.post('/api/customers/login', async (req, res) => {
+  try {
+    const { email, password } = req.body ?? {};
+    if (!email || !password) {
+      res.status(400).json({ error: 'Email and password are required' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const customer = await prisma.customer.findUnique({ where: { email: normalizedEmail } });
+    if (!customer || !customer.password) {
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+
+    const isMatch = await bcrypt.compare(password, customer.password);
+    if (!isMatch) {
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+
+    const token = jwt.sign({ id: customer.id, email: customer.email }, process.env.JWT_SECRET || 'vestigia_jwt_secret_token_key_12345!', { expiresIn: '7d' });
+    res.json({ token, user: serializeCustomerProfile(customer) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+app.get('/api/customers/profile', authenticateToken, async (req, res) => {
+  try {
+    const userPayload = (req as any).user;
+    const customer = await prisma.customer.findUnique({ where: { id: userPayload.id } });
+    if (!customer) {
+      res.status(404).json({ error: 'Customer not found' });
+      return;
+    }
+    res.json(serializeCustomerProfile(customer));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to retrieve profile' });
+  }
+});
+
+app.put('/api/customers/profile', authenticateToken, async (req, res) => {
+  try {
+    const userPayload = (req as any).user;
+    const { name, phone, addresses } = req.body ?? {};
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+    if (addresses !== undefined) {
+      updateData.addresses = typeof addresses === 'string' ? addresses : JSON.stringify(addresses);
+    }
+
+    const updated = await prisma.customer.update({
+      where: { id: userPayload.id },
+      data: updateData,
+    });
+
+    res.json(serializeCustomerProfile(updated));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+app.put('/api/customers/change-password', authenticateToken, async (req, res) => {
+  try {
+    const userPayload = (req as any).user;
+    const { oldPassword, newPassword } = req.body ?? {};
+    if (!oldPassword || !newPassword) {
+      res.status(400).json({ error: 'Current password and new password are required' });
+      return;
+    }
+
+    const customer = await prisma.customer.findUnique({ where: { id: userPayload.id } });
+    if (!customer || !customer.password) {
+      res.status(404).json({ error: 'Customer not found' });
+      return;
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, customer.password);
+    if (!isMatch) {
+      res.status(400).json({ error: 'Incorrect current password' });
+      return;
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.customer.update({
+      where: { id: userPayload.id },
+      data: { password: hashedNewPassword },
+    });
+
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+app.post('/api/customers/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body ?? {};
+    if (!email) {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const customer = await prisma.customer.findUnique({ where: { email: normalizedEmail } });
+
+    if (!customer) {
+      res.json({ success: true, message: 'Password reset instructions have been logged.' });
+      return;
+    }
+
+    const token = crypto.randomBytes(20).toString('hex');
+    const expiry = String(Date.now() + 3600000); // 1 hour
+
+    await prisma.customer.update({
+      where: { email: normalizedEmail },
+      data: {
+        resetToken: token,
+        resetTokenExpiry: expiry,
+      },
+    });
+
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/account?token=${token}`;
+    try {
+      await sendPasswordResetEmail(normalizedEmail, resetLink);
+    } catch (mailError) {
+      console.error('Error sending password reset email:', mailError);
+      console.log(`\n=== FALLBACK PASSWORD RESET LINK (EMAIL FAILED) FOR ${normalizedEmail} ===`);
+      console.log(resetLink);
+      console.log(`============================================================\n`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Password reset instructions have been sent.',
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to generate reset link' });
+  }
+});
+
+app.post('/api/customers/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body ?? {};
+    if (!token || !password) {
+      res.status(400).json({ error: 'Token and new password are required' });
+      return;
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: { resetToken: token },
+    });
+
+    if (!customer || !customer.resetTokenExpiry) {
+      res.status(400).json({ error: 'Invalid or expired reset token' });
+      return;
+    }
+
+    const expiry = Number(customer.resetTokenExpiry);
+    if (Date.now() > expiry) {
+      res.status(400).json({ error: 'Reset token has expired' });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
+
+    res.json({ success: true, message: 'Password reset successful. You can now log in.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// ── Send OTP ──────────────────────────────────────────────────────────────────
+app.post('/api/customers/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body ?? {};
+    if (!email) {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const customer = await prisma.customer.findUnique({ where: { email: normalizedEmail } });
+    if (!customer) {
+      // Return success to avoid user enumeration
+      res.json({ success: true, message: 'If an account exists, a code has been sent.' });
+      return;
+    }
+
+    // Generate a 6-digit OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiry = String(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await prisma.customer.update({
+      where: { email: normalizedEmail },
+      data: { resetToken: otp, resetTokenExpiry: expiry },
+    });
+
+    try {
+      await sendOtpEmail(normalizedEmail, otp, 10);
+    } catch (mailErr) {
+      console.error('OTP email failed:', mailErr);
+      console.log(`\n=== FALLBACK OTP FOR ${normalizedEmail}: ${otp} ===\n`);
+    }
+
+    res.json({ success: true, message: 'If an account exists, a code has been sent.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
+});
+
+app.get('/api/customers/orders', authenticateToken, async (req, res) => {
+  try {
+    const userPayload = (req as any).user;
+    const customer = await prisma.customer.findUnique({ where: { id: userPayload.id } });
+    if (!customer) {
+      res.status(404).json({ error: 'Customer not found' });
+      return;
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { email: customer.email },
+      include: { items: true },
+      orderBy: { date: 'desc' },
+    });
+
+    res.json(orders);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to retrieve orders' });
+  }
+});
+
 // --- AUTHENTICATION ---
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
@@ -354,6 +773,61 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // --- PRODUCTS ---
+app.get('/api/products/google-feed', async (req, res) => {
+  try {
+    const dbProducts = await prisma.product.findMany({
+      include: { inventory: true }
+    });
+
+    const host = req.get('host') || 'localhost:4000';
+    const protocol = req.protocol || 'http';
+    const baseUrl = `${protocol}://${host}`;
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+  <channel>
+    <title>Vestigia Product Feed</title>
+    <link>${baseUrl}</link>
+    <description>Google Shopping Feed for Vestigia - Refined Apparel</description>
+`;
+
+    for (const product of dbProducts) {
+      const pUrl = `${baseUrl}/shop/product/${product.id}`;
+      const imgUrl = product.image.startsWith('http') ? product.image : `${baseUrl}${product.image}`;
+      
+      // Calculate total stock
+      const totalStock = product.inventory.reduce((sum, item) => sum + item.stock, 0);
+      const availability = totalStock > 0 ? 'in_stock' : 'out_of_stock';
+      
+      const cleanDesc = product.description.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const cleanName = product.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      xml += `    <item>
+      <g:id>VST-${String(product.id).padStart(4, '0')}</g:id>
+      <title>${cleanName}</title>
+      <description>${cleanDesc}</description>
+      <link>${pUrl}</link>
+      <g:image_link>${imgUrl}</g:image_link>
+      <g:availability>${availability}</g:availability>
+      <g:price>${product.price.toFixed(2)} EUR</g:price>
+      <g:brand>Vestigia</g:brand>
+      <g:condition>new</g:condition>
+      <g:google_product_category>Apparel &amp; Accessories &gt; Clothing</g:google_product_category>
+    </item>
+`;
+    }
+
+    xml += `  </channel>
+</rss>`;
+
+    res.header('Content-Type', 'application/xml');
+    res.status(200).send(xml);
+  } catch (error) {
+    console.error('Failed to generate Google Shopping feed:', error);
+    res.status(500).json({ error: 'Failed to generate product feed' });
+  }
+});
+
 app.get('/api/products', async (_req, res) => {
   try {
     const dbProducts = await prisma.product.findMany({
@@ -543,14 +1017,24 @@ app.get('/api/orders', async (_req, res) => {
 app.post('/api/orders', async (req, res) => {
   try {
     const payload = req.body ?? {};
-    const orderId = String(payload.id ?? `VST-${Date.now()}`);
     const items = Array.isArray(payload.items) ? payload.items : [];
+
+    // Generate sequential order ID unless caller supplies one (legacy/test)
+    let orderId = payload.id ? String(payload.id) : null;
+    let invoiceNumber = payload.invoiceNumber ? String(payload.invoiceNumber) : null;
+    if (!orderId) {
+      const generated = await generateOrderId();
+      orderId = generated.orderId;
+      invoiceNumber = generated.invoiceNumber;
+    }
 
     const createdOrder = await prisma.order.create({
       data: {
         id: orderId,
+        invoiceNumber,
         customer: String(payload.customer ?? 'Guest Customer'),
         email: String(payload.email ?? ''),
+        phone: payload.phone ? String(payload.phone) : null,
         date: String(payload.date ?? new Date().toISOString()),
         status: String(payload.status ?? 'pending'),
         subtotal: Number(payload.subtotal ?? 0),
@@ -558,6 +1042,9 @@ app.post('/api/orders', async (req, res) => {
         tax: Number(payload.tax ?? 0),
         total: Number(payload.total ?? 0),
         address: String(payload.address ?? ''),
+        courier: payload.courier ? String(payload.courier) : null,
+        trackingNumber: payload.trackingNumber ? String(payload.trackingNumber) : null,
+        stripePaymentIntentId: payload.stripePaymentIntentId ? String(payload.stripePaymentIntentId) : `pi_mock_${Math.random().toString(36).substring(2, 15)}`,
         items: {
           create: items.map((item: any) => ({
             productId: Number(item.productId),
@@ -592,6 +1079,11 @@ app.post('/api/orders', async (req, res) => {
       },
     });
 
+    // Send order confirmation email (non-blocking)
+    sendOrderConfirmationEmail(createdOrder).catch((err) => {
+      console.error('Order confirmation email failed:', err);
+    });
+
     res.status(201).json(serializeOrder(createdOrder));
   } catch (error) {
     console.error(error);
@@ -601,16 +1093,166 @@ app.post('/api/orders', async (req, res) => {
 
 app.put('/api/orders/:id/status', async (req, res) => {
   try {
-    const order = await prisma.order.update({
+    const currentOrder = await prisma.order.findUnique({
       where: { id: req.params.id },
-      data: { status: String(req.body?.status ?? 'pending') },
+    });
+    if (!currentOrder) { res.status(404).json({ error: 'Order not found' }); return; }
+
+    const newStatus = String(req.body?.status ?? 'pending');
+    let order = await prisma.order.update({
+      where: { id: req.params.id },
+      data: { status: newStatus },
       include: { items: true },
     });
+
+    if (newStatus === 'refunded' && currentOrder.status !== 'refunded') {
+      const refundResult = await processStripeRefund(order);
+      const note = refundResult.success
+        ? (refundResult.mock
+            ? `[System] Automatically processed Stripe refund (Mock Mode).`
+            : `[System] Automatically processed Stripe refund: ${refundResult.refundId}.`)
+        : `[System ERROR] Automatic Stripe refund failed: ${refundResult.error}`;
+      
+      const updatedNotes = order.notes ? `${order.notes}\n${note}` : note;
+      order = await prisma.order.update({
+        where: { id: order.id },
+        data: { notes: updatedNotes },
+        include: { items: true },
+      });
+    }
+
+    // Send status update email (non-blocking)
+    if (order.email) {
+      sendOrderStatusEmail(order).catch((err) => {
+        console.error('Order status email failed:', err);
+      });
+    }
 
     res.json(serializeOrder(order));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+// GET single order
+app.get('/api/orders/:id', async (req, res) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: { items: true },
+    });
+    if (!order) { res.status(404).json({ error: 'Order not found' }); return; }
+    res.json(serializeOrder(order));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch order' });
+  }
+});
+
+// PUT full order update (notes, address, etc.)
+app.put('/api/orders/:id', async (req, res) => {
+  try {
+    const currentOrder = await prisma.order.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!currentOrder) { res.status(404).json({ error: 'Order not found' }); return; }
+
+    const body = req.body ?? {};
+    let order = await prisma.order.update({
+      where: { id: req.params.id },
+      data: {
+        ...(body.status         !== undefined && { status: String(body.status) }),
+        ...(body.notes          !== undefined && { notes: body.notes === null ? null : String(body.notes) }),
+        ...(body.address        !== undefined && { address: String(body.address) }),
+        ...(body.customer       !== undefined && { customer: String(body.customer) }),
+        ...(body.email          !== undefined && { email: String(body.email) }),
+        ...(body.phone          !== undefined && { phone: body.phone === null ? null : String(body.phone) }),
+        ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber === null ? null : String(body.trackingNumber) }),
+        ...(body.courier        !== undefined && { courier: body.courier === null ? null : String(body.courier) }),
+      },
+      include: { items: true },
+    });
+
+    if (body.status === 'refunded' && currentOrder.status !== 'refunded') {
+      const refundResult = await processStripeRefund(order);
+      const note = refundResult.success
+        ? (refundResult.mock
+            ? `[System] Automatically processed Stripe refund (Mock Mode).`
+            : `[System] Automatically processed Stripe refund: ${refundResult.refundId}.`)
+        : `[System ERROR] Automatic Stripe refund failed: ${refundResult.error}`;
+      
+      const updatedNotes = order.notes ? `${order.notes}\n${note}` : note;
+      order = await prisma.order.update({
+        where: { id: order.id },
+        data: { notes: updatedNotes },
+        include: { items: true },
+      });
+    }
+
+    res.json(serializeOrder(order));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+// DELETE order
+app.delete('/api/orders/:id', async (req, res) => {
+  try {
+    await prisma.order.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete order' });
+  }
+});
+
+// POST duplicate order
+app.post('/api/orders/:id/duplicate', async (req, res) => {
+  try {
+    const original = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: { items: true },
+    });
+    if (!original) { res.status(404).json({ error: 'Order not found' }); return; }
+
+    const newId = `VST-DUP-${Date.now()}`;
+    const { orderId: dupId, invoiceNumber: dupInv } = await generateOrderId();
+    const duplicated = await prisma.order.create({
+      data: {
+        id: dupId,
+        invoiceNumber: dupInv,
+        customer: original.customer,
+        email: original.email,
+        phone: original.phone,
+        date: new Date().toISOString(),
+        status: 'pending',
+        subtotal: original.subtotal,
+        shipping: original.shipping,
+        tax: original.tax,
+        total: original.total,
+        address: original.address,
+        courier: original.courier,
+        notes: `Duplicated from ${original.id}`,
+        items: {
+          create: original.items.map(item => ({
+            productId: item.productId,
+            productName: item.productName,
+            image: item.image,
+            size: item.size,
+            color: item.color,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        },
+      },
+      include: { items: true },
+    });
+    res.status(201).json(serializeOrder(duplicated));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to duplicate order' });
   }
 });
 

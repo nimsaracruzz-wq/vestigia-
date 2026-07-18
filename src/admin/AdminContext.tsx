@@ -8,7 +8,10 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+export type OrderStatus =
+  | "pending" | "confirmed" | "processing" | "quality_check" | "packed"
+  | "ready_for_shipment" | "shipped" | "out_for_delivery" | "delivered"
+  | "cancelled" | "refunded";
 
 export type OrderItem = {
   productId: number;
@@ -22,8 +25,10 @@ export type OrderItem = {
 
 export type Order = {
   id: string;
+  invoiceNumber?: string;
   customer: string;
   email: string;
+  phone?: string;
   date: string;
   status: OrderStatus;
   items: OrderItem[];
@@ -32,6 +37,10 @@ export type Order = {
   tax: number;
   total: number;
   address: string;
+  notes?: string;
+  trackingNumber?: string;
+  courier?: string;
+  stripePaymentIntentId?: string;
 };
 
 export type Customer = {
@@ -42,6 +51,8 @@ export type Customer = {
   totalSpend: number;
   joined: string;
   lastOrder: string;
+  phone?: string;
+  addresses?: string;
 };
 
 export type PromoCode = {
@@ -92,7 +103,11 @@ interface AdminContextType {
   updateProduct: (p: Product) => void;
   deleteProduct: (id: number) => void;
   updateProductInventory: (id: number, inventory: Record<string, number>) => void;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<Order | null>;
+  updateOrderNotes: (orderId: string, notes: string) => void;
+  updateOrderShipping: (orderId: string, data: { trackingNumber?: string; courier?: string; phone?: string }) => void;
+  deleteOrder: (orderId: string) => void;
+  duplicateOrder: (orderId: string) => Promise<Order | null>;
   addPromoCode: (p: Omit<PromoCode, "id" | "uses">) => void;
   togglePromoCode: (id: number) => void;
   deletePromoCode: (id: number) => void;
@@ -269,12 +284,53 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
+  const updateOrderStatus = async (orderId: string, status: OrderStatus): Promise<Order | null> => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
-    void apiRequest(`/orders/${orderId}/status`, {
+    try {
+      const updated = await apiRequest(`/orders/${orderId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      });
+      if (updated) {
+        setOrders(prev => prev.map(o => o.id === orderId ? (updated as Order) : o));
+        return updated as Order;
+      }
+    } catch (e) {
+      console.error("Failed to update order status:", e);
+    }
+    return null;
+  };
+
+  const updateOrderNotes = (orderId: string, notes: string) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, notes } : o));
+    void apiRequest(`/orders/${orderId}`, {
       method: "PUT",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ notes }),
     }).catch(() => undefined);
+  };
+
+  const updateOrderShipping = (orderId: string, data: { trackingNumber?: string; courier?: string; phone?: string }) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...data } : o));
+    void apiRequest(`/orders/${orderId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }).catch(() => undefined);
+  };
+
+  const deleteOrder = (orderId: string) => {
+    setOrders(prev => prev.filter(o => o.id !== orderId));
+    void apiRequest(`/orders/${orderId}`, { method: "DELETE" }).catch(() => undefined);
+  };
+
+  const duplicateOrder = async (orderId: string): Promise<Order | null> => {
+    try {
+      const created = await apiRequest(`/orders/${orderId}/duplicate`, { method: "POST" });
+      if (created) {
+        setOrders(prev => [created as Order, ...prev]);
+        return created as Order;
+      }
+    } catch { /* ignore */ }
+    return null;
   };
 
   const addPromoCode = (p: Omit<PromoCode, "id" | "uses">) => {
@@ -372,7 +428,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     <AdminContext.Provider value={{
       products, orders, customers, promoCodes, settings, journal,
       addProduct, updateProduct, deleteProduct, updateProductInventory,
-      updateOrderStatus,
+      updateOrderStatus, updateOrderNotes, updateOrderShipping, deleteOrder, duplicateOrder,
       addPromoCode, togglePromoCode, deletePromoCode,
       updateSettings,
       addJournalArticle, updateJournalArticle, deleteJournalArticle,

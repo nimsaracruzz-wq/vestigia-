@@ -17,6 +17,12 @@ model AdminUser {
   password String // hashed
 }
 
+model OrderCounter {
+  id    Int @id @default(1)
+  year  Int
+  count Int @default(0)
+}
+
 model Product {
   id          Int      @id @default(autoincrement())
   name        String
@@ -34,6 +40,9 @@ model Product {
   care        String   // stored as JSON array string
   sizeChart   String?  // stored as JSON string
   rating      Float    @default(0)
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String?
   
   reviews     Review[]
   orderItems  OrderItem[]
@@ -63,16 +72,22 @@ model Review {
 }
 
 model Order {
-  id        String      @id // Custom ID like VST-2026-001
-  customer  String
-  email     String
-  date      String
-  status    String      @default("pending")
-  subtotal  Float
-  shipping  Float
-  tax       Float
-  total     Float
-  address   String
+  id                    String      @id // e.g. VST-2026-0001
+  invoiceNumber         String?     // e.g. INV-2026-0001
+  customer              String
+  email                 String
+  phone                 String?
+  date                  String
+  status                String      @default("pending")
+  subtotal              Float
+  shipping              Float
+  tax                   Float
+  total                 Float
+  address               String
+  notes                 String?     // Internal admin notes
+  trackingNumber        String?
+  courier               String?
+  stripePaymentIntentId String?
 
   items     OrderItem[]
 }
@@ -92,13 +107,18 @@ model OrderItem {
 }
 
 model Customer {
-  id         Int      @id @default(autoincrement())
-  name       String
-  email      String   @unique
-  orders     Int      @default(0)
-  totalSpend Float    @default(0)
-  joined     String
-  lastOrder  String?
+  id               Int      @id @default(autoincrement())
+  name             String
+  email            String   @unique
+  password         String?  // hashed, nullable for guest checkout customers
+  phone            String?
+  addresses        String?  // stored as JSON array string
+  orders           Int      @default(0)
+  totalSpend       Float    @default(0)
+  joined           String
+  lastOrder        String?
+  resetToken       String?
+  resetTokenExpiry String?
 }
 
 model PromoCode {

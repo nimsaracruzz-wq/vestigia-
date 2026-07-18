@@ -7,6 +7,7 @@ import { Elements, CardElement, useStripe, useElements } from "@stripe/react-str
 import { useCart } from "../context/CartContext";
 import { useCurrency } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
+import { useAdmin } from "../admin/AdminContext";
 
 // Initialize Stripe (using test key)
 const stripePromise = loadStripe("pk_test_51234567890123456789012345678901234567890123");
@@ -98,6 +99,7 @@ function CheckoutContent() {
   } = useCart();
 
   const { formatPrice: money } = useCurrency();
+  const { products } = useAdmin();
   const { user, isAuthenticated, createAccount, updateUser } = useUser();
 
   const [step, setStep] = useState<Step>("shipping");
@@ -270,6 +272,19 @@ function CheckoutContent() {
       return;
     }
 
+    // Check if any cart item is unavailable
+    const hasUnavailable = cart.some(item => {
+      const liveProduct = products.find(p => p.id === item.product.id);
+      if (!liveProduct) return true;
+      const stockKey = `${item.selectedColor}_${item.selectedSize}`;
+      return liveProduct.inventory && liveProduct.inventory[stockKey] === 0;
+    });
+
+    if (hasUnavailable) {
+      setPaymentError("Your bag contains items that are no longer available. Please remove them before checkout.");
+      return;
+    }
+
     setPaymentError("");
     setIsProcessing(true);
     
@@ -291,6 +306,37 @@ function CheckoutContent() {
       // Generate random order number
       const randomOrder = "VEST-" + Math.floor(100000 + Math.random() * 900000);
       setOrderNumber(randomOrder);
+
+      // Call backend to create the order in database
+      const orderPayload = {
+        id: randomOrder,
+        customer: `${shippingForm.firstName} ${shippingForm.lastName}`,
+        email: shippingForm.email,
+        date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+        status: "pending",
+        subtotal: cartTotalBeforeDiscount,
+        shipping: activeShippingCost,
+        tax: taxCost,
+        total: activeGrandTotal,
+        address: `${shippingForm.address}, ${shippingForm.city}, ${shippingForm.state} ${shippingForm.zip}, ${shippingForm.country}`,
+        items: cart.map((item) => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          image: item.product.image,
+          size: item.selectedSize || "OS",
+          color: item.selectedColor || "",
+          quantity: item.quantity,
+          price: item.product.price,
+        })),
+      };
+
+      await fetch("http://127.0.0.1:4000/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderPayload),
+      });
       
       // Transition and clear
       setStep("success");
@@ -823,23 +869,36 @@ function CheckoutContent() {
           <aside className="checkout-summary-pane">
             <h3>Order summary ({cartCount})</h3>
             <div className="checkout-summary-items-list">
-              {cart.map((item, idx) => (
-                <div key={idx} className="checkout-summary-item-card">
-                  <div className="img-holder">
-                    <img src={item.product.image} alt={item.product.alt} />
-                    <span className="qty-tag">{item.quantity}</span>
+              {cart.map((item, idx) => {
+                const liveProduct = products.find(p => p.id === item.product.id);
+                const isDeleted = !liveProduct;
+                const stockKey = `${item.selectedColor}_${item.selectedSize}`;
+                const isOutOfStock = liveProduct && liveProduct.inventory && liveProduct.inventory[stockKey] === 0;
+                const isUnavailable = isDeleted || isOutOfStock;
+
+                return (
+                  <div key={idx} className="checkout-summary-item-card" style={isUnavailable ? { opacity: 0.6 } : {}}>
+                    <div className="img-holder">
+                      <img src={item.product.image} alt={item.product.alt} />
+                      <span className="qty-tag">{item.quantity}</span>
+                    </div>
+                    <div className="details-col">
+                      <h4 style={isUnavailable ? { textDecoration: "line-through", color: "#888" } : {}}>{item.product.name}</h4>
+                      <p>
+                        {item.selectedSize !== "OS" && `Size: ${item.selectedSize}`}
+                        {item.selectedSize !== "OS" && item.selectedColor && "  /  "}
+                        {item.selectedColor && `Color: ${item.selectedColor}`}
+                      </p>
+                      {isUnavailable && (
+                        <p style={{ color: "#dc2626", fontSize: "11px", fontWeight: 600, marginTop: "2px" }}>
+                          {isDeleted ? "No longer available" : "Out of stock"}
+                        </p>
+                      )}
+                    </div>
+                    <span className="price-tag" style={isUnavailable ? { color: "#888" } : {}}>{money(item.product.price * item.quantity)}</span>
                   </div>
-                  <div className="details-col">
-                    <h4>{item.product.name}</h4>
-                    <p>
-                      {item.selectedSize !== "OS" && `Size: ${item.selectedSize}`}
-                      {item.selectedSize !== "OS" && item.selectedColor && "  /  "}
-                      {item.selectedColor && `Color: ${item.selectedColor}`}
-                    </p>
-                  </div>
-                  <span className="price-tag">{money(item.product.price * item.quantity)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Promo Form in Summary */}

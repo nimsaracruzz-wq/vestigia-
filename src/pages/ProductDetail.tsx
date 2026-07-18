@@ -139,10 +139,73 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   const [activeAccordion, setActiveAccordion] = useState<string | null>("details");
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
 
-  // Sync state if product changes
+  // Sync state and SEO settings if product changes
   useEffect(() => {
     if (product) {
-      document.title = `${product.name} | Vestigia`;
+      // 1. Update Title tag
+      document.title = product.seoTitle || `${product.name} | Vestigia`;
+
+      // 2. Update Description meta tag
+      let descMeta = document.querySelector('meta[name="description"]');
+      if (!descMeta) {
+        descMeta = document.createElement("meta");
+        descMeta.setAttribute("name", "description");
+        document.head.appendChild(descMeta);
+      }
+      descMeta.setAttribute("content", product.seoDescription || product.description || "");
+
+      // 3. Update Keywords meta tag
+      let kwMeta = document.querySelector('meta[name="keywords"]');
+      if (product.seoKeywords) {
+        if (!kwMeta) {
+          kwMeta = document.createElement("meta");
+          kwMeta.setAttribute("name", "keywords");
+          document.head.appendChild(kwMeta);
+        }
+        kwMeta.setAttribute("content", product.seoKeywords);
+      } else if (kwMeta) {
+        kwMeta.remove();
+      }
+
+      // 4. Inject Google Shopping Structured Data (JSON-LD)
+      let ldJsonScript = document.getElementById("product-jsonld") as HTMLScriptElement;
+      if (!ldJsonScript) {
+        ldJsonScript = document.createElement("script");
+        ldJsonScript.id = "product-jsonld";
+        ldJsonScript.type = "application/ld+json";
+        document.head.appendChild(ldJsonScript);
+      }
+      const absoluteUrl = window.location.href;
+      const productSchema = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": product.name,
+        "image": product.images && product.images.length > 0 
+          ? product.images.map(img => img.startsWith("http") ? img : window.location.origin + img)
+          : [product.image.startsWith("http") ? product.image : window.location.origin + product.image],
+        "description": product.description,
+        "sku": `VST-${product.id.toString().padStart(4, "0")}`,
+        "mpn": `VST-${product.id.toString().padStart(4, "0")}`,
+        "brand": {
+          "@type": "Brand",
+          "name": "Vestigia"
+        },
+        "offers": {
+          "@type": "Offer",
+          "url": absoluteUrl,
+          "priceCurrency": "EUR",
+          "price": product.price.toFixed(2),
+          "priceValidUntil": new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split("T")[0],
+          "itemCondition": "https://schema.org/NewCondition",
+          "availability": "https://schema.org/InStock",
+          "seller": {
+            "@type": "Organization",
+            "name": "Vestigia"
+          }
+        }
+      };
+      ldJsonScript.textContent = JSON.stringify(productSchema, null, 2);
+
       setSelectedColor(product.colors[0] || "");
       setActiveImageIndex(0);
       setQuantity(1);
@@ -155,6 +218,16 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       }
     }
   }, [product]);
+
+  // Clean up JSON-LD script on unmount
+  useEffect(() => {
+    return () => {
+      const ldJsonScript = document.getElementById("product-jsonld");
+      if (ldJsonScript) {
+        ldJsonScript.remove();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -291,23 +364,6 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
               </span>
             </div>
             <h1 style={{ marginTop: '8px' }}>{product.name}</h1>
-            
-            {/* Reviews display */}
-            <div className="pdp-ratings-row">
-              <div className="stars-list">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    size={14}
-                    fill={i < Math.floor(product.rating) ? "#111" : "none"}
-                    color="#111"
-                  />
-                ))}
-              </div>
-              <span>
-                {product.rating} ({product.reviews.length} reviews)
-              </span>
-            </div>
 
             <div className="pdp-price">
               {product.compareAt && <span className="compare-at">{formatPrice(product.compareAt)}</span>}

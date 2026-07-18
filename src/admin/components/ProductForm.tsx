@@ -45,6 +45,10 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     description: initialData?.description || "",
     sizes: initialData?.sizes.join(", ") || "",
     colors: initialData?.colors.join(", ") || "",
+    seoTitle: initialData?.seoTitle || "",
+    seoDescription: initialData?.seoDescription || "",
+    seoKeywords: initialData?.seoKeywords || "",
+    alt: initialData?.alt || "",
   });
 
   const [hasSizeChart, setHasSizeChart] = useState(!!initialData?.sizeChart);
@@ -167,7 +171,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       sizes: formData.sizes.split(",").map(s => s.trim()).filter(Boolean),
       colors: formData.colors.split(",").map(c => c.trim()).filter(Boolean),
       images: initialData?.images || [formData.image],
-      alt: initialData?.alt || formData.name,
+      alt: formData.alt || formData.name,
       details: initialData?.details || [],
       care: initialData?.care || [],
       rating: initialData?.rating || 0,
@@ -228,6 +232,17 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
           </div>
         )}
         {imageError && <span className="error-text">{imageError}</span>}
+      </div>
+
+      <div className="admin-form-group">
+        <label>Image Alt Text (Accessibility &amp; SEO)</label>
+        <input
+          type="text"
+          name="alt"
+          value={formData.alt}
+          onChange={handleChange}
+          placeholder="Describe the image context (e.g. Charcoal merino wool sweater)"
+        />
       </div>
 
       <div className="admin-form-row">
@@ -358,6 +373,42 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
             </div>
           </div>
         )}
+      </div>
+
+      {/* ── SEO Settings Section ────────────────────────────────────────────── */}
+      <div style={{ marginTop: "24px", borderTop: "1px solid #eee", paddingTop: "20px" }}>
+        <h3 style={{ fontSize: "14px", fontWeight: "600", marginBottom: "14px", color: "#111" }}>SEO Settings</h3>
+        <div className="admin-form-group">
+          <label>Meta Title</label>
+          <input
+            type="text"
+            name="seoTitle"
+            value={formData.seoTitle}
+            onChange={handleChange}
+            placeholder="Search engine title tag"
+          />
+        </div>
+        <div className="admin-form-group">
+          <label>Meta Description</label>
+          <textarea
+            name="seoDescription"
+            value={formData.seoDescription}
+            onChange={handleChange}
+            placeholder="Search engine description snippet"
+            rows={2}
+            style={{ width: "100%", padding: "8px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px", fontFamily: "inherit" }}
+          />
+        </div>
+        <div className="admin-form-group">
+          <label>Meta Keywords</label>
+          <input
+            type="text"
+            name="seoKeywords"
+            value={formData.seoKeywords}
+            onChange={handleChange}
+            placeholder="e.g. luxury apparel, minimalist, Italian cotton"
+          />
+        </div>
       </div>
 
       <div className="admin-form-actions">

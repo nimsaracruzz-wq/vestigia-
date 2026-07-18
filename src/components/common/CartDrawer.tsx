@@ -45,10 +45,17 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     updateQuantity,
     removeFromCart,
   } = useCart();
+  const { settings, products } = useAdmin();
   const { formatPrice: money } = useCurrency();
-  const { settings } = useAdmin();
 
   const [promoInput, setPromoInput] = useState("");
+
+  const hasUnavailableItems = cart.some(item => {
+    const liveProduct = products.find(p => p.id === item.product.id);
+    if (!liveProduct) return true;
+    const stockKey = `${item.selectedColor}_${item.selectedSize}`;
+    return liveProduct.inventory && liveProduct.inventory[stockKey] === 0;
+  });
 
   // Lock body scroll while drawer is open
   useEffect(() => {
@@ -165,65 +172,83 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 </div>
               ) : (
                 <AnimatePresence initial={false}>
-                  {cart.map((item, index) => (
-                    <motion.article
-                      key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}-${index}`}
-                      className="cart-drawer__item"
-                      initial={{ opacity: 0, x: 30 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 30, height: 0, marginBottom: 0, overflow: "hidden" }}
-                      transition={{ duration: 0.22 }}
-                      layout
-                    >
-                      <div className="cart-drawer__item-img-wrap">
-                        <img src={item.product.image} alt={item.product.alt} />
-                      </div>
-                      <div className="cart-drawer__item-info">
-                        <div className="cart-drawer__item-top">
-                          <h3>{item.product.name}</h3>
-                          <button
-                            className="cart-drawer__remove"
-                            type="button"
-                            onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedColor)}
-                            aria-label={`Remove ${item.product.name}`}
-                          >
-                            <X size={14} />
-                          </button>
+                  {cart.map((item, index) => {
+                    const liveProduct = products.find(p => p.id === item.product.id);
+                    const isDeleted = !liveProduct;
+                    const stockKey = `${item.selectedColor}_${item.selectedSize}`;
+                    const isOutOfStock = liveProduct && liveProduct.inventory && liveProduct.inventory[stockKey] === 0;
+                    const isUnavailable = isDeleted || isOutOfStock;
+
+                    return (
+                      <motion.article
+                        key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}-${index}`}
+                        className="cart-drawer__item"
+                        style={isUnavailable ? { borderLeft: "3px solid #dc2626", paddingLeft: "10px" } : {}}
+                        initial={{ opacity: 0, x: 30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 30, height: 0, marginBottom: 0, overflow: "hidden" }}
+                        transition={{ duration: 0.22 }}
+                        layout
+                      >
+                        <div className="cart-drawer__item-img-wrap" style={isUnavailable ? { opacity: 0.5 } : {}}>
+                          <img src={item.product.image} alt={item.product.alt} />
                         </div>
-                        <p className="cart-drawer__item-variant">
-                          {item.selectedSize !== "OS" && `Size ${item.selectedSize}`}
-                          {item.selectedSize !== "OS" && item.selectedColor && " · "}
-                          {item.selectedColor && (
-                            <span
-                              className="cart-drawer__color-dot"
-                              style={{ backgroundColor: item.selectedColor }}
-                              aria-hidden="true"
-                            />
-                          )}
-                        </p>
-                        <div className="cart-drawer__item-bottom">
-                          <div className="cart-drawer__qty">
+                        <div className="cart-drawer__item-info">
+                          <div className="cart-drawer__item-top">
+                            <h3 style={isUnavailable ? { color: "#888", textDecoration: "line-through" } : {}}>{item.product.name}</h3>
                             <button
+                              className="cart-drawer__remove"
                               type="button"
-                              onClick={() => updateQuantity(item.product.id, item.selectedSize, item.selectedColor, -1)}
-                              aria-label="Decrease quantity"
+                              onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedColor)}
+                              aria-label={`Remove ${item.product.name}`}
                             >
-                              <Minus size={12} />
-                            </button>
-                            <span>{item.quantity}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.product.id, item.selectedSize, item.selectedColor, 1)}
-                              aria-label="Increase quantity"
-                            >
-                              <Plus size={12} />
+                              <X size={14} />
                             </button>
                           </div>
-                          <span className="cart-drawer__item-price">{money(item.product.price * item.quantity)}</span>
+                          <p className="cart-drawer__item-variant">
+                            {item.selectedSize !== "OS" && `Size ${item.selectedSize}`}
+                            {item.selectedSize !== "OS" && item.selectedColor && " · "}
+                            {item.selectedColor && (
+                              <span
+                                className="cart-drawer__color-dot"
+                                style={{ backgroundColor: item.selectedColor }}
+                                aria-hidden="true"
+                              />
+                            )}
+                          </p>
+                          {isUnavailable && (
+                            <p style={{ color: "#dc2626", fontSize: "11px", fontWeight: 600, margin: "4px 0" }}>
+                              {isDeleted ? "This item is no longer available" : "This item is out of stock"}
+                            </p>
+                          )}
+                          <div className="cart-drawer__item-bottom">
+                            <div className="cart-drawer__qty">
+                              <button
+                                type="button"
+                                disabled={isUnavailable}
+                                onClick={() => updateQuantity(item.product.id, item.selectedSize, item.selectedColor, -1)}
+                                aria-label="Decrease quantity"
+                                style={isUnavailable ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+                              >
+                                <Minus size={12} />
+                              </button>
+                              <span>{item.quantity}</span>
+                              <button
+                                type="button"
+                                disabled={isUnavailable}
+                                onClick={() => updateQuantity(item.product.id, item.selectedSize, item.selectedColor, 1)}
+                                aria-label="Increase quantity"
+                                style={isUnavailable ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+                              >
+                                <Plus size={12} />
+                              </button>
+                            </div>
+                            <span className="cart-drawer__item-price" style={isUnavailable ? { color: "#888" } : {}}>{money(item.product.price * item.quantity)}</span>
+                          </div>
                         </div>
-                      </div>
-                    </motion.article>
-                  ))}
+                      </motion.article>
+                    );
+                  })}
                 </AnimatePresence>
               )}
             </div>
@@ -266,13 +291,38 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 </div>
                 <p className="cart-drawer__tax-note">Shipping &amp; taxes calculated at checkout</p>
 
-                <Link
-                  to="/checkout"
-                  onClick={onClose}
-                  className="cart-drawer__checkout-btn"
-                >
-                  Checkout <ArrowRight size={15} />
-                </Link>
+                {hasUnavailableItems ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled
+                      className="cart-drawer__checkout-btn"
+                      style={{
+                        background: "#888",
+                        cursor: "not-allowed",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: "8px",
+                        opacity: 0.6,
+                        width: "100%",
+                      }}
+                    >
+                      Checkout (Unavailable items) <ArrowRight size={15} />
+                    </button>
+                    <p style={{ color: "#dc2626", fontSize: "11px", marginTop: "8px", textAlign: "center", fontWeight: 500 }}>
+                      Please remove unavailable or out-of-stock items before checkout.
+                    </p>
+                  </>
+                ) : (
+                  <Link
+                    to="/checkout"
+                    onClick={onClose}
+                    className="cart-drawer__checkout-btn"
+                  >
+                    Checkout <ArrowRight size={15} />
+                  </Link>
+                )}
               </div>
             )}
           </motion.aside>

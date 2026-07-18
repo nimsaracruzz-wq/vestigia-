@@ -222,23 +222,96 @@ img {
 .hotspot {
   align-items: center;
   aspect-ratio: 1;
-  background: rgb(255 255 255 / 0.92);
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 999px;
-  color: #111;
+  color: #fff;
   display: inline-flex;
   justify-content: center;
   position: absolute;
-  width: 38px;
-  z-index: 2;
+  width: 36px;
+  z-index: 10;
+  cursor: pointer;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s ease, background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.hotspot:hover {
+  transform: scale(1.1);
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: #fff;
+  color: #111;
+}
+
+.hotspot::before,
+.hotspot::after {
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: inherit;
+  content: "";
+  inset: -10px;
+  position: absolute;
+  pointer-events: none;
+  animation: radar 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
 .hotspot::after {
-  animation: pulse 2.4s infinite;
-  border: 1px solid rgb(255 255 255 / 0.74);
-  border-radius: inherit;
-  content: "";
-  inset: -8px;
+  animation-delay: 1.2s;
+}
+
+.hotspot-tooltip {
   position: absolute;
+  bottom: 46px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: #fff;
+  color: #111;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  letter-spacing: 0.06em;
+  border: 1px solid #eee;
+}
+
+.hotspot:hover .hotspot-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.tooltip-title {
+  text-transform: uppercase;
+  font-size: 9px;
+  color: #888;
+  font-weight: 500;
+}
+
+.tooltip-price {
+  font-family: Georgia, serif;
+  color: #111;
+  font-size: 12px;
+}
+
+.tooltip-cta {
+  font-size: 9px;
+  color: #111;
+  margin-top: 3px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-bottom: 1.5px solid #111;
+  padding-bottom: 1px;
 }
 
 .hotspot-one {
@@ -256,10 +329,14 @@ img {
   top: 42%;
 }
 
-@keyframes pulse {
-  50% {
-    opacity: 0.2;
-    transform: scale(1.28);
+@keyframes radar {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(2.0);
+    opacity: 0;
   }
 }
 
@@ -1132,15 +1209,20 @@ img {
   }
 
   .hero {
-    min-height: 680px;
+    min-height: 520px;
+    height: 75svh;
   }
 
   .hero img {
-    object-position: 55% center;
+    object-position: center center;
   }
 
   .hero-copy {
-    bottom: 180px;
+    bottom: 50px;
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    text-align: center;
   }
 
   .hero-copy h1 {
@@ -5826,6 +5908,178 @@ img {
     transition: none !important;
     transform: none !important;
   }
+}
+
+/* ==========================================================================
+   Account Authentication Screen Styles
+   ========================================================================== */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding: 140px 24px 100px;
+  background: #fbfaf8;
+}
+
+.auth-card-container {
+  background: #fff;
+  border: 1px solid #ddd5cc;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(23, 20, 18, 0.04);
+  max-width: 440px;
+  width: 100%;
+  padding: 40px clamp(20px, 8vw, 40px);
+}
+
+.auth-card-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.auth-card-header h2 {
+  font-family: Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 400;
+  color: #171412;
+  margin: 0 0 10px;
+}
+
+.auth-card-header p {
+  font-size: 0.88rem;
+  color: #8c8276;
+  margin: 0;
+}
+
+.auth-card-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-error-alert {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.auth-success-alert {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  color: #2e7d32;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon > svg {
+  position: absolute;
+  left: 14px;
+  color: #8c8276;
+  pointer-events: none;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding: 12px 40px 12px 42px;
+  border: 1px solid #ddd5cc;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  background: #fff;
+  color: #171412;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.input-with-icon input:focus {
+  outline: none;
+  border-color: #171412;
+  box-shadow: 0 0 0 3px rgba(23, 20, 18, 0.05);
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 14px;
+  background: transparent;
+  color: #8c8276;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.password-toggle-btn:hover {
+  color: #171412;
+}
+
+.forgot-password-link {
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: underline;
+  color: #8c8276;
+  transition: color 0.2s;
+}
+
+.forgot-password-link:hover {
+  color: #171412;
+}
+
+.auth-card-footer {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #f2eee8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #8c8276;
+}
+
+.auth-toggle-link {
+  background: transparent;
+  color: #171412;
+  font-weight: 700;
+  text-decoration: underline;
+  transition: opacity 0.2s;
+}
+
+.auth-toggle-link:hover {
+  opacity: 0.8;
+}
+
+.sidebar-logout-btn {
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: #c62828 !important;
+  padding: 12px 16px;
+  border-radius: 6px;
+  text-align: left;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.sidebar-logout-btn:hover {
+  background: #ffebee !important;
+}
+
+.dev-helper-alert {
+  box-shadow: 0 2px 8px rgba(138, 109, 59, 0.08);
 }
 
 

@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { User, ShoppingBag, Heart, MapPin, Trash2, Plus } from "lucide-react";
+import { User, ShoppingBag, Heart, MapPin, Trash2, Plus, Eye, EyeOff, Lock, Mail, Info } from "lucide-react";
 import { useCurrency } from "../context/CurrencyContext";
 import { useUser, Address } from "../context/UserContext";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
 import { products, type Product } from "../data";
 
 type Tab = "orders" | "wishlist" | "addresses" | "profile";
+type AuthScreen = "login" | "register" | "forgot";
 
-// Countries list
 const COUNTRIES = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina", "Armenia", "Australia",
   "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium",
@@ -41,10 +41,65 @@ export default function Account() {
   const { formatPrice: money } = useCurrency();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab") as Tab;
-  const [activeTab, setActiveTab] = useState<Tab>(tabParam || "orders");
+  const tokenParam = searchParams.get("token"); // reset token
 
+  const [activeTab, setActiveTab] = useState<Tab>(tabParam || "orders");
+  const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
+
+  // Core states & contexts
   const { wishlist, toggleWishlist, addToCart } = useCart();
-  const { user, updateUser, addAddress, removeAddress, setDefaultAddress } = useUser();
+  const {
+    user,
+    isAuthenticated,
+    isLoading: authLoading,
+    login,
+    registerUser,
+    forgotPassword,
+    resetPassword,
+    changePassword,
+    updateUser,
+    addAddress,
+    removeAddress,
+    setDefaultAddress,
+    logout,
+    getOrders
+  } = useUser();
+
+  // Orders fetching state
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
+
+  // Form states
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  const [registerName, setRegisterName] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPhone, setRegisterPhone] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [registerError, setRegisterError] = useState("");
+
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotMessage, setForgotMessage] = useState("");
+  const [forgotDevLink, setForgotDevLink] = useState("");
+  const [forgotError, setForgotError] = useState("");
+
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetError, setResetError] = useState("");
+
+  const [changeOldPassword, setChangeOldPassword] = useState("");
+  const [changeNewPassword, setChangeNewPassword] = useState("");
+  const [changeConfirmPassword, setChangeConfirmPassword] = useState("");
+  const [changePwdMessage, setChangePwdMessage] = useState("");
+  const [changePwdError, setChangePwdError] = useState("");
+
+  const [formLoading, setFormLoading] = useState(false);
 
   // Sync tab status with URL params
   useEffect(() => {
@@ -55,8 +110,26 @@ export default function Account() {
 
   // Set document title
   useEffect(() => {
-    document.title = "My Account | Vestigia";
-  }, []);
+    document.title = isAuthenticated ? "My Account | Vestigia" : "Sign In | Vestigia";
+  }, [isAuthenticated]);
+
+  // Fetch real order history from database when authenticated
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (isAuthenticated) {
+        setOrdersLoading(true);
+        try {
+          const data = await getOrders();
+          setOrders(data);
+        } catch (e) {
+          console.error("Failed to load customer orders:", e);
+        } finally {
+          setOrdersLoading(false);
+        }
+      }
+    };
+    void loadOrders();
+  }, [isAuthenticated]);
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
@@ -64,43 +137,442 @@ export default function Account() {
     setSearchParams(searchParams);
   };
 
-
-
-  const mockOrders = [
-    {
-      id: "VST-2026-001",
-      date: "June 28, 2026",
-      status: "Delivered",
-      total: 78,
-      items: [
-        { name: "VESTIGIA SIGNATURE TEE", price: 78, size: "M", color: "#f3eedf" },
-      ],
-    },
-    {
-      id: "VST-2026-002",
-      date: "July 01, 2026",
-      status: "Shipped",
-      total: 153,
-      items: [
-        { name: "VESTIGIA ORIGIN TEE", price: 85, size: "M", color: "#1c1a1a" },
-        { name: "VESTIGIA ESSENTIAL TEE", price: 68, size: "S", color: "#8b8882" },
-      ],
-    },
-  ];
-
   const getProductImageByName = (name: string) => {
     const matched = products.find(p => p.name.toLowerCase() === name.toLowerCase());
     return matched?.image || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=80&q=80";
   };
 
   const handleMoveToCart = (product: Product) => {
-    // If it has sizes, prompt to go to PDP, or just use the first available size by default
     const size = product.sizes[0] || "OS";
     const color = product.colors[0] || "";
     addToCart(product, size, color);
-    toggleWishlist(product); // Remove from wishlist
+    toggleWishlist(product);
   };
 
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    if (!loginEmail || !loginPassword) {
+      setLoginError("Please enter your email and password.");
+      return;
+    }
+    setFormLoading(true);
+    const result = await login(loginEmail, loginPassword);
+    setFormLoading(false);
+    if (!result.success) {
+      setLoginError(result.error || "Login failed.");
+    } else {
+      setLoginEmail("");
+      setLoginPassword("");
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegisterError("");
+    if (!registerName || !registerEmail || !registerPassword) {
+      setRegisterError("Full name, email, and password are required.");
+      return;
+    }
+    if (registerPassword !== registerConfirmPassword) {
+      setRegisterError("Passwords do not match.");
+      return;
+    }
+    setFormLoading(true);
+    const result = await registerUser(registerName, registerEmail, registerPassword, registerPhone);
+    setFormLoading(false);
+    if (!result.success) {
+      setRegisterError(result.error || "Registration failed.");
+    } else {
+      setRegisterName("");
+      setRegisterEmail("");
+      setRegisterPhone("");
+      setRegisterPassword("");
+      setRegisterConfirmPassword("");
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotMessage("");
+    setForgotDevLink("");
+    if (!forgotEmail) {
+      setForgotError("Email address is required.");
+      return;
+    }
+    setFormLoading(true);
+    const result = await forgotPassword(forgotEmail);
+    setFormLoading(false);
+    if (!result.success) {
+      setForgotError(result.error || "An error occurred.");
+    } else {
+      setForgotMessage("Instructions logged to server terminal.");
+      if (result.devLink) {
+        setForgotDevLink(result.devLink);
+      }
+    }
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError("");
+    setResetMessage("");
+    if (!tokenParam) {
+      setResetError("Reset token is missing from the URL.");
+      return;
+    }
+    if (!resetNewPassword) {
+      setResetError("Please enter a new password.");
+      return;
+    }
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError("Passwords do not match.");
+      return;
+    }
+    setFormLoading(true);
+    const result = await resetPassword(tokenParam, resetNewPassword);
+    setFormLoading(false);
+    if (!result.success) {
+      setResetError(result.error || "Password reset failed.");
+    } else {
+      setResetMessage("Your password has been reset successfully. Redirecting you to Login...");
+      setTimeout(() => {
+        searchParams.delete("token");
+        setSearchParams(searchParams);
+        setAuthScreen("login");
+        setResetNewPassword("");
+        setResetConfirmPassword("");
+        setResetMessage("");
+      }, 3000);
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangePwdError("");
+    setChangePwdMessage("");
+    if (!changeOldPassword || !changeNewPassword) {
+      setChangePwdError("Current password and new password are required.");
+      return;
+    }
+    if (changeNewPassword !== changeConfirmPassword) {
+      setChangePwdError("Passwords do not match.");
+      return;
+    }
+    setFormLoading(true);
+    const result = await changePassword(changeOldPassword, changeNewPassword);
+    setFormLoading(false);
+    if (!result.success) {
+      setChangePwdError(result.error || "Failed to update password.");
+    } else {
+      setChangePwdMessage("Password updated successfully.");
+      setChangeOldPassword("");
+      setChangeNewPassword("");
+      setChangeConfirmPassword("");
+    }
+  };
+
+  // Loading animation state for context mounting checks
+  if (authLoading) {
+    return (
+      <div className="account-loading-spinner" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+        <div className="spinner-border" style={{ border: "2px solid #ddd5cc", borderTop: "2px solid #171412", width: "40px", height: "40px", borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // Render RESET PASSWORD view
+  if (tokenParam && !isAuthenticated) {
+    return (
+      <motion.div className="account-page-container auth-page" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <div className="auth-card-container">
+          <div className="auth-card-header">
+            <h2>Reset Password</h2>
+            <p>Enter your new password below.</p>
+          </div>
+
+          <form onSubmit={handleResetSubmit} className="auth-card-form">
+            {resetError && <div className="auth-error-alert">{resetError}</div>}
+            {resetMessage && <div className="auth-success-alert">{resetMessage}</div>}
+
+            <div className="form-input-box full-width">
+              <label htmlFor="rst-pwd">New Password</label>
+              <div className="input-with-icon">
+                <Lock size={16} />
+                <input
+                  id="rst-pwd"
+                  type="password"
+                  value={resetNewPassword}
+                  onChange={(e) => setResetNewPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-input-box full-width">
+              <label htmlFor="rst-pwd-conf">Confirm New Password</label>
+              <div className="input-with-icon">
+                <Lock size={16} />
+                <input
+                  id="rst-pwd-conf"
+                  type="password"
+                  value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  placeholder="Repeat your password"
+                  required
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="save-profile-btn" disabled={formLoading}>
+              {formLoading ? "Saving Changes..." : "Reset Password"}
+            </button>
+          </form>
+
+          <div className="auth-card-footer">
+            <button onClick={() => {
+              searchParams.delete("token");
+              setSearchParams(searchParams);
+              setAuthScreen("login");
+            }} className="auth-toggle-link">
+              Back to Login
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Render AUTHENTICATION view (Login / Register / Forgot Password)
+  if (!isAuthenticated) {
+    return (
+      <motion.div className="account-page-container auth-page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+        <div className="auth-card-container">
+          <AnimatePresence mode="wait">
+            {authScreen === "login" && (
+              <motion.div key="login" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                <div className="auth-card-header">
+                  <h2>Welcome to VESTIGIA</h2>
+                  <p>Access your orders and account settings.</p>
+                </div>
+
+                <form onSubmit={handleLoginSubmit} className="auth-card-form">
+                  {loginError && <div className="auth-error-alert">{loginError}</div>}
+
+                  <div className="form-input-box full-width">
+                    <label htmlFor="login-email">Email Address</label>
+                    <div className="input-with-icon">
+                      <Mail size={16} />
+                      <input
+                        id="login-email"
+                        type="email"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        placeholder="email@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-input-box full-width">
+                    <div className="label-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <label htmlFor="login-pass">Password</label>
+                      <button type="button" onClick={() => setAuthScreen("forgot")} className="forgot-password-link">Forgot?</button>
+                    </div>
+                    <div className="input-with-icon">
+                      <Lock size={16} />
+                      <input
+                        id="login-pass"
+                        type={showLoginPassword ? "text" : "password"}
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="Enter password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="password-toggle-btn"
+                        aria-label="Toggle password visibility"
+                      >
+                        {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button type="submit" className="save-profile-btn" disabled={formLoading}>
+                    {formLoading ? "Accessing..." : "Log In"}
+                  </button>
+                </form>
+
+                <div className="auth-card-footer">
+                  <span>Don't have an account?</span>
+                  <button onClick={() => setAuthScreen("register")} className="auth-toggle-link">Create one</button>
+                </div>
+              </motion.div>
+            )}
+
+            {authScreen === "register" && (
+              <motion.div key="register" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                <div className="auth-card-header">
+                  <h2>Create Account</h2>
+                  <p>Register to unlock premium member benefits.</p>
+                </div>
+
+                <form onSubmit={handleRegisterSubmit} className="auth-card-form">
+                  {registerError && <div className="auth-error-alert">{registerError}</div>}
+
+                  <div className="form-input-box full-width">
+                    <label htmlFor="reg-name">Full Name</label>
+                    <div className="input-with-icon">
+                      <User size={16} />
+                      <input
+                        id="reg-name"
+                        type="text"
+                        value={registerName}
+                        onChange={(e) => setRegisterName(e.target.value)}
+                        placeholder="John Doe"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-input-box full-width">
+                    <label htmlFor="reg-email">Email Address</label>
+                    <div className="input-with-icon">
+                      <Mail size={16} />
+                      <input
+                        id="reg-email"
+                        type="email"
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        placeholder="john@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-input-box full-width">
+                    <label htmlFor="reg-phone">Phone Number (Optional)</label>
+                    <div className="input-with-icon">
+                      <Plus size={16} />
+                      <input
+                        id="reg-phone"
+                        type="tel"
+                        value={registerPhone}
+                        onChange={(e) => setRegisterPhone(e.target.value)}
+                        placeholder="+39 123 456 7890"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-input-box full-width">
+                    <label htmlFor="reg-pass">Password</label>
+                    <div className="input-with-icon">
+                      <Lock size={16} />
+                      <input
+                        id="reg-pass"
+                        type={showRegisterPassword ? "text" : "password"}
+                        value={registerPassword}
+                        onChange={(e) => setRegisterPassword(e.target.value)}
+                        placeholder="Create strong password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                        className="password-toggle-btn"
+                        aria-label="Toggle password visibility"
+                      >
+                        {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="form-input-box full-width">
+                    <label htmlFor="reg-pass-conf">Confirm Password</label>
+                    <div className="input-with-icon">
+                      <Lock size={16} />
+                      <input
+                        id="reg-pass-conf"
+                        type="password"
+                        value={registerConfirmPassword}
+                        onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                        placeholder="Repeat password"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button type="submit" className="save-profile-btn" disabled={formLoading}>
+                    {formLoading ? "Creating Account..." : "Create Account"}
+                  </button>
+                </form>
+
+                <div className="auth-card-footer">
+                  <span>Already have an account?</span>
+                  <button onClick={() => setAuthScreen("login")} className="auth-toggle-link">Log In</button>
+                </div>
+              </motion.div>
+            )}
+
+            {authScreen === "forgot" && (
+              <motion.div key="forgot" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                <div className="auth-card-header">
+                  <h2>Forgot Password</h2>
+                  <p>Provide your email to receive recovery instructions.</p>
+                </div>
+
+                <form onSubmit={handleForgotSubmit} className="auth-card-form">
+                  {forgotError && <div className="auth-error-alert">{forgotError}</div>}
+                  {forgotMessage && <div className="auth-success-alert">{forgotMessage}</div>}
+
+                  <div className="form-input-box full-width">
+                    <label htmlFor="forgot-email">Email Address</label>
+                    <div className="input-with-icon">
+                      <Mail size={16} />
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="email@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {forgotDevLink && (
+                    <div className="dev-helper-alert" style={{ background: "#fdf8e2", border: "1px solid #f9e29a", color: "#8a6d3b", padding: "12px", borderRadius: "6px", fontSize: "0.85rem", margin: "10px 0", display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                      <Info size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
+                      <div>
+                        <strong>Developer Mode Helper</strong>
+                        <p style={{ margin: "4px 0 0" }}>Click link below to test the reset password form directly:</p>
+                        <a href={forgotDevLink} style={{ color: "#171412", fontWeight: 700, textDecoration: "underline", wordBreak: "break-all" }}>{forgotDevLink}</a>
+                      </div>
+                    </div>
+                  )}
+
+                  <button type="submit" className="save-profile-btn" disabled={formLoading}>
+                    {formLoading ? "Sending Recovery..." : "Send Reset Link"}
+                  </button>
+                </form>
+
+                <div className="auth-card-footer">
+                  <button onClick={() => setAuthScreen("login")} className="auth-toggle-link">Back to Log In</button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Render DASHBOARD view (Authenticated)
   return (
     <motion.div
       className="account-page-container"
@@ -149,6 +621,15 @@ export default function Account() {
             <User size={18} />
             <span>Profile Settings</span>
           </button>
+          <button
+            onClick={logout}
+            type="button"
+            className="sidebar-logout-btn"
+            style={{ borderTop: "1px solid #ddd5cc", marginTop: "24px", paddingTop: "16px", color: "#c62828" }}
+          >
+            <EyeOff size={18} />
+            <span>Log Out</span>
+          </button>
         </nav>
 
         {/* Content pane */}
@@ -156,11 +637,15 @@ export default function Account() {
           {activeTab === "orders" && (
             <section className="account-pane-section">
               <h2>Order history</h2>
-              {mockOrders.length === 0 ? (
+              {ordersLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                  <div className="spinner-border" style={{ border: "2px solid #ddd5cc", borderTop: "2px solid #171412", width: "30px", height: "30px", borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
+                </div>
+              ) : orders.length === 0 ? (
                 <p className="no-records-text">You haven't placed any orders yet.</p>
               ) : (
                 <div className="orders-history-list">
-                  {mockOrders.map((order) => (
+                  {orders.map((order) => (
                     <article className="order-history-card" key={order.id}>
                       <div className="order-card-header">
                         <div>
@@ -173,12 +658,12 @@ export default function Account() {
                         </div>
                       </div>
                       <div className="order-card-items">
-                        {order.items.map((item, idx) => (
+                        {(order.items ?? []).map((item: any, idx: number) => (
                           <div key={idx} className="order-card-item-row">
                             <div className="order-card-item-info">
-                              <img src={getProductImageByName(item.name)} alt={item.name} className="order-item-thumbnail" />
+                              <img src={getProductImageByName(item.productName)} alt={item.productName} className="order-item-thumbnail" />
                               <div>
-                                <h4>{item.name}</h4>
+                                <h4>{item.productName}</h4>
                                 <p>Size: {item.size} | Color: <span className="variant-color-dot" style={{ backgroundColor: item.color }} /></p>
                               </div>
                             </div>
@@ -283,7 +768,7 @@ export default function Account() {
                 </div>
                 <div className="form-input-box full-width">
                   <label htmlFor="prof-email">Email Address</label>
-                  <input id="prof-email" type="email" defaultValue={user?.email || ""} />
+                  <input id="prof-email" type="email" value={user?.email || ""} disabled style={{ background: "#fbfaf8", color: "#8c8276", cursor: "not-allowed" }} />
                 </div>
                 <div className="form-input-box full-width">
                   <label htmlFor="prof-phone">Phone Number</label>
@@ -296,13 +781,57 @@ export default function Account() {
                     const updated = {
                       firstName: (document.getElementById("prof-fname") as HTMLInputElement).value || "",
                       lastName: (document.getElementById("prof-lname") as HTMLInputElement).value || "",
-                      email: (document.getElementById("prof-email") as HTMLInputElement).value || "",
                       phone: (document.getElementById("prof-phone") as HTMLInputElement).value || "",
                     } as any;
                     updateUser({ ...(user || {}), ...updated });
                   }}
                 >
                   Save Changes
+                </button>
+              </form>
+
+              <hr style={{ border: "0", borderTop: "1px solid #ddd5cc", margin: "40px 0" }} />
+
+              <h2>Change Password</h2>
+              <form onSubmit={handleChangePasswordSubmit} className="profile-form-grid" style={{ maxWidth: "600px" }}>
+                {changePwdError && <div className="auth-error-alert" style={{ gridColumn: "span 2" }}>{changePwdError}</div>}
+                {changePwdMessage && <div className="auth-success-alert" style={{ gridColumn: "span 2" }}>{changePwdMessage}</div>}
+
+                <div className="form-input-box full-width">
+                  <label htmlFor="prof-pwd-old">Current Password</label>
+                  <input
+                    id="prof-pwd-old"
+                    type="password"
+                    value={changeOldPassword}
+                    onChange={(e) => setChangeOldPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    required
+                  />
+                </div>
+                <div className="form-input-box">
+                  <label htmlFor="prof-pwd-new">New Password</label>
+                  <input
+                    id="prof-pwd-new"
+                    type="password"
+                    value={changeNewPassword}
+                    onChange={(e) => setChangeNewPassword(e.target.value)}
+                    placeholder="Minimum 6 characters"
+                    required
+                  />
+                </div>
+                <div className="form-input-box">
+                  <label htmlFor="prof-pwd-conf">Confirm New Password</label>
+                  <input
+                    id="prof-pwd-conf"
+                    type="password"
+                    value={changeConfirmPassword}
+                    onChange={(e) => setChangeConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    required
+                  />
+                </div>
+                <button type="submit" className="save-profile-btn" disabled={formLoading}>
+                  {formLoading ? "Updating..." : "Update Password"}
                 </button>
               </form>
             </section>
@@ -348,6 +877,7 @@ function AddAddressButton({ addAddress }: AddAddressButtonProps) {
         className="add-new-address-btn"
         type="button"
         onClick={() => setShowForm(!showForm)}
+        style={{ marginTop: "20px" }}
       >
         <Plus size={18} />
         Add New Address

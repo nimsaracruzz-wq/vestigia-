@@ -38,23 +38,47 @@ export default function Home({ onQuickShop }: HomeProps) {
       {/* SECTION 01 — HERO */}
       <section className="hero" id="top">
         <img
-          src="/images/products/signature_model.png"
+          src="/images/products/Vestigia_Hero.png"
           alt="Model wearing the VESTIGIA Signature T-Shirt in a minimalist architectural space"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
         <div className="hero-shade" />
 
         {/* Hotspot pointing to Signature Tee (ID 1) */}
-        <button
-          className="hotspot hotspot-one"
-          type="button"
-          onClick={() => featuredProduct && onQuickShop(featuredProduct)}
-          style={{ left: '48%', top: '55%' }}
-          aria-label={featuredProduct ? `Quick shop ${featuredProduct.name}` : "Quick shop featured product"}
-          disabled={!featuredProduct}
-        >
-          <Plus size={18} />
-        </button>
+        {featuredProduct && (
+          <button
+            className="hotspot hotspot-one"
+            type="button"
+            onClick={() => onQuickShop(featuredProduct)}
+            style={{ left: '25%', top: '25%' }}
+            aria-label={`Quick shop ${featuredProduct.name}`}
+          >
+            <Plus size={16} />
+            <div className="hotspot-tooltip">
+              <span className="tooltip-title">{featuredProduct.name}</span>
+              <span className="tooltip-price">€{featuredProduct.price.toFixed(2)}</span>
+              <span className="tooltip-cta">Quick Shop +</span>
+            </div>
+          </button>
+        )}
+
+        {/* Second Hotspot pointing to Signature Tee (White T-shirt) */}
+        {featuredProduct && (
+          <button
+            className="hotspot hotspot-two"
+            type="button"
+            onClick={() => onQuickShop(featuredProduct)}
+            style={{ left: '65%', top: '30%' }}
+            aria-label={`Quick shop ${featuredProduct.name}`}
+          >
+            <Plus size={16} />
+            <div className="hotspot-tooltip">
+              <span className="tooltip-title">{featuredProduct.name}</span>
+              <span className="tooltip-price">€{featuredProduct.price.toFixed(2)}</span>
+              <span className="tooltip-cta">Quick Shop +</span>
+            </div>
+          </button>
+        )}
 
         <div className="hero-copy">
           <p className="hero-eyebrow" style={{ textTransform: 'uppercase', letterSpacing: '0.15em', fontSize: '0.8rem', opacity: 0.9 }}>
@@ -87,7 +111,7 @@ export default function Home({ onQuickShop }: HomeProps) {
             DESIGNED TO REMAIN.
           </h2>
           <p style={{ fontSize: '1.05rem', lineHeight: '1.8', color: '#444', fontWeight: 300 }}>
-            VESTIGIA creates contemporary clothing inspired by the traces people, places, and moments leave behind. 
+            VESTIGIA creates contemporary clothing inspired by the traces people, places, and moments leave behind.
             Designed in Italy and made in Sri Lanka, each piece is shaped with restraint, intention, and a focus on lasting identity.
           </p>
         </div>
@@ -163,8 +187,8 @@ export default function Home({ onQuickShop }: HomeProps) {
               TWO PLACES. ONE IDENTITY.
             </h2>
             <p style={{ color: '#444', lineHeight: 1.8, marginBottom: '32px', fontSize: '0.95rem' }}>
-              VESTIGIA was born from the connection between Italy and Sri Lanka. 
-              Guided by contemporary Italian creative direction and brought to life through Sri Lankan garment production, 
+              VESTIGIA was born from the connection between Italy and Sri Lanka.
+              Guided by contemporary Italian creative direction and brought to life through Sri Lankan garment production,
               we create clothing shaped by different places and a shared vision.
             </p>
             <Link className="primary-link dark" to="/story">
@@ -206,7 +230,7 @@ export default function Home({ onQuickShop }: HomeProps) {
               MADE WITH INTENTION.
             </h2>
             <p style={{ color: '#444', lineHeight: 1.8, marginBottom: '24px', fontSize: '0.95rem' }}>
-              Our garments are produced in Sri Lanka, home to a globally established apparel manufacturing industry. 
+              Our garments are produced in Sri Lanka, home to a globally established apparel manufacturing industry.
               VESTIGIA focuses on considered construction, quality, and clothing designed to become part of the wearer's own story.
             </p>
           </div>
@@ -229,7 +253,7 @@ export default function Home({ onQuickShop }: HomeProps) {
           <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '32px' }}>
             Early access to releases, stories, and everything that comes next.
           </p>
-          
+
           <form style={{ display: 'flex', gap: '8px', maxWidth: '420px', margin: '0 auto' }} onSubmit={(e) => e.preventDefault()}>
             <input
               type="email"
