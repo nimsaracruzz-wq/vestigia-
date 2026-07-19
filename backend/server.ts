@@ -88,6 +88,7 @@ const serializeProduct = (product: {
   price: number;
   compareAt: number | null;
   badge: string | null;
+  slug?: string | null;
   colors: string;
   image: string;
   images: string;
@@ -96,6 +97,7 @@ const serializeProduct = (product: {
   description: string;
   details: string;
   care: string;
+  sizeChart?: string | null;
   rating: number;
   seoTitle?: string | null;
   seoDescription?: string | null;
@@ -109,6 +111,7 @@ const serializeProduct = (product: {
   sizes: parseJson<string[]>(product.sizes, []),
   details: parseJson<string[]>(product.details, []),
   care: parseJson<string[]>(product.care, []),
+  sizeChart: product.sizeChart ? parseJson<object>(product.sizeChart, null) : null,
   inventory: (product.inventory ?? []).reduce((acc, curr) => {
     acc[`${curr.color}_${curr.size}`] = curr.stock;
     return acc;
@@ -232,8 +235,21 @@ const serializeJournalArticle = (article: {
   content: parseJson<string[]>(article.content, []),
 });
 
+const slugify = (text: string): string => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+};
+
 const mapProductInput = (body: any) => ({
   name: String(body.name ?? ''),
+  slug: body.slug ? String(body.slug) : (body.name ? slugify(body.name) : null),
   category: String(body.category ?? 'Clothing'),
   price: Number(body.price ?? 0),
   compareAt: body.compareAt === '' || body.compareAt === undefined || body.compareAt === null ? null : Number(body.compareAt),
@@ -304,6 +320,7 @@ const parseArrayField = (value: unknown) => {
 
 const getProductPayload = (body: any, file?: Express.Multer.File) => ({
   name: body.name,
+  slug: body.slug,
   category: body.category,
   price: body.price,
   compareAt: body.compareAt,
@@ -380,37 +397,15 @@ const seedDatabase = async () => {
         });
       }
     }
-  } else {
-    for (const product of seedProducts) {
-      const existingProduct = await prisma.product.findFirst({ where: { name: product.name } });
-
-      if (existingProduct) {
-        continue;
-      }
-
-      const createdProduct = await prisma.product.create({
-        data: {
-          ...mapProductInput(product),
-        },
-      });
-
-      if (product.inventory) {
-        await syncInventory(createdProduct.id, product.inventory);
-      }
-
-      for (const review of product.reviews ?? []) {
-        await prisma.review.create({
-          data: {
-            productId: createdProduct.id,
-            author: review.author,
-            rating: review.rating,
-            date: review.date,
-            comment: review.comment,
-            status: review.status || 'approved',
-          },
-        });
-      }
-    }
+  }
+  
+  // Fill missing slugs for legacy database products
+  const legacyProducts = await prisma.product.findMany({ where: { slug: null } });
+  for (const legacyP of legacyProducts) {
+    await prisma.product.update({
+      where: { id: legacyP.id },
+      data: { slug: slugify(legacyP.name) }
+    });
   }
 
   const journalCount = await prisma.journalArticle.count();
@@ -911,10 +906,18 @@ app.put('/api/products/:id', upload.single('imageFile'), async (req, res) => {
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const productId = Number(req.params.id);
-    await prisma.product.delete({ where: { id: productId } });
+    
+    // Clean up all related records in a transaction to prevent constraint violations
+    await prisma.$transaction([
+      prisma.orderItem.deleteMany({ where: { productId } }),
+      prisma.inventory.deleteMany({ where: { productId } }),
+      prisma.review.deleteMany({ where: { productId } }),
+      prisma.product.delete({ where: { id: productId } }),
+    ]);
+
     res.status(204).send();
   } catch (error) {
-    console.error(error);
+    console.error("Failed to delete product:", error);
     res.status(500).json({ error: 'Failed to delete product' });
   }
 });

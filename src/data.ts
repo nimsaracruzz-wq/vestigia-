@@ -27,6 +27,7 @@ export type SizeChart = {
 export type Product = {
   id: number;
   name: string;
+  slug?: string;
   category: "New" | "Clothing" | "Accessories" | "Sale";
   productType?: string;
   price: number;

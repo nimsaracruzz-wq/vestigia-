@@ -122,8 +122,8 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   const { products } = useAdmin();
   const { formatPrice } = useCurrency();
 
-  // Find product by id
-  const product = products.find((p) => p.id === Number(id));
+  // Find product by id or slug
+  const product = products.find((p) => p.id === Number(id) || p.slug === id);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
@@ -278,10 +278,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       return;
     }
     setError("");
-    // Add multiple quantities to cart
-    for (let i = 0; i < quantity; i++) {
-      addToCart(product, selectedSize, selectedColor);
-    }
+    addToCart(product, selectedSize, selectedColor, quantity);
     setAddedToCartText(true);
     openCart();
     setTimeout(() => {

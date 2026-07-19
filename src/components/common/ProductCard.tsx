@@ -28,7 +28,7 @@ export default function ProductCard({ product, onQuickShop }: ProductCardProps) 
       onMouseLeave={() => setHovered(false)}
     >
       <div className="product-media">
-        <Link to={`/product/${product.id}`} aria-label={`View details for ${product.name}`}>
+        <Link to={`/product/${product.slug || product.id}`} aria-label={`View details for ${product.name}`}>
           <img src={currentImage} alt={product.alt} loading="lazy" style={{ transition: 'all 0.3s ease' }} />
         </Link>
         {product.badge && <span className="badge">{product.badge}</span>}
@@ -56,7 +56,7 @@ export default function ProductCard({ product, onQuickShop }: ProductCardProps) 
             {product.productType || "Premium Tee"}
           </p>
           <h3>
-            <Link to={`/product/${product.id}`}>{product.name}</Link>
+            <Link to={`/product/${product.slug || product.id}`}>{product.name}</Link>
           </h3>
         </div>
         <div className="price">
@@ -75,7 +75,7 @@ export default function ProductCard({ product, onQuickShop }: ProductCardProps) 
             />
           ))}
         </div>
-        <Link className="view-details-btn" to={`/product/${product.id}`}>
+        <Link className="view-details-btn" to={`/product/${product.slug || product.id}`}>
           View Details
         </Link>
       </div>

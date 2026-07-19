@@ -848,3 +848,335 @@
 .admin-login-footer a:hover {
   color: #111;
 }
+
+/* ─── Analytics Page ─── */
+.analytics-page .admin-page-header {
+  margin-bottom: 24px;
+}
+
+/* Period Tabs */
+.analytics-period-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 4px;
+}
+.analytics-period-btn {
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.analytics-period-btn.active {
+  background: #111;
+  color: #fff;
+}
+.analytics-period-btn:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+/* KPI Grid */
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.analytics-kpi-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e8e8e8;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.analytics-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.analytics-kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.analytics-kpi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+.analytics-kpi-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+.analytics-kpi-trend.pos {
+  background: #dcfce7;
+  color: #166534;
+}
+.analytics-kpi-trend.neg {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.analytics-kpi-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
+}
+.analytics-kpi-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #555;
+  margin-bottom: 2px;
+}
+.analytics-kpi-sub {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+/* Main 2-col grid */
+.analytics-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+@media (max-width: 1100px) {
+  .analytics-main-grid { grid-template-columns: 1fr; }
+}
+
+.analytics-chart-panel { overflow: visible; }
+
+/* Mini Bar Chart */
+.analytics-chart-container {
+  height: 180px;
+  margin-bottom: 12px;
+}
+.analytics-mini-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 100%;
+  padding-bottom: 24px;
+}
+.analytics-mini-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+.analytics-mini-bar {
+  width: 100%;
+  background: #111;
+  border-radius: 3px 3px 0 0;
+  min-height: 0;
+  transition: height 0.4s ease;
+}
+.analytics-mini-bar-label {
+  font-size: 0.6rem;
+  color: #aaa;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.analytics-forecast-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #666;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+.analytics-forecast-row strong { color: #111; }
+
+/* AI Insights Panel */
+.analytics-insights-panel { overflow: auto; max-height: 520px; }
+.analytics-insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.analytics-insight-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+.analytics-insight-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.analytics-insight-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 2px;
+}
+.analytics-insight-body {
+  font-size: 0.8rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* Bottom Grid */
+.analytics-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  .analytics-bottom-grid { grid-template-columns: 1fr; }
+}
+
+/* Share bar in top products table */
+.analytics-share-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.analytics-share-fill {
+  height: 6px;
+  background: #111;
+  border-radius: 3px;
+  min-width: 4px;
+  max-width: 80px;
+  flex-shrink: 0;
+}
+.analytics-share-bar span {
+  font-size: 0.8rem;
+  color: #666;
+  width: 32px;
+  text-align: right;
+}
+
+/* Status Funnel */
+.analytics-funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.analytics-funnel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.analytics-funnel-label {
+  font-size: 0.75rem;
+  text-transform: capitalize;
+  color: #555;
+  width: 130px;
+  flex-shrink: 0;
+}
+.analytics-funnel-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.analytics-funnel-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+.analytics-funnel-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #111;
+  width: 24px;
+  text-align: right;
+}
+
+/* Category list */
+.analytics-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.analytics-category-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.analytics-category-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 120px;
+  flex-shrink: 0;
+}
+.analytics-category-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.analytics-category-name {
+  font-size: 0.85rem;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.analytics-category-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.analytics-category-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+.analytics-category-pct {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  width: 36px;
+  text-align: right;
+}
+
+/* Weekly labels */
+.analytics-weekly-labels {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 8px;
+}
+.analytics-weekly-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.68rem;
+  color: #999;
+}
+.analytics-weekly-label strong {
+  font-size: 0.7rem;
+  color: #333;
+  font-weight: 600;
+}

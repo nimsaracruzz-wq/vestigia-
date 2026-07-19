@@ -140,7 +140,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                     {results.map((product) => (
                       <Link
                         key={product.id}
-                        to={`/product/${product.id}`}
+                        to={`/product/${product.slug || product.id}`}
                         onClick={onClose}
                         className="search-result-item"
                       >

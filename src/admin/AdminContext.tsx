@@ -117,12 +117,13 @@ interface AdminContextType {
   deleteJournalArticle: (id: number) => void;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
+  isSynced: boolean;
   logout: () => void;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
-const API_BASE_URL = "http://127.0.0.1:4000/api";
+const API_BASE_URL = "/api";
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -172,6 +173,9 @@ function buildProductFormData(product: any) {
   formData.append("care", JSON.stringify(product.care ?? []));
   formData.append("rating", String(product.rating ?? 0));
   formData.append("sizeChart", product.sizeChart ? JSON.stringify(product.sizeChart) : "");
+  formData.append("seoTitle", String(product.seoTitle ?? ""));
+  formData.append("seoDescription", String(product.seoDescription ?? ""));
+  formData.append("seoKeywords", String(product.seoKeywords ?? ""));
 
   if (product.imageFile instanceof File) {
     formData.append("imageFile", product.imageFile);
@@ -194,6 +198,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }));
   const [journal, setJournal] = useState<JournalArticle[]>(() => initialJournal);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => load("vstigia_adm_auth", false));
+  const [isSynced, setIsSynced] = useState(false);
 
   useEffect(() => {
     const sync = async () => {
@@ -239,6 +244,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         // Keep local fallback if the API is unavailable.
+      } finally {
+        setIsSynced(true);
       }
     };
 
@@ -265,12 +272,28 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     void apiRequest(`/products/${p.id}`, {
       method: "PUT",
       body: buildProductFormData(p),
-    }).catch(() => undefined);
+    }).then((updated) => {
+      if (updated) {
+        setProducts(prev => prev.map(x => x.id === p.id ? updated as Product : x));
+      }
+    }).catch((err) => {
+      console.error("Failed to update product:", err);
+      // Revert optimistic update by re-fetching from API
+      void apiRequest("/products").then((remote) => {
+        if (Array.isArray(remote)) setProducts(remote as Product[]);
+      }).catch(() => undefined);
+    });
   };
 
   const deleteProduct = (id: number) => {
+    const originalProducts = [...products];
     setProducts(prev => prev.filter(x => x.id !== id));
-    void apiRequest(`/products/${id}`, { method: "DELETE" }).catch(() => undefined);
+    void apiRequest(`/products/${id}`, { method: "DELETE" })
+      .catch((err) => {
+        console.error("Failed to delete product:", err);
+        alert("Failed to delete product. Please try again.");
+        setProducts(originalProducts);
+      });
   };
 
   const updateProductInventory = (id: number, inventory: Record<string, number>) => {
@@ -432,7 +455,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       addPromoCode, togglePromoCode, deletePromoCode,
       updateSettings,
       addJournalArticle, updateJournalArticle, deleteJournalArticle,
-      isAuthenticated, login, logout
+      isAuthenticated, login, logout,
+      isSynced
     }}>
       {children}
     </AdminContext.Provider>

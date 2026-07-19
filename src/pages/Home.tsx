@@ -18,7 +18,6 @@ export default function Home({ onQuickShop }: HomeProps) {
     document.title = "VESTIGIA — Designed in Italy. Made in Sri Lanka.";
   }, []);
 
-  const featuredProduct = products[0];
 
   const slideUp = {
     initial: { opacity: 0, y: 30 },
@@ -26,6 +25,15 @@ export default function Home({ onQuickShop }: HomeProps) {
     viewport: { once: true, margin: "-100px" },
     transition: { duration: 0.6 },
   };
+
+  // Dynamically find Black and White Aurelius products
+  const blackProduct = products.find(
+    (p) => p.slug === "vestigia-aurelius-oversized-tee-black" || (p.name.toLowerCase().includes("aurelius") && p.name.toLowerCase().includes("black"))
+  ) || products[0];
+
+  const whiteProduct = products.find(
+    (p) => p.slug === "vestigia-aurelius-oversized-tee-white" || (p.name.toLowerCase().includes("aurelius") && p.name.toLowerCase().includes("white"))
+  ) || products[0];
 
   return (
     <motion.div
@@ -44,37 +52,37 @@ export default function Home({ onQuickShop }: HomeProps) {
         />
         <div className="hero-shade" />
 
-        {/* Hotspot pointing to Signature Tee (ID 1) */}
-        {featuredProduct && (
+        {/* Hotspot pointing to Black Product */}
+        {blackProduct && (
           <button
             className="hotspot hotspot-one"
             type="button"
-            onClick={() => onQuickShop(featuredProduct)}
+            onClick={() => onQuickShop(blackProduct)}
             style={{ left: '25%', top: '25%' }}
-            aria-label={`Quick shop ${featuredProduct.name}`}
+            aria-label={`Quick shop ${blackProduct.name}`}
           >
             <Plus size={16} />
             <div className="hotspot-tooltip">
-              <span className="tooltip-title">{featuredProduct.name}</span>
-              <span className="tooltip-price">€{featuredProduct.price.toFixed(2)}</span>
+              <span className="tooltip-title">{blackProduct.name}</span>
+              <span className="tooltip-price">€{blackProduct.price.toFixed(2)}</span>
               <span className="tooltip-cta">Quick Shop +</span>
             </div>
           </button>
         )}
 
-        {/* Second Hotspot pointing to Signature Tee (White T-shirt) */}
-        {featuredProduct && (
+        {/* Second Hotspot pointing to White Product */}
+        {whiteProduct && (
           <button
             className="hotspot hotspot-two"
             type="button"
-            onClick={() => onQuickShop(featuredProduct)}
+            onClick={() => onQuickShop(whiteProduct)}
             style={{ left: '65%', top: '30%' }}
-            aria-label={`Quick shop ${featuredProduct.name}`}
+            aria-label={`Quick shop ${whiteProduct.name}`}
           >
             <Plus size={16} />
             <div className="hotspot-tooltip">
-              <span className="tooltip-title">{featuredProduct.name}</span>
-              <span className="tooltip-price">€{featuredProduct.price.toFixed(2)}</span>
+              <span className="tooltip-title">{whiteProduct.name}</span>
+              <span className="tooltip-price">€{whiteProduct.price.toFixed(2)}</span>
               <span className="tooltip-cta">Quick Shop +</span>
             </div>
           </button>
@@ -155,15 +163,15 @@ export default function Home({ onQuickShop }: HomeProps) {
             <p style={{ color: '#444', lineHeight: 1.8, marginBottom: '32px', fontSize: '0.95rem' }}>
               Heavyweight construction. Relaxed proportions. Understated details. The Signature Tee establishes the foundation of VESTIGIA.
             </p>
-            <Link className="primary-link dark" to="/product/1">
+            <Link className="primary-link dark" to="/product/vestigia-signature-tee">
               Discover the Signature Tee
             </Link>
           </div>
           <div className="lookbook-image-container" style={{ overflow: 'hidden' }}>
             <img
-              src="/images/products/signature_model.png"
+              src="/images/products/BRAND INTRODUCTION_Vestigia.png"
               alt="VESTIGIA Signature Tee worn by model"
-              style={{ width: '100%', objectFit: 'cover', maxHeight: '550px' }}
+              style={{ width: '80%', objectFit: 'cover', maxHeight: '550px' }}
             />
           </div>
         </div>

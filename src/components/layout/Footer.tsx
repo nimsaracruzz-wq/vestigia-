@@ -63,9 +63,9 @@ export default function Footer() {
             <p className="lux-footer__nav-label">Shop</p>
             <ul className="lux-footer__nav-list">
               <li><Link to="/shop">All Products</Link></li>
-              <li><Link to="/product/1">Signature Tee</Link></li>
-              <li><Link to="/product/2">Origin Tee</Link></li>
-              <li><Link to="/product/3">Essential Tee</Link></li>
+              <li><Link to="/product/vestigia-signature-tee">Signature Tee</Link></li>
+              <li><Link to="/product/vestigia-origin-tee">Origin Tee</Link></li>
+              <li><Link to="/product/vestigia-essential-tee">Essential Tee</Link></li>
             </ul>
           </div>
           <div className="lux-footer__nav-col">

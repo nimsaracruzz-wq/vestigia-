@@ -72,11 +72,11 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
             Crisp linen vests met with flowing, tapered trousers in shades of natural sand, stone, and bone. Built for the heat of the city, styled with effortless ease.
           </p>
           <div className="scene-products-list">
-            <Link to={`/product/${lookbookProducts[0].id}`} className="scene-product-link">
+            <Link to={`/product/${lookbookProducts[0].slug || lookbookProducts[0].id}`} className="scene-product-link">
               <span>01. {lookbookProducts[0].name}</span>
               <strong>${lookbookProducts[0].price.toFixed(2)}</strong>
             </Link>
-            <Link to={`/product/${lookbookProducts[1].id}`} className="scene-product-link">
+            <Link to={`/product/${lookbookProducts[1].slug || lookbookProducts[1].id}`} className="scene-product-link">
               <span>02. {lookbookProducts[1].name}</span>
               <strong>${lookbookProducts[1].price.toFixed(2)}</strong>
             </Link>
@@ -115,7 +115,7 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
             Finishing details that carry intent. Dual-sized lightweight gold vermeil hoops capturing the warm reflection of summer solstice sunlight.
           </p>
           <div className="scene-products-list">
-            <Link to={`/product/${lookbookProducts[2].id}`} className="scene-product-link">
+            <Link to={`/product/${lookbookProducts[2].slug || lookbookProducts[2].id}`} className="scene-product-link">
               <span>03. {lookbookProducts[2].name}</span>
               <strong>${lookbookProducts[2].price.toFixed(2)}</strong>
             </Link>

@@ -24,7 +24,7 @@ interface CartContextType {
   cartOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addToCart: (product: Product, size: string, color: string) => void;
+  addToCart: (product: Product, size: string, color: string, qty?: number) => void;
   removeFromCart: (productId: number, size: string, color: string) => void;
   updateQuantity: (productId: number, size: string, color: string, change: number) => void;
   toggleWishlist: (product: Product) => void;
@@ -37,7 +37,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { settings } = useAdmin();
+  const { settings, products, isSynced } = useAdmin();
 
   // Load initial cart and wishlist from localStorage
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -77,6 +77,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("vestigia_wishlist", JSON.stringify(wishlist));
   }, [wishlist]);
 
+  // Clean up wishlist when products sync is complete (filter out deleted and out-of-stock items)
+  useEffect(() => {
+    if (isSynced && products.length > 0) {
+      setWishlist((prev) => {
+        const cleaned = prev.filter((wishItem) => {
+          const liveProduct = products.find((p) => p.id === wishItem.id);
+          if (!liveProduct) return false; // deleted product
+
+          // check if in stock
+          if (liveProduct.inventory) {
+            const values = Object.values(liveProduct.inventory);
+            if (values.length > 0) {
+              return values.some((stock) => Number(stock) > 0);
+            }
+          }
+          return true;
+        });
+
+        if (cleaned.length !== prev.length) {
+          return cleaned;
+        }
+        return prev;
+      });
+    }
+  }, [products, isSynced]);
+
   useEffect(() => {
     if (promoCode) {
       localStorage.setItem("vestigia_promo", promoCode);
@@ -103,7 +129,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const taxCost = cartTotal * 0.08; // 8% sales tax
   const grandTotal = cartTotal + shippingCost + taxCost;
 
-  const addToCart = (product: Product, size: string, color: string) => {
+  const addToCart = (product: Product, size: string, color: string, qty = 1) => {
     setCart((prev) => {
       const existingIndex = prev.findIndex(
         (item) =>
@@ -114,11 +140,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (existingIndex > -1) {
         const newCart = [...prev];
-        newCart[existingIndex].quantity += 1;
+        newCart[existingIndex] = {
+          ...newCart[existingIndex],
+          quantity: newCart[existingIndex].quantity + qty,
+        };
         return newCart;
       }
 
-      return [...prev, { product, quantity: 1, selectedSize: size, selectedColor: color }];
+      return [...prev, { product, quantity: qty, selectedSize: size, selectedColor: color }];
     });
   };
 

@@ -9,7 +9,7 @@ interface ProductFormProps {
 }
 
 const DEFAULT_COLUMNS = ["Size", "Chest", "Waist", "Length"];
-const API_BASE_URL = "http://127.0.0.1:4000/api";
+const API_BASE_URL = "/api";
 
 const normalizeColumnKey = (label: string) =>
   label.trim().toLowerCase().replace(/\s+/g, "_");
@@ -70,11 +70,22 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload image");
+        let errMsg = `Server error ${response.status}`;
+        try {
+          const errJson = await response.json();
+          errMsg = errJson.error || errMsg;
+        } catch {
+          // ignore JSON parse error
+        }
+        throw new Error(errMsg);
       }
 
       const resJson = await response.json();
       const uploadedUrl = resJson.url;
+
+      if (!uploadedUrl) {
+        throw new Error("No URL returned from server");
+      }
 
       setPhotos(prev => {
         const next = [...prev, uploadedUrl];
@@ -84,13 +95,14 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         return next;
       });
     } catch (err: any) {
-      console.error(err);
-      setImageError("Error uploading image. Please try again.");
+      console.error("Image upload error:", err);
+      setImageError(`Error uploading image: ${err.message || "Please try again."}`);
     } finally {
       setIsUploading(false);
       e.target.value = "";
     }
   };
+
 
   const movePhoto = (index: number, direction: "left" | "right") => {
     setPhotos(prev => {
@@ -121,6 +133,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
 
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
+    slug: initialData?.slug || "",
     category: initialData?.category || "Clothing",
     price: initialData?.price || 0,
     compareAt: initialData?.compareAt || "",
@@ -135,15 +148,102 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     alt: initialData?.alt || "",
   });
 
-  const [hasSizeChart, setHasSizeChart] = useState(!!initialData?.sizeChart);
+  const [isSlugEdited, setIsSlugEdited] = useState(!!initialData?.slug);
+  const [isSeoTitleEdited, setIsSeoTitleEdited] = useState(!!initialData?.seoTitle);
+  const [isSeoDescriptionEdited, setIsSeoDescriptionEdited] = useState(!!initialData?.seoDescription);
+  const [isSeoKeywordsEdited, setIsSeoKeywordsEdited] = useState(!!initialData?.seoKeywords);
+  const [isAltEdited, setIsAltEdited] = useState(!!initialData?.alt);
+
+  const slugify = (text: string): string => {
+    return text
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')           // Replace spaces with -
+      .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+      .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+      .replace(/^-+/, '')             // Trim - from start
+      .replace(/-+$/, '');            // Trim - from end
+  };
+
+  // Safely parse sizeChart — backend may return it as a raw JSON string or a pre-parsed object
+  const parsedSizeChart = (() => {
+    const sc = initialData?.sizeChart;
+    if (!sc) return null;
+    if (typeof sc === "string") {
+      try { return JSON.parse(sc) as SizeChart; } catch { return null; }
+    }
+    return sc as SizeChart;
+  })();
+
+  const [hasSizeChart, setHasSizeChart] = useState(!!parsedSizeChart);
   const [sizeChart, setSizeChart] = useState<SizeChart>(
-    initialData?.sizeChart ?? buildEmptySizeChart()
+    parsedSizeChart ?? buildEmptySizeChart()
   );
+
+  const [stockLevels, setStockLevels] = useState<Record<string, number>>(() => {
+    const inv = initialData?.inventory;
+    if (!inv) return {};
+    if (typeof inv === "string") {
+      try { return JSON.parse(inv); } catch { return {}; }
+    }
+    return inv as Record<string, number>;
+  });
+
+  const handleStockChange = (color: string, size: string, val: number) => {
+    setStockLevels(prev => ({
+      ...prev,
+      [`${color}_${size}`]: val
+    }));
+  };
+
+  const colorsList = formData.colors.split(",").map(c => c.trim()).filter(Boolean);
+  const sizesList = formData.sizes.split(",").map(s => s.trim()).filter(Boolean);
 
   // ── form field changes ──────────────────────────────────────────────────
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Mark manual edits
+    if (name === "slug") setIsSlugEdited(true);
+    if (name === "seoTitle") setIsSeoTitleEdited(true);
+    if (name === "seoDescription") setIsSeoDescriptionEdited(true);
+    if (name === "seoKeywords") setIsSeoKeywordsEdited(true);
+    if (name === "alt") setIsAltEdited(true);
+
+    setFormData(prev => {
+      const next = { ...prev, [name]: value };
+
+      // Auto-generate fields on name/title change
+      if (name === "name") {
+        if (!isSlugEdited) {
+          next.slug = slugify(value);
+        }
+        if (!isSeoTitleEdited) {
+          next.seoTitle = value ? `${value} | Vestigia` : "";
+        }
+        if (!isSeoKeywordsEdited) {
+          next.seoKeywords = value
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, "")
+            .split(/\s+/)
+            .filter(Boolean)
+            .join(", ");
+        }
+        if (!isAltEdited) {
+          next.alt = value;
+        }
+      }
+
+      // Auto-generate description metadata on description change
+      if (name === "description") {
+        if (!isSeoDescriptionEdited) {
+          next.seoDescription = value.replace(/\r?\n/g, " ").substring(0, 155);
+        }
+      }
+
+      return next;
+    });
   };
 
   // ── size chart helpers ──────────────────────────────────────────────────
@@ -253,6 +353,16 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       reviews: initialData?.reviews || [],
       id: initialData?.id,
       sizeChart: hasSizeChart ? sizeChart : undefined,
+      inventory: (() => {
+        const cleaned: Record<string, number> = {};
+        colorsList.forEach(color => {
+          sizesList.forEach(size => {
+            const key = `${color}_${size}`;
+            cleaned[key] = stockLevels[key] !== undefined ? stockLevels[key] : 10;
+          });
+        });
+        return cleaned;
+      })(),
     });
   };
 
@@ -484,6 +594,78 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         </div>
       </div>
 
+      {/* ── Variant Stock Management ── */}
+      <div style={{
+        border: "1px solid #e8e8e8",
+        borderRadius: "8px",
+        padding: "20px",
+        background: "#fafafa",
+        marginBottom: "12px"
+      }}>
+        <h3 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "4px" }}>Variant Stock Levels</h3>
+        <p style={{ fontSize: "0.8rem", color: "#666", marginBottom: "16px" }}>
+          Configure inventory stock counts for each size and color variant combination.
+        </p>
+
+        {colorsList.length === 0 || sizesList.length === 0 ? (
+          <div style={{ fontSize: "0.85rem", color: "#888", fontStyle: "italic" }}>
+            Add colors and sizes above to configure variant stock levels.
+          </div>
+        ) : (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+            gap: "12px"
+          }}>
+            {colorsList.map(color => (
+              sizesList.map(size => {
+                const key = `${color}_${size}`;
+                const stockVal = stockLevels[key] !== undefined ? stockLevels[key] : 10;
+                return (
+                  <div key={key} style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    background: "#fff",
+                    border: "1px solid #eaeaea",
+                    borderRadius: "6px",
+                    padding: "10px"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span
+                        className="color-dot"
+                        style={{
+                          backgroundColor: color,
+                          border: color.toLowerCase() === "#ffffff" || color.toLowerCase() === "white" ? "1px solid #ddd" : "none",
+                          width: "12px",
+                          height: "12px",
+                          borderRadius: "50%"
+                        }}
+                      />
+                      <span style={{ fontSize: "0.8rem", fontWeight: "600", color: "#333" }}>
+                        {color} / {size}
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      value={stockVal}
+                      min="0"
+                      onChange={(e) => handleStockChange(color, size, Math.max(0, parseInt(e.target.value) || 0))}
+                      style={{
+                        padding: "6px 8px",
+                        fontSize: "0.9rem",
+                        border: "1px solid #ddd",
+                        borderRadius: "4px"
+                      }}
+                    />
+                  </div>
+                );
+              })
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="admin-form-group">
         <label>Description</label>
         <textarea name="description" value={formData.description} onChange={handleChange} rows={4} required />
@@ -606,6 +788,20 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       {/* ── SEO Settings Section ────────────────────────────────────────────── */}
       <div style={{ marginTop: "24px", borderTop: "1px solid #eee", paddingTop: "20px" }}>
         <h3 style={{ fontSize: "14px", fontWeight: "600", marginBottom: "14px", color: "#111" }}>SEO Settings</h3>
+        <div className="admin-form-group">
+          <label>URL Slug (e.g. vestigia-signature-tee)</label>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <span style={{ paddingRight: "6px", color: "#888", fontSize: "14px" }}>/product/</span>
+            <input
+              type="text"
+              name="slug"
+              value={formData.slug}
+              onChange={handleChange}
+              placeholder="url-slug"
+              style={{ flex: 1 }}
+            />
+          </div>
+        </div>
         <div className="admin-form-group">
           <label>Meta Title</label>
           <input

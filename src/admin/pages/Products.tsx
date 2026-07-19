@@ -122,6 +122,7 @@ export default function Products() {
         title={editingProduct ? "Edit Product" : "Add New Product"}
       >
         <ProductForm 
+          key={editingProduct ? `edit-${editingProduct.id}` : "new"}
           initialData={editingProduct} 
           onSubmit={handleSubmit}
           onCancel={() => setIsModalOpen(false)}

@@ -52,7 +52,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = "vestigia_user";
 const TOKEN_STORAGE_KEY = "vestigia_cust_token";
-const API_BASE_URL = "http://127.0.0.1:4000/api";
+const API_BASE_URL = "/api";
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
