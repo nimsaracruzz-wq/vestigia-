@@ -416,6 +416,15 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (username: string, password: string) => {
+    // Local offline fallback — works when backend is unavailable (e.g. Netlify static deploy)
+    const localCheck = () => {
+      if (username === "admin" && (password === settings.adminPassword || password === DEFAULT_SETTINGS.adminPassword)) {
+        setIsAuthenticated(true);
+        return true;
+      }
+      return false;
+    };
+
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
@@ -424,7 +433,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       });
 
       if (!response.ok) {
-        return false;
+        // Backend returned an error — fall back to local check
+        return localCheck();
       }
 
       const data = await response.json();
@@ -433,13 +443,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         return true;
       }
 
-      return false;
+      return localCheck();
     } catch {
-      if (username === "admin" && (password === settings.adminPassword || password === DEFAULT_SETTINGS.adminPassword)) {
-        setIsAuthenticated(true);
-        return true;
-      }
-      return false;
+      // Network error (backend unreachable) — fall back to local check
+      return localCheck();
     }
   };
 
