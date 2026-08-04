@@ -25,10 +25,17 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Checkout from "./pages/Checkout";
 import Account from "./pages/Account";
+import ActivateAccount from "./pages/ActivateAccount";
 import Lookbook from "./pages/Lookbook";
 import Journal from "./pages/Journal";
 import About from "./pages/About";
 import Story from "./pages/Story";
+import RefundPolicy from "./pages/RefundPolicy";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import ShippingPolicy from "./pages/ShippingPolicy";
+import ContactUs from "./pages/ContactUs";
+import FAQ from "./pages/FAQ";
 
 // Admin pages & context
 import { AdminProvider } from "./admin/AdminContext";
@@ -41,6 +48,7 @@ import Analytics from "./admin/pages/Analytics";
 import Promotions from "./admin/pages/Promotions";
 import AdminJournal from "./admin/pages/AdminJournal";
 import AdminSettings from "./admin/pages/AdminSettings";
+import AdminShipping from "./admin/AdminShipping";
 
 // ScrollToTop helper component to reset window scroll position on route change
 function ScrollToTop() {
@@ -82,10 +90,22 @@ function MainAppShell() {
             <Route path="/product/:id" element={<ProductDetail onQuickShop={setQuickProduct} />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/account" element={<Account />} />
+            <Route path="/activate-account" element={<ActivateAccount />} />
             <Route path="/lookbook" element={<Lookbook onQuickShop={setQuickProduct} />} />
             <Route path="/journal" element={<Journal />} />
             <Route path="/about" element={<About />} />
             <Route path="/story" element={<Story />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/returns" element={<RefundPolicy />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/shipping-policy" element={<ShippingPolicy />} />
+            <Route path="/shipping" element={<ShippingPolicy />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/contact-us" element={<ContactUs />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/faqs" element={<FAQ />} />
           </Routes>
         </AnimatePresence>
       </main>
@@ -111,6 +131,7 @@ function AdminAppShell() {
         <Route path="customers" element={<Customers />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="promotions" element={<Promotions />} />
+        <Route path="shipping" element={<AdminShipping />} />
         <Route path="journal" element={<AdminJournal />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>
@@ -127,6 +148,7 @@ export default function App() {
         <UserProvider>
           <CartProvider>
             <BrowserRouter>
+              <ScrollToTop />
               <Routes>
                 <Route path="/admin/*" element={<AdminAppShell />} />
                 <Route path="/*" element={<MainAppShell />} />

@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -90,6 +88,20 @@ model Order {
   courier               String?
   stripePaymentIntentId String?
 
+  shippingRegion        String?
+  shippingCountry       String?
+  shippingMethod        String?
+  shippingCost          Float?
+  estimatedDelivery     String?
+
+  customerType          String      @default("GUEST") // "REGISTERED" | "GUEST" | "AUTO_CREATED"
+  billingAddress        String?     // JSON string
+  sameAsShipping        Boolean     @default(true)
+  giftOrder             Boolean     @default(false)
+  giftMessage           String?
+  companyName           String?
+  vatId                 String?
+
   items     OrderItem[]
 }
 
@@ -108,18 +120,66 @@ model OrderItem {
 }
 
 model Customer {
-  id               Int      @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   name             String
-  email            String   @unique
-  password         String?  // hashed, nullable for guest checkout customers
+  email            String    @unique
+  password         String?   // hashed, nullable for guest checkout & auto-created customers
   phone            String?
-  addresses        String?  // stored as JSON array string
-  orders           Int      @default(0)
-  totalSpend       Float    @default(0)
+  addresses        String?   // stored as JSON array string for backward compatibility
+  savedAddresses   Address[]
+  orders           Int       @default(0)
+  totalSpend       Float     @default(0)
   joined           String
   lastOrder        String?
+  lastLogin        String?
   resetToken       String?
   resetTokenExpiry String?
+  emailVerified    Boolean   @default(false)
+  verificationCode String?
+
+  customerType     String    @default("GUEST") // "REGISTERED" | "GUEST" | "AUTO_CREATED" | "MANUAL"
+  activationStatus String    @default("GUEST") // "ACTIVATED" | "PENDING" | "GUEST"
+  marketingConsent Boolean   @default(false)
+  companyName      String?
+  vatId            String?
+}
+
+model Address {
+  id                Int       @id @default(autoincrement())
+  customerId        Int?
+  customer          Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label             String    @default("Home") // "Home", "Office", "Parents", "Warehouse"
+  firstName         String
+  lastName          String
+  company           String?
+  address           String
+  apartment         String?
+  city              String
+  state             String
+  zip               String
+  country           String
+  phone             String?
+  phoneCountry      String?
+  phoneDialCode     String?
+  isDefaultShipping Boolean   @default(false)
+  isDefaultBilling  Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+}
+
+model ActivationToken {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
 }
 
 model PromoCode {
@@ -154,4 +214,63 @@ model JournalArticle {
   excerpt  String
   content  String   // JSON array
   image    String
+}
+
+model NewsletterSubscriber {
+  id        Int    @id @default(autoincrement())
+  email     String @unique
+  createdAt String // ISO date string
+}
+
+model ShippingRegion {
+  id        Int               @id @default(autoincrement())
+  name      String            @unique
+  isActive  Boolean           @default(true)
+  countries ShippingCountry[]
+  methods   ShippingMethod[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+model ShippingCountry {
+  id           Int            @id @default(autoincrement())
+  regionId     Int
+  region       ShippingRegion @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  countryCode  String         @unique // e.g. "US", "LK", "JP"
+  countryName  String
+  isEnabled    Boolean        @default(true)
+  currency     String         @default("USD")
+  displayOrder Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model ShippingMethod {
+  id                    Int            @id @default(autoincrement())
+  regionId              Int
+  region                ShippingRegion @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  name                  String         // e.g. "Standard Shipping", "Express DHL"
+  description           String?
+  price                 Float
+  estimatedDays         String         // e.g. "3-5 Days"
+  freeShippingThreshold Float?         // e.g. 300.0 or null
+  isActive              Boolean        @default(true)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+model ShippingAnnouncement {
+  id          Int      @id @default(autoincrement())
+  countryCode String?  // Specific country code or null for global
+  message     String   // e.g. "No shipping to Canada until August 25."
+  isSuspended Boolean  @default(false)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model ShippingLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  details   String
+  createdAt DateTime @default(now())
 }

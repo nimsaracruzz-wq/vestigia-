@@ -1,4 +1,5 @@
 import 'dotenv/config';
+// Shipping Management System Enabled
 // Force reload to load updated Prisma client types
 import express from 'express';
 import cors from 'cors';
@@ -398,7 +399,7 @@ const seedDatabase = async () => {
       }
     }
   }
-  
+
   // Fill missing slugs for legacy database products
   const legacyProducts = await prisma.product.findMany({ where: { slug: null } });
   for (const legacyP of legacyProducts) {
@@ -412,6 +413,123 @@ const seedDatabase = async () => {
   if (journalCount === 0) {
     // Leave journal empty until real content is created in the admin panel.
   }
+
+  // Seed Shipping Regions, Countries, and Methods if empty
+  const defaultRegions = [
+    {
+      name: 'Europe',
+      isActive: true,
+      countries: [
+        { countryCode: 'GB', countryName: 'United Kingdom', isEnabled: true, currency: 'GBP', displayOrder: 1 },
+        { countryCode: 'FR', countryName: 'France', isEnabled: true, currency: 'EUR', displayOrder: 2 },
+        { countryCode: 'DE', countryName: 'Germany', isEnabled: true, currency: 'EUR', displayOrder: 3 },
+        { countryCode: 'IT', countryName: 'Italy', isEnabled: true, currency: 'EUR', displayOrder: 4 },
+        { countryCode: 'ES', countryName: 'Spain', isEnabled: true, currency: 'EUR', displayOrder: 5 },
+        { countryCode: 'NL', countryName: 'Netherlands', isEnabled: true, currency: 'EUR', displayOrder: 6 },
+        { countryCode: 'CH', countryName: 'Switzerland', isEnabled: true, currency: 'CHF', displayOrder: 7 },
+        { countryCode: 'SE', countryName: 'Sweden', isEnabled: true, currency: 'SEK', displayOrder: 8 },
+      ],
+      methods: [
+        { name: 'Standard Shipping', description: 'Reliable postal express delivery', price: 15, estimatedDays: '4-7 Days', freeShippingThreshold: 200, isActive: true },
+        { name: 'Express DHL', description: 'Guaranteed priority courier delivery', price: 35, estimatedDays: '2-3 Days', freeShippingThreshold: null, isActive: true },
+        { name: 'Economy Shipping', description: 'Budget friendly standard shipping', price: 10, estimatedDays: '7-14 Days', freeShippingThreshold: 150, isActive: true },
+      ],
+    },
+    {
+      name: 'North America',
+      isActive: true,
+      countries: [
+        { countryCode: 'US', countryName: 'United States', isEnabled: true, currency: 'USD', displayOrder: 1 },
+        { countryCode: 'CA', countryName: 'Canada', isEnabled: true, currency: 'CAD', displayOrder: 2 },
+      ],
+      methods: [
+        { name: 'Standard Shipping', description: 'Insured ground express delivery', price: 20, estimatedDays: '5-8 Days', freeShippingThreshold: 300, isActive: true },
+        { name: 'Express FedEx', description: 'Next-flight priority courier', price: 45, estimatedDays: '2-4 Days', freeShippingThreshold: null, isActive: true },
+      ],
+    },
+    {
+      name: 'Asia',
+      isActive: true,
+      countries: [
+        { countryCode: 'LK', countryName: 'Sri Lanka', isEnabled: true, currency: 'LKR', displayOrder: 1 },
+        { countryCode: 'JP', countryName: 'Japan', isEnabled: true, currency: 'JPY', displayOrder: 2 },
+        { countryCode: 'SG', countryName: 'Singapore', isEnabled: true, currency: 'SGD', displayOrder: 3 },
+        { countryCode: 'AE', countryName: 'United Arab Emirates', isEnabled: true, currency: 'AED', displayOrder: 4 },
+        { countryCode: 'IN', countryName: 'India', isEnabled: false, currency: 'INR', displayOrder: 5 },
+        { countryCode: 'RU', countryName: 'Russia', isEnabled: false, currency: 'RUB', displayOrder: 6 },
+        { countryCode: 'KP', countryName: 'North Korea', isEnabled: false, currency: 'KPW', displayOrder: 7 },
+      ],
+      methods: [
+        { name: 'Standard Shipping', description: 'Express Asian distribution hub shipping', price: 15, estimatedDays: '3-6 Days', freeShippingThreshold: 150, isActive: true },
+        { name: 'Express Courier', description: 'Priority air courier delivery', price: 30, estimatedDays: '2-3 Days', freeShippingThreshold: null, isActive: true },
+      ],
+    },
+    {
+      name: 'Oceania',
+      isActive: true,
+      countries: [
+        { countryCode: 'AU', countryName: 'Australia', isEnabled: true, currency: 'AUD', displayOrder: 1 },
+        { countryCode: 'NZ', countryName: 'New Zealand', isEnabled: true, currency: 'NZD', displayOrder: 2 },
+      ],
+      methods: [
+        { name: 'Standard International', description: 'Insured international air mail', price: 25, estimatedDays: '6-10 Days', freeShippingThreshold: 350, isActive: true },
+        { name: 'DHL Express', description: 'Express international delivery', price: 55, estimatedDays: '3-5 Days', freeShippingThreshold: null, isActive: true },
+      ],
+    },
+  ];
+
+  for (const reg of defaultRegions) {
+    let region = await prisma.shippingRegion.findUnique({ where: { name: reg.name } });
+    if (!region) {
+      try {
+        region = await prisma.shippingRegion.create({
+          data: {
+            name: reg.name,
+            isActive: reg.isActive,
+          },
+        });
+      } catch (e) {
+        region = await prisma.shippingRegion.findUnique({ where: { name: reg.name } });
+      }
+    }
+    if (!region) continue;
+
+    for (const c of reg.countries) {
+      try {
+        const existingCountry = await prisma.shippingCountry.findFirst({
+          where: { countryCode: c.countryCode },
+        });
+        if (!existingCountry) {
+          await prisma.shippingCountry.create({
+            data: {
+              regionId: region.id,
+              ...c,
+            },
+          });
+        }
+      } catch (err) {
+        // Ignored for existing seeded entries
+      }
+    }
+
+    for (const m of reg.methods) {
+      try {
+        const existingMethod = await prisma.shippingMethod.findFirst({
+          where: { regionId: region.id, name: m.name },
+        });
+        if (!existingMethod) {
+          await prisma.shippingMethod.create({
+            data: {
+              regionId: region.id,
+              ...m,
+            },
+          });
+        }
+      } catch (err) {
+        // Ignored for existing seeded entries
+      }
+    }
+  }
 };
 
 const serializeCustomerProfile = (customer: any) => {
@@ -421,11 +539,20 @@ const serializeCustomerProfile = (customer: any) => {
     name: customer.name,
     email: customer.email,
     phone: customer.phone ?? '',
-    addresses: parseJson<any[]>(customer.addresses, []),
+    addresses: customer.savedAddresses && customer.savedAddresses.length > 0
+      ? customer.savedAddresses
+      : parseJson<any[]>(customer.addresses, []),
+    savedAddresses: customer.savedAddresses ?? [],
     orders: customer.orders,
     totalSpend: customer.totalSpend,
     joined: customer.joined,
     lastOrder: customer.lastOrder ?? customer.joined,
+    customerType: customer.customerType ?? 'GUEST',
+    activationStatus: customer.activationStatus ?? 'GUEST',
+    emailVerified: Boolean(customer.emailVerified),
+    companyName: customer.companyName ?? null,
+    vatId: customer.vatId ?? null,
+    marketingConsent: Boolean(customer.marketingConsent),
   };
 };
 
@@ -448,6 +575,182 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
   });
 };
 
+// --- CHECKOUT AUTHENTICATION & EMAIL CHECK ENDPOINTS ---
+
+app.post('/api/customers/check-email', async (req, res) => {
+  try {
+    const { email } = req.body ?? {};
+    if (!email || !String(email).includes('@')) {
+      res.status(400).json({ error: 'Valid email address is required' });
+      return;
+    }
+
+    const cleanEmail = String(email).toLowerCase().trim();
+    const customer = await prisma.customer.findUnique({
+      where: { email: cleanEmail },
+      include: { savedAddresses: true },
+    });
+
+    if (!customer) {
+      res.json({
+        case: 'NEW_CUSTOMER',
+        email: cleanEmail,
+        message: 'New customer checkout. Continue without password.',
+      });
+      return;
+    }
+
+    if (customer.password && (customer.customerType === 'REGISTERED' || customer.activationStatus === 'ACTIVATED')) {
+      res.json({
+        case: 'EXISTS_PASSWORD',
+        email: cleanEmail,
+        name: customer.name,
+        message: 'Welcome back! Enter your password to log in and use saved addresses.',
+      });
+      return;
+    }
+
+    res.json({
+      case: 'GUEST_WITH_PAST_ORDERS',
+      email: cleanEmail,
+      name: customer.name,
+      ordersCount: customer.orders,
+      message: 'You have placed past orders with us. Would you like to activate your Vestigia account?',
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to check customer email' });
+  }
+});
+
+app.post('/api/customers/activate-account', async (req, res) => {
+  try {
+    const { token, password, email } = req.body ?? {};
+    let customerToActivate: any = null;
+
+    if (token) {
+      const actToken = await prisma.activationToken.findUnique({
+        where: { token: String(token) },
+      });
+      if (!actToken || actToken.expiresAt < new Date()) {
+        res.status(400).json({ error: 'Activation link has expired or is invalid.' });
+        return;
+      }
+      customerToActivate = await prisma.customer.findUnique({
+        where: { id: actToken.customerId },
+        include: { savedAddresses: true },
+      });
+    } else if (email) {
+      customerToActivate = await prisma.customer.findUnique({
+        where: { email: String(email).toLowerCase().trim() },
+        include: { savedAddresses: true },
+      });
+    }
+
+    if (!customerToActivate) {
+      res.status(404).json({ error: 'Customer account not found' });
+      return;
+    }
+
+    const hashedPassword = password ? await bcrypt.hash(String(password), 10) : customerToActivate.password;
+
+    const updated = await prisma.customer.update({
+      where: { id: customerToActivate.id },
+      data: {
+        password: hashedPassword,
+        customerType: 'REGISTERED',
+        activationStatus: 'ACTIVATED',
+        emailVerified: true,
+      },
+      include: { savedAddresses: true },
+    });
+
+    if (token) {
+      await prisma.activationToken.deleteMany({ where: { customerId: customerToActivate.id } });
+    }
+
+    const JWT_SECRET = process.env.JWT_SECRET || 'vestigia_jwt_secret_token_key_12345!';
+    const authToken = jwt.sign({ id: updated.id, email: updated.email }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({
+      token: authToken,
+      user: serializeCustomerProfile(updated),
+      message: 'Account activated successfully!',
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to activate account' });
+  }
+});
+
+// ADDRESS BOOK ENDPOINTS
+app.get('/api/customers/addresses', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const addresses = await prisma.address.findMany({
+      where: { customerId: userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(addresses);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch customer addresses' });
+  }
+});
+
+app.post('/api/customers/addresses', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { label, firstName, lastName, company, address, apartment, city, state, zip, country, phone, phoneCountry, phoneDialCode, isDefaultShipping, isDefaultBilling } = req.body ?? {};
+
+    if (!firstName || !lastName || !address || !city || !state || !zip || !country) {
+      res.status(400).json({ error: 'Required address fields are missing' });
+      return;
+    }
+
+    if (isDefaultShipping) {
+      await prisma.address.updateMany({ where: { customerId: userId }, data: { isDefaultShipping: false } });
+    }
+    if (isDefaultBilling) {
+      await prisma.address.updateMany({ where: { customerId: userId }, data: { isDefaultBilling: false } });
+    }
+
+    const created = await prisma.address.create({
+      data: {
+        customerId: userId,
+        label: label ? String(label).trim() : 'Home',
+        firstName: String(firstName).trim(),
+        lastName: String(lastName).trim(),
+        company: company ? String(company).trim() : null,
+        address: String(address).trim(),
+        apartment: apartment ? String(apartment).trim() : null,
+        city: String(city).trim(),
+        state: String(state).trim(),
+        zip: String(zip).trim(),
+        country: String(country).trim(),
+        phone: phone ? String(phone).trim() : null,
+        phoneCountry: phoneCountry ? String(phoneCountry).trim() : null,
+        phoneDialCode: phoneDialCode ? String(phoneDialCode).trim() : null,
+        isDefaultShipping: Boolean(isDefaultShipping),
+        isDefaultBilling: Boolean(isDefaultBilling),
+      },
+    });
+
+    res.status(201).json(created);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add address' });
+  }
+});
+
+app.delete('/api/customers/addresses/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const id = Number(req.params.id);
+    await prisma.address.deleteMany({ where: { id, customerId: userId } });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete address' });
+  }
+});
+
 // --- CUSTOMER PORTAL AUTHENTICATION & MANAGEMENT ---
 app.post('/api/customers/register', async (req, res) => {
   try {
@@ -466,7 +769,7 @@ app.post('/api/customers/register', async (req, res) => {
         res.status(400).json({ error: 'A customer with this email is already registered' });
         return;
       }
-      
+
       // If customer exists from a guest checkout, complete registration by setting password
       const hashedPassword = await bcrypt.hash(password, 10);
       const updated = await prisma.customer.update({
@@ -789,11 +1092,11 @@ app.get('/api/products/google-feed', async (req, res) => {
     for (const product of dbProducts) {
       const pUrl = `${baseUrl}/shop/product/${product.id}`;
       const imgUrl = product.image.startsWith('http') ? product.image : `${baseUrl}${product.image}`;
-      
+
       // Calculate total stock
       const totalStock = product.inventory.reduce((sum, item) => sum + item.stock, 0);
       const availability = totalStock > 0 ? 'in_stock' : 'out_of_stock';
-      
+
       const cleanDesc = product.description.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const cleanName = product.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -906,7 +1209,7 @@ app.put('/api/products/:id', upload.single('imageFile'), async (req, res) => {
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const productId = Number(req.params.id);
-    
+
     // Clean up all related records in a transaction to prevent constraint violations
     await prisma.$transaction([
       prisma.orderItem.deleteMany({ where: { productId } }),
@@ -1034,7 +1337,6 @@ app.post('/api/orders', async (req, res) => {
     const payload = req.body ?? {};
     const items = Array.isArray(payload.items) ? payload.items : [];
 
-    // Generate sequential order ID unless caller supplies one (legacy/test)
     let orderId = payload.id ? String(payload.id) : null;
     let invoiceNumber = payload.invoiceNumber ? String(payload.invoiceNumber) : null;
     if (!orderId) {
@@ -1043,12 +1345,19 @@ app.post('/api/orders', async (req, res) => {
       invoiceNumber = generated.invoiceNumber;
     }
 
+    const autoCreateAccount = payload.autoCreateAccount !== undefined ? Boolean(payload.autoCreateAccount) : true;
+    const sameAsShipping = payload.sameAsShipping !== undefined ? Boolean(payload.sameAsShipping) : true;
+    const giftOrder = Boolean(payload.giftOrder);
+    const giftMessage = payload.giftMessage ? String(payload.giftMessage) : null;
+    const companyName = payload.companyName ? String(payload.companyName) : null;
+    const vatId = payload.vatId ? String(payload.vatId) : null;
+
     const createdOrder = await prisma.order.create({
       data: {
         id: orderId,
         invoiceNumber,
         customer: String(payload.customer ?? 'Guest Customer'),
-        email: String(payload.email ?? ''),
+        email: String(payload.email ?? '').toLowerCase().trim(),
         phone: payload.phone ? String(payload.phone) : null,
         date: String(payload.date ?? new Date().toISOString()),
         status: String(payload.status ?? 'pending'),
@@ -1057,6 +1366,17 @@ app.post('/api/orders', async (req, res) => {
         tax: Number(payload.tax ?? 0),
         total: Number(payload.total ?? 0),
         address: String(payload.address ?? ''),
+        billingAddress: payload.billingAddress ? (typeof payload.billingAddress === 'string' ? payload.billingAddress : JSON.stringify(payload.billingAddress)) : null,
+        sameAsShipping,
+        giftOrder,
+        giftMessage,
+        companyName,
+        vatId,
+        shippingRegion: payload.shippingRegion ? String(payload.shippingRegion) : null,
+        shippingCountry: payload.shippingCountry ? String(payload.shippingCountry) : null,
+        shippingMethod: payload.shippingMethod ? String(payload.shippingMethod) : null,
+        shippingCost: payload.shippingCost !== undefined ? Number(payload.shippingCost) : null,
+        estimatedDelivery: payload.estimatedDelivery ? String(payload.estimatedDelivery) : null,
         courier: payload.courier ? String(payload.courier) : null,
         trackingNumber: payload.trackingNumber ? String(payload.trackingNumber) : null,
         stripePaymentIntentId: payload.stripePaymentIntentId ? String(payload.stripePaymentIntentId) : `pi_mock_${Math.random().toString(36).substring(2, 15)}`,
@@ -1075,24 +1395,102 @@ app.post('/api/orders', async (req, res) => {
       include: { items: true },
     });
 
-    const currentCustomer = await prisma.customer.findUnique({ where: { email: createdOrder.email } });
-    await prisma.customer.upsert({
-      where: { email: createdOrder.email },
+    // Customer upsert & Auto Account Creation logic
+    const cleanEmail = createdOrder.email;
+    const currentCustomer = await prisma.customer.findUnique({
+      where: { email: cleanEmail },
+      include: { savedAddresses: true },
+    });
+
+    let customerType = 'GUEST';
+    let activationStatus = 'GUEST';
+
+    if (currentCustomer) {
+      customerType = currentCustomer.customerType;
+      activationStatus = currentCustomer.activationStatus;
+    } else if (autoCreateAccount) {
+      customerType = 'AUTO_CREATED';
+      activationStatus = 'PENDING';
+    }
+
+    const customerRecord = await prisma.customer.upsert({
+      where: { email: cleanEmail },
       update: {
         name: createdOrder.customer,
+        phone: createdOrder.phone || currentCustomer?.phone || null,
         orders: (currentCustomer?.orders ?? 0) + 1,
         totalSpend: (currentCustomer?.totalSpend ?? 0) + createdOrder.total,
         lastOrder: createdOrder.date,
+        companyName: companyName || currentCustomer?.companyName || null,
+        vatId: vatId || currentCustomer?.vatId || null,
       },
       create: {
         name: createdOrder.customer,
-        email: createdOrder.email,
+        email: cleanEmail,
+        phone: createdOrder.phone || null,
+        customerType,
+        activationStatus,
         orders: 1,
         totalSpend: createdOrder.total,
         joined: createdOrder.date,
         lastOrder: createdOrder.date,
+        companyName,
+        vatId,
       },
     });
+
+    // Save Shipping Address to Customer's Address Book
+    if (payload.shippingForm) {
+      const sf = payload.shippingForm;
+      const existingAddr = await prisma.address.findFirst({
+        where: {
+          customerId: customerRecord.id,
+          address: sf.address,
+          city: sf.city,
+        },
+      });
+
+      if (!existingAddr) {
+        await prisma.address.create({
+          data: {
+            customerId: customerRecord.id,
+            label: 'Home',
+            firstName: sf.firstName || '',
+            lastName: sf.lastName || '',
+            company: sf.company || null,
+            address: sf.address || '',
+            apartment: sf.apartment || null,
+            city: sf.city || '',
+            state: sf.state || '',
+            zip: sf.zip || '',
+            country: sf.country || '',
+            phone: sf.phone || null,
+            phoneCountry: sf.phoneCountry || null,
+            phoneDialCode: sf.phoneDialCode || null,
+            isDefaultShipping: true,
+          },
+        });
+      }
+    }
+
+    // Generate activation token if auto account created and pending
+    if (autoCreateAccount && customerRecord.activationStatus === 'PENDING') {
+      const tokenString = crypto.randomBytes(24).toString('hex');
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      await prisma.activationToken.create({
+        data: {
+          customerId: customerRecord.id,
+          token: tokenString,
+          expiresAt,
+        },
+      });
+
+      // Send Welcome Account Email (non-blocking)
+      sendWelcomeAccountEmail(customerRecord.email, customerRecord.name, tokenString).catch((err) => {
+        console.error('Welcome email dispatch failed:', err);
+      });
+    }
 
     // Send order confirmation email (non-blocking)
     sendOrderConfirmationEmail(createdOrder).catch((err) => {
@@ -1124,10 +1522,10 @@ app.put('/api/orders/:id/status', async (req, res) => {
       const refundResult = await processStripeRefund(order);
       const note = refundResult.success
         ? (refundResult.mock
-            ? `[System] Automatically processed Stripe refund (Mock Mode).`
-            : `[System] Automatically processed Stripe refund: ${refundResult.refundId}.`)
+          ? `[System] Automatically processed Stripe refund (Mock Mode).`
+          : `[System] Automatically processed Stripe refund: ${refundResult.refundId}.`)
         : `[System ERROR] Automatic Stripe refund failed: ${refundResult.error}`;
-      
+
       const updatedNotes = order.notes ? `${order.notes}\n${note}` : note;
       order = await prisma.order.update({
         where: { id: order.id },
@@ -1177,14 +1575,14 @@ app.put('/api/orders/:id', async (req, res) => {
     let order = await prisma.order.update({
       where: { id: req.params.id },
       data: {
-        ...(body.status         !== undefined && { status: String(body.status) }),
-        ...(body.notes          !== undefined && { notes: body.notes === null ? null : String(body.notes) }),
-        ...(body.address        !== undefined && { address: String(body.address) }),
-        ...(body.customer       !== undefined && { customer: String(body.customer) }),
-        ...(body.email          !== undefined && { email: String(body.email) }),
-        ...(body.phone          !== undefined && { phone: body.phone === null ? null : String(body.phone) }),
+        ...(body.status !== undefined && { status: String(body.status) }),
+        ...(body.notes !== undefined && { notes: body.notes === null ? null : String(body.notes) }),
+        ...(body.address !== undefined && { address: String(body.address) }),
+        ...(body.customer !== undefined && { customer: String(body.customer) }),
+        ...(body.email !== undefined && { email: String(body.email) }),
+        ...(body.phone !== undefined && { phone: body.phone === null ? null : String(body.phone) }),
         ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber === null ? null : String(body.trackingNumber) }),
-        ...(body.courier        !== undefined && { courier: body.courier === null ? null : String(body.courier) }),
+        ...(body.courier !== undefined && { courier: body.courier === null ? null : String(body.courier) }),
       },
       include: { items: true },
     });
@@ -1193,10 +1591,10 @@ app.put('/api/orders/:id', async (req, res) => {
       const refundResult = await processStripeRefund(order);
       const note = refundResult.success
         ? (refundResult.mock
-            ? `[System] Automatically processed Stripe refund (Mock Mode).`
-            : `[System] Automatically processed Stripe refund: ${refundResult.refundId}.`)
+          ? `[System] Automatically processed Stripe refund (Mock Mode).`
+          : `[System] Automatically processed Stripe refund: ${refundResult.refundId}.`)
         : `[System ERROR] Automatic Stripe refund failed: ${refundResult.error}`;
-      
+
       const updatedNotes = order.notes ? `${order.notes}\n${note}` : note;
       order = await prisma.order.update({
         where: { id: order.id },
@@ -1402,4 +1800,687 @@ app.delete('/api/journal/:id', async (req, res) => {
     console.error(error);
     res.status(500).json({ error: 'Failed to delete journal article' });
   }
+});
+
+app.post('/api/promos', async (req, res) => {
+  try {
+    const promo = await prisma.promoCode.create({
+      data: {
+        code: String(req.body.code ?? '').toUpperCase(),
+        discount: Number(req.body.discount ?? 0),
+        type: String(req.body.type ?? 'percentage'),
+        maxUses: req.body.maxUses === null || req.body.maxUses === undefined || req.body.maxUses === '' ? null : Number(req.body.maxUses),
+        active: Boolean(req.body.active ?? true),
+        expiry: req.body.expiry ? String(req.body.expiry) : null,
+        uses: 0,
+      },
+    });
+
+    res.status(201).json(serializePromoCode(promo));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create promo code' });
+  }
+});
+
+app.put('/api/promos/:id', async (req, res) => {
+  try {
+    const promo = await prisma.promoCode.update({
+      where: { id: Number(req.params.id) },
+      data: {
+        code: String(req.body.code ?? '').toUpperCase(),
+        discount: Number(req.body.discount ?? 0),
+        type: String(req.body.type ?? 'percentage'),
+        maxUses: req.body.maxUses === null || req.body.maxUses === undefined || req.body.maxUses === '' ? null : Number(req.body.maxUses),
+        active: Boolean(req.body.active ?? true),
+        expiry: req.body.expiry ? String(req.body.expiry) : null,
+      },
+    });
+
+    res.json(serializePromoCode(promo));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update promo code' });
+  }
+});
+
+app.delete('/api/promos/:id', async (req, res) => {
+  try {
+    await prisma.promoCode.delete({ where: { id: Number(req.params.id) } });
+    res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete promo code' });
+  }
+});
+
+app.get('/api/journal', async (_req, res) => {
+  try {
+    const articles = await prisma.journalArticle.findMany({ orderBy: { date: 'desc' } });
+    res.json(articles.map(serializeJournalArticle));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch journal articles' });
+  }
+});
+
+app.post('/api/journal', async (req, res) => {
+  try {
+    const article = await prisma.journalArticle.create({
+      data: {
+        title: String(req.body.title ?? ''),
+        date: String(req.body.date ?? new Date().toISOString().split('T')[0]),
+        readTime: String(req.body.readTime ?? '5 min read'),
+        excerpt: String(req.body.excerpt ?? ''),
+        content: JSON.stringify(parseJsonBody<string[]>(req.body.content, [])),
+        image: String(req.body.image ?? ''),
+      },
+    });
+
+    res.status(201).json(serializeJournalArticle(article));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create journal article' });
+  }
+});
+
+app.put('/api/journal/:id', async (req, res) => {
+  try {
+    const article = await prisma.journalArticle.update({
+      where: { id: Number(req.params.id) },
+      data: {
+        title: String(req.body.title ?? ''),
+        date: String(req.body.date ?? new Date().toISOString().split('T')[0]),
+        readTime: String(req.body.readTime ?? '5 min read'),
+        excerpt: String(req.body.excerpt ?? ''),
+        content: JSON.stringify(parseJsonBody<string[]>(req.body.content, [])),
+        image: String(req.body.image ?? ''),
+      },
+    });
+
+    res.json(serializeJournalArticle(article));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update journal article' });
+  }
+});
+
+app.delete('/api/journal/:id', async (req, res) => {
+  try {
+    await prisma.journalArticle.delete({ where: { id: Number(req.params.id) } });
+    res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete journal article' });
+  }
+});
+
+// ── SHIPPING MANAGEMENT SYSTEM API ENDPOINTS ────────────────
+
+const logShippingAction = async (action: string, details: any) => {
+  try {
+    await prisma.shippingLog.create({
+      data: {
+        action,
+        details: typeof details === 'string' ? details : JSON.stringify(details),
+      },
+    });
+  } catch (e) {
+    console.error('Failed to record shipping log:', e);
+  }
+};
+
+// 1. PUBLIC: GET /api/shipping/countries
+app.get('/api/shipping/countries', async (_req, res) => {
+  try {
+    const countries = await prisma.shippingCountry.findMany({
+      include: {
+        region: {
+          select: { id: true, name: true, isActive: true },
+        },
+      },
+      orderBy: [{ isEnabled: 'desc' }, { displayOrder: 'asc' }, { countryName: 'asc' }],
+    });
+    res.json(countries);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch shipping countries' });
+  }
+});
+
+// 2. PUBLIC: GET /api/shipping/regions
+app.get('/api/shipping/regions', async (_req, res) => {
+  try {
+    const regions = await prisma.shippingRegion.findMany({
+      where: { isActive: true },
+      include: {
+        countries: { where: { isEnabled: true } },
+        methods: { where: { isActive: true } },
+      },
+    });
+    res.json(regions);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch shipping regions' });
+  }
+});
+
+// 3. PUBLIC: GET /api/shipping/methods/:country (Lookup by ISO code or Country Name)
+app.get('/api/shipping/methods/:country', async (req, res) => {
+  try {
+    const param = decodeURIComponent(req.params.country).trim();
+
+    const country = await prisma.shippingCountry.findFirst({
+      where: {
+        OR: [
+          { countryCode: { equals: param.toUpperCase() } },
+          { countryName: { equals: param } },
+          { countryName: { contains: param } },
+        ],
+      },
+      include: {
+        region: {
+          include: {
+            methods: {
+              where: { isActive: true },
+              orderBy: { price: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    const announcements = await prisma.shippingAnnouncement.findMany({
+      where: {
+        active: true,
+        OR: [
+          { countryCode: null },
+          { countryCode: country?.countryCode ?? param.toUpperCase() },
+        ],
+      },
+    });
+
+    const isSuspended = announcements.some((a) => a.isSuspended);
+
+    if (!country || !country.isEnabled || !country.region?.isActive || isSuspended) {
+      res.json({
+        isEnabled: false,
+        countryName: country?.countryName ?? param,
+        message: isSuspended
+          ? (announcements.find((a) => a.isSuspended)?.message || 'Shipping is temporarily suspended for this destination.')
+          : 'Sorry, we currently do not ship to your country.',
+        announcements,
+        methods: [],
+      });
+      return;
+    }
+
+    res.json({
+      isEnabled: true,
+      country: {
+        id: country.id,
+        countryCode: country.countryCode,
+        countryName: country.countryName,
+        currency: country.currency,
+      },
+      region: {
+        id: country.region.id,
+        name: country.region.name,
+      },
+      methods: country.region.methods,
+      announcements,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch shipping methods for country' });
+  }
+});
+
+// 4. PUBLIC: GET /api/shipping/announcements
+app.get('/api/shipping/announcements', async (_req, res) => {
+  try {
+    const list = await prisma.shippingAnnouncement.findMany({
+      where: { active: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch shipping announcements' });
+  }
+});
+
+// ── ADMIN SHIPPING MANAGEMENT ENDPOINTS ──
+
+// GET /api/admin/shipping/stats
+app.get('/api/admin/shipping/stats', async (_req, res) => {
+  try {
+    const totalCountries = await prisma.shippingCountry.count();
+    const enabledCountries = await prisma.shippingCountry.count({ where: { isEnabled: true } });
+    const disabledCountries = totalCountries - enabledCountries;
+    const totalRegions = await prisma.shippingRegion.count();
+
+    const methods = await prisma.shippingMethod.findMany({ where: { isActive: true } });
+    const avgCost = methods.length > 0 ? (methods.reduce((acc, m) => acc + m.price, 0) / methods.length) : 0;
+
+    const orders = await prisma.order.findMany({ select: { shippingMethod: true } });
+    const methodCounts: Record<string, number> = {};
+    orders.forEach((o) => {
+      if (o.shippingMethod) {
+        methodCounts[o.shippingMethod] = (methodCounts[o.shippingMethod] || 0) + 1;
+      }
+    });
+
+    let mostUsedMethod = 'Express DHL';
+    let maxCount = 0;
+    Object.entries(methodCounts).forEach(([name, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostUsedMethod = name;
+      }
+    });
+
+    res.json({
+      totalCountries,
+      enabledCountries,
+      disabledCountries,
+      totalRegions,
+      avgCost: Math.round(avgCost * 100) / 100,
+      mostUsedMethod,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch shipping stats' });
+  }
+});
+
+// GET /api/admin/shipping/regions
+app.get('/api/admin/shipping/regions', async (_req, res) => {
+  try {
+    const regions = await prisma.shippingRegion.findMany({
+      include: {
+        countries: { orderBy: { countryName: 'asc' } },
+        methods: { orderBy: { price: 'asc' } },
+      },
+      orderBy: { name: 'asc' },
+    });
+    res.json(regions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch admin regions' });
+  }
+});
+
+// POST /api/admin/shipping/region
+app.post(['/api/admin/shipping/region', '/api/admin/shipping/regions'], async (req, res) => {
+  try {
+    const { name, isActive } = req.body ?? {};
+    if (!name) {
+      res.status(400).json({ error: 'Region name is required' });
+      return;
+    }
+
+    const region = await prisma.shippingRegion.create({
+      data: {
+        name: String(name).trim(),
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
+      },
+      include: { countries: true, methods: true },
+    });
+
+    await logShippingAction('CREATE_REGION', `Created region ${region.name} (ID: ${region.id})`);
+    res.status(201).json(region);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to create region' });
+  }
+});
+
+// PUT /api/admin/shipping/region/:id
+app.put(['/api/admin/shipping/region/:id', '/api/admin/shipping/regions/:id'], async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { name, isActive } = req.body ?? {};
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = String(name).trim();
+    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
+
+    const updated = await prisma.shippingRegion.update({
+      where: { id },
+      data: updateData,
+      include: { countries: true, methods: true },
+    });
+
+    await logShippingAction('UPDATE_REGION', `Updated region ${updated.name} (ID: ${id})`);
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to update region' });
+  }
+});
+
+// DELETE /api/admin/shipping/region/:id
+app.delete(['/api/admin/shipping/region/:id', '/api/admin/shipping/regions/:id'], async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const deleted = await prisma.shippingRegion.delete({ where: { id } });
+    await logShippingAction('DELETE_REGION', `Deleted region ${deleted.name} (ID: ${id})`);
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to delete region' });
+  }
+});
+
+// GET /api/admin/shipping/countries
+app.get('/api/admin/shipping/countries', async (req, res) => {
+  try {
+    const { search, regionId, enabled } = req.query;
+
+    const where: any = {};
+    if (regionId) where.regionId = Number(regionId);
+    if (enabled !== undefined) where.isEnabled = enabled === 'true';
+    if (search) {
+      const q = String(search).trim();
+      where.OR = [
+        { countryName: { contains: q } },
+        { countryCode: { contains: q.toUpperCase() } },
+      ];
+    }
+
+    const countries = await prisma.shippingCountry.findMany({
+      where,
+      include: {
+        region: { select: { id: true, name: true, isActive: true } },
+      },
+      orderBy: [{ regionId: 'asc' }, { isEnabled: 'desc' }, { countryName: 'asc' }],
+    });
+
+    res.json(countries);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch admin countries' });
+  }
+});
+
+// POST /api/admin/shipping/country
+app.post(['/api/admin/shipping/country', '/api/admin/shipping/countries'], async (req, res) => {
+  try {
+    const { regionId, countryCode, countryName, isEnabled, currency, displayOrder } = req.body ?? {};
+    if (!regionId || !countryCode || !countryName) {
+      res.status(400).json({ error: 'Region, Country Code and Country Name are required' });
+      return;
+    }
+
+    const created = await prisma.shippingCountry.create({
+      data: {
+        regionId: Number(regionId),
+        countryCode: String(countryCode).toUpperCase().trim(),
+        countryName: String(countryName).trim(),
+        isEnabled: isEnabled !== undefined ? Boolean(isEnabled) : true,
+        currency: currency ? String(currency).toUpperCase().trim() : 'USD',
+        displayOrder: displayOrder ? Number(displayOrder) : 0,
+      },
+      include: { region: true },
+    });
+
+    await logShippingAction('CREATE_COUNTRY', `Added country ${created.countryName} (${created.countryCode}) to ${created.region.name}`);
+    res.status(201).json(created);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to create country' });
+  }
+});
+
+// PUT /api/admin/shipping/country/:id
+app.put(['/api/admin/shipping/country/:id', '/api/admin/shipping/countries/:id'], async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { regionId, countryCode, countryName, isEnabled, currency, displayOrder } = req.body ?? {};
+
+    const updateData: any = {};
+    if (regionId !== undefined) updateData.regionId = Number(regionId);
+    if (countryCode !== undefined) updateData.countryCode = String(countryCode).toUpperCase().trim();
+    if (countryName !== undefined) updateData.countryName = String(countryName).trim();
+    if (isEnabled !== undefined) updateData.isEnabled = Boolean(isEnabled);
+    if (currency !== undefined) updateData.currency = String(currency).toUpperCase().trim();
+    if (displayOrder !== undefined) updateData.displayOrder = Number(displayOrder);
+
+    const updated = await prisma.shippingCountry.update({
+      where: { id },
+      data: updateData,
+      include: { region: true },
+    });
+
+    await logShippingAction('UPDATE_COUNTRY', `Updated country ${updated.countryName} (Enabled: ${updated.isEnabled})`);
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to update country' });
+  }
+});
+
+// PUT /api/admin/shipping/countries/bulk
+app.put('/api/admin/shipping/countries/bulk', async (req, res) => {
+  try {
+    const { ids, isEnabled } = req.body ?? {};
+    if (!Array.isArray(ids) || ids.length === 0 || isEnabled === undefined) {
+      res.status(400).json({ error: 'Array of country IDs and isEnabled status are required' });
+      return;
+    }
+
+    const numIds = ids.map((i) => Number(i));
+    await prisma.shippingCountry.updateMany({
+      where: { id: { in: numIds } },
+      data: { isEnabled: Boolean(isEnabled) },
+    });
+
+    await logShippingAction('BULK_UPDATE_COUNTRIES', `Bulk set isEnabled=${isEnabled} for ${ids.length} countries`);
+    res.json({ success: true, count: ids.length, isEnabled: Boolean(isEnabled) });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to bulk update countries' });
+  }
+});
+
+// GET /api/admin/shipping/methods
+app.get('/api/admin/shipping/methods', async (req, res) => {
+  try {
+    const { regionId } = req.query;
+    const where: any = {};
+    if (regionId) where.regionId = Number(regionId);
+
+    const methods = await prisma.shippingMethod.findMany({
+      where,
+      include: { region: { select: { id: true, name: true } } },
+      orderBy: [{ regionId: 'asc' }, { price: 'asc' }],
+    });
+    res.json(methods);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch admin shipping methods' });
+  }
+});
+
+// POST /api/admin/shipping/method
+app.post(['/api/admin/shipping/method', '/api/admin/shipping/methods'], async (req, res) => {
+  try {
+    const { regionId, name, description, price, estimatedDays, freeShippingThreshold, isActive } = req.body ?? {};
+    if (!regionId || !name || price === undefined || !estimatedDays) {
+      res.status(400).json({ error: 'Region, Method Name, Price, and Estimated Days are required' });
+      return;
+    }
+
+    const method = await prisma.shippingMethod.create({
+      data: {
+        regionId: Number(regionId),
+        name: String(name).trim(),
+        description: description ? String(description).trim() : null,
+        price: Number(price),
+        estimatedDays: String(estimatedDays).trim(),
+        freeShippingThreshold: freeShippingThreshold !== null && freeShippingThreshold !== undefined && freeShippingThreshold !== '' ? Number(freeShippingThreshold) : null,
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
+      },
+      include: { region: true },
+    });
+
+    await logShippingAction('CREATE_METHOD', `Added method "${method.name}" ($${method.price}) to region ${method.region.name}`);
+    res.status(201).json(method);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to create shipping method' });
+  }
+});
+
+// PUT /api/admin/shipping/method/:id
+app.put(['/api/admin/shipping/method/:id', '/api/admin/shipping/methods/:id'], async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { regionId, name, description, price, estimatedDays, freeShippingThreshold, isActive } = req.body ?? {};
+
+    const updateData: any = {};
+    if (regionId !== undefined) updateData.regionId = Number(regionId);
+    if (name !== undefined) updateData.name = String(name).trim();
+    if (description !== undefined) updateData.description = description ? String(description).trim() : null;
+    if (price !== undefined) updateData.price = Number(price);
+    if (estimatedDays !== undefined) updateData.estimatedDays = String(estimatedDays).trim();
+    if (freeShippingThreshold !== undefined) {
+      updateData.freeShippingThreshold = (freeShippingThreshold !== null && freeShippingThreshold !== '') ? Number(freeShippingThreshold) : null;
+    }
+    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
+
+    const updated = await prisma.shippingMethod.update({
+      where: { id },
+      data: updateData,
+      include: { region: true },
+    });
+
+    await logShippingAction('UPDATE_METHOD', `Updated method "${updated.name}" ($${updated.price}) in ${updated.region.name}`);
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to update shipping method' });
+  }
+});
+
+// DELETE /api/admin/shipping/method/:id
+app.delete(['/api/admin/shipping/method/:id', '/api/admin/shipping/methods/:id'], async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const deleted = await prisma.shippingMethod.delete({ where: { id } });
+    await logShippingAction('DELETE_METHOD', `Deleted shipping method "${deleted.name}" (ID: ${id})`);
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to delete shipping method' });
+  }
+});
+
+// GET & POST /api/admin/shipping/announcements
+app.get('/api/admin/shipping/announcements', async (_req, res) => {
+  try {
+    const list = await prisma.shippingAnnouncement.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch announcements' });
+  }
+});
+
+app.post('/api/admin/shipping/announcements', async (req, res) => {
+  try {
+    const { countryCode, message, isSuspended, active } = req.body ?? {};
+    if (!message) {
+      res.status(400).json({ error: 'Announcement message is required' });
+      return;
+    }
+
+    const created = await prisma.shippingAnnouncement.create({
+      data: {
+        countryCode: countryCode ? String(countryCode).toUpperCase().trim() : null,
+        message: String(message).trim(),
+        isSuspended: Boolean(isSuspended),
+        active: active !== undefined ? Boolean(active) : true,
+      },
+    });
+
+    await logShippingAction('CREATE_ANNOUNCEMENT', `Added announcement: "${created.message}"`);
+    res.status(201).json(created);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to create announcement' });
+  }
+});
+
+app.delete('/api/admin/shipping/announcements/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await prisma.shippingAnnouncement.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(400).json({ error: 'Failed to delete announcement' });
+  }
+});
+
+// GET /api/admin/shipping/export
+app.get('/api/admin/shipping/export', async (_req, res) => {
+  try {
+    const regions = await prisma.shippingRegion.findMany({
+      include: { countries: true, methods: true },
+    });
+    const announcements = await prisma.shippingAnnouncement.findMany();
+    res.json({
+      exportedAt: new Date().toISOString(),
+      regions,
+      announcements,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to export shipping settings' });
+  }
+});
+
+// POST /api/admin/shipping/import (CSV / JSON Import)
+app.post('/api/admin/shipping/import', async (req, res) => {
+  try {
+    const { countries } = req.body ?? {};
+    if (!Array.isArray(countries)) {
+      res.status(400).json({ error: 'Array of countries data is required' });
+      return;
+    }
+
+    let updatedCount = 0;
+    for (const c of countries) {
+      if (c.countryCode) {
+        await prisma.shippingCountry.upsert({
+          where: { countryCode: String(c.countryCode).toUpperCase() },
+          update: {
+            isEnabled: c.isEnabled !== undefined ? Boolean(c.isEnabled) : true,
+          },
+          create: {
+            regionId: Number(c.regionId || 1),
+            countryCode: String(c.countryCode).toUpperCase(),
+            countryName: String(c.countryName || c.countryCode),
+            isEnabled: c.isEnabled !== undefined ? Boolean(c.isEnabled) : true,
+            currency: c.currency ? String(c.currency).toUpperCase() : 'USD',
+          },
+        });
+        updatedCount++;
+      }
+    }
+
+    await logShippingAction('IMPORT_COUNTRIES', `Imported/Updated ${updatedCount} shipping countries`);
+    res.json({ success: true, count: updatedCount });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to import shipping data' });
+  }
+});
+
+// GET /api/admin/shipping/logs
+app.get('/api/admin/shipping/logs', async (_req, res) => {
+  try {
+    const logs = await prisma.shippingLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch shipping logs' });
+  }
+});
+
+async function startServer() {
+  await seedDatabase();
+  app.listen(PORT, () => {
+    console.log(`Backend server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
 });

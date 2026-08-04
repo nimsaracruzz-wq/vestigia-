@@ -272,6 +272,8 @@ export default function Customers() {
             <thead>
               <tr>
                 <th>Customer</th>
+                <th>Type</th>
+                <th>Status</th>
                 <th>Joined</th>
                 <th>Last Order</th>
                 <th>Orders</th>
@@ -279,33 +281,56 @@ export default function Customers() {
               </tr>
             </thead>
             <tbody>
-              {filteredCustomers.map(customer => (
-                <tr 
-                  key={customer.id} 
-                  onClick={() => setSelectedCustomerId(customer.id)}
-                  style={{ cursor: "pointer" }}
-                  className="admin-table-row-hover"
-                >
-                  <td>
-                    <div className="admin-customer-cell">
-                      <div className="admin-avatar">
-                        {getInitials(customer.name)}
+              {filteredCustomers.map(customer => {
+                const cType = (customer as any).customerType || "GUEST";
+                const actStatus = (customer as any).activationStatus || "GUEST";
+
+                return (
+                  <tr 
+                    key={customer.id} 
+                    onClick={() => setSelectedCustomerId(customer.id)}
+                    style={{ cursor: "pointer" }}
+                    className="admin-table-row-hover"
+                  >
+                    <td>
+                      <div className="admin-customer-cell">
+                        <div className="admin-avatar">
+                          {getInitials(customer.name)}
+                        </div>
+                        <div>
+                          <strong>{customer.name}</strong>
+                          <div className="text-sm text-muted">{customer.email}</div>
+                        </div>
                       </div>
-                      <div>
-                        <strong>{customer.name}</strong>
-                        <div className="text-sm text-muted">{customer.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{new Date(customer.joined).toLocaleDateString()}</td>
-                  <td>{customer.lastOrder ? new Date(customer.lastOrder).toLocaleDateString() : "—"}</td>
-                  <td>{customer.orders}</td>
-                  <td><strong>€{customer.totalSpend.toFixed(2)}</strong></td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <span style={{
+                        padding: "3px 8px", borderRadius: "10px", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase",
+                        background: cType === "REGISTERED" ? "#dbeafe" : cType === "AUTO_CREATED" ? "#fef3c7" : "#f3f4f6",
+                        color: cType === "REGISTERED" ? "#1e40af" : cType === "AUTO_CREATED" ? "#92400e" : "#4b5563"
+                      }}>
+                        {cType}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        padding: "3px 8px", borderRadius: "10px", fontSize: "0.72rem", fontWeight: 600,
+                        background: actStatus === "ACTIVATED" ? "#dcfce7" : actStatus === "PENDING" ? "#fff7ed" : "#f3f4f6",
+                        color: actStatus === "ACTIVATED" ? "#15803d" : actStatus === "PENDING" ? "#c2410c" : "#6b7280"
+                      }}>
+                        {actStatus}
+                      </span>
+                    </td>
+                    <td>{new Date(customer.joined).toLocaleDateString()}</td>
+                    <td>{customer.lastOrder ? new Date(customer.lastOrder).toLocaleDateString() : "—"}</td>
+                    <td>{customer.orders}</td>
+                    <td><strong>€{customer.totalSpend.toFixed(2)}</strong></td>
+                  </tr>
+                );
+              })}
               {filteredCustomers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-8">
+                  <td colSpan={7} className="text-center py-8">
                     No customers found matching "{search}"
                   </td>
                 </tr>

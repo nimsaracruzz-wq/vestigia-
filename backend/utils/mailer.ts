@@ -730,3 +730,50 @@ export const sendOrderStatusEmail = async (order: OrderData): Promise<void> => {
     html: buildEmailBase(content, `Your Vestigia order ${order.id} status: ${order.status}.`),
   });
 };
+
+// ─── 5. Welcome & Account Setup Email ────────────────────────────────────────
+
+export const sendWelcomeAccountEmail = async (
+  email: string,
+  name: string,
+  setupToken: string,
+  appUrl: string = 'http://localhost:5173'
+): Promise<void> => {
+  const setupUrl = `${appUrl}/activate-account?token=${setupToken}`;
+  const content = `
+    <div class="email-body">
+      <div class="section-label">Welcome to Vestigia</div>
+      <div class="gold-line"></div>
+      <h1 class="headline">Your Account Has Been Created</h1>
+      <p class="body-text">Dear ${name},</p>
+      <p class="body-text">
+        Thank you for placing your order with Vestigia. To ensure maximum security and seamless order tracking, 
+        we have automatically created your client account.
+      </p>
+      <p class="body-text">
+        Click below to complete your account setup and set your password:
+      </p>
+
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${setupUrl}" class="button" target="_blank">Set Your Account Password</a>
+      </div>
+
+      <p class="body-text" style="font-size:12px;color:${MUTED_LIGHT};">
+        Or copy and paste this secure activation link into your browser:<br />
+        <a href="${setupUrl}" style="color:${GOLD};">${setupUrl}</a>
+      </p>
+
+      <div class="divider"></div>
+      <p class="body-text" style="font-size:12px;margin-bottom:0;">
+        With your Vestigia account, you can track current shipments, view past receipts, and manage your saved delivery addresses.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || 'no-reply@gmail.com',
+    to: email,
+    subject: 'Welcome to Vestigia — Set Your Account Password',
+    html: buildEmailBase(content, `Welcome to Vestigia, ${name}. Click to set your account password.`),
+  });
+};

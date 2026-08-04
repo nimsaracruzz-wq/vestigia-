@@ -71,11 +71,19 @@ export default function Footer() {
           <div className="lux-footer__nav-col">
             <p className="lux-footer__nav-label">Information</p>
             <ul className="lux-footer__nav-list">
-              <li><Link to="/about">About</Link></li>
+              <li><Link to="/about">About Us</Link></li>
               <li><Link to="/story">Our Story</Link></li>
-              <li><a href="#shipping">Shipping</a></li>
-              <li><a href="#returns">Returns</a></li>
-              <li><a href="#contact">Contact</a></li>
+              <li><Link to="/shipping-policy">Shipping & Delivery</Link></li>
+              <li><Link to="/contact">Contact Concierge</Link></li>
+              <li><Link to="/faq">Frequently Asked Questions</Link></li>
+            </ul>
+          </div>
+          <div className="lux-footer__nav-col">
+            <p className="lux-footer__nav-label">Legal & Policies</p>
+            <ul className="lux-footer__nav-list">
+              <li><Link to="/privacy-policy">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service">Terms of Service</Link></li>
+              <li><Link to="/refund-policy">Refund & Return Policy</Link></li>
             </ul>
           </div>
           <div className="lux-footer__nav-col">
@@ -93,10 +101,10 @@ export default function Footer() {
         <p className="lux-footer__copy">
           &copy; 2026 VESTIGIA. ALL RIGHTS RESERVED.
         </p>
-        
+
         <div className="lux-footer__bottom-right">
           <CurrencySwitcher />
-          
+
           <div className="lux-footer__payments">
             {["Visa", "Mastercard", "Amex", "Apple Pay"].map((method) => (
               <span key={method} className="lux-footer__payment-badge">
@@ -114,13 +122,13 @@ import { useCurrency, type CurrencyCode } from "../../context/CurrencyContext";
 
 function CurrencySwitcher() {
   const { currency, setCurrency } = useCurrency();
-  
+
   return (
     <div className="currency-switcher" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
       <label htmlFor="currency-select" style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: '#888', letterSpacing: '0.05em' }}>Currency</label>
-      <select 
+      <select
         id="currency-select"
-        value={currency} 
+        value={currency}
         onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
         style={{
           background: 'transparent',

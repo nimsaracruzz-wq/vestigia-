@@ -37,7 +37,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { settings, products, isSynced } = useAdmin();
+  const { settings, products, isSynced, promoCodes } = useAdmin();
 
   // Load initial cart and wishlist from localStorage
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -115,10 +115,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotalBeforeDiscount = cart.reduce((acc, item) => acc + item.quantity * item.product.price, 0);
 
-  // VESTIGIA20 gives 20% discount
-  const discountRate = promoCode?.toUpperCase() === "VESTIGIA20" ? 0.2 : 0;
-  const discountAmount = cartTotalBeforeDiscount * discountRate;
-  const cartTotal = cartTotalBeforeDiscount - discountAmount;
+  // Dynamic promo code discount calculation (supports DB promo codes + VESTIGIA20 fallback)
+  const cleanPromoCode = promoCode ? promoCode.toUpperCase() : null;
+  const activePromo = (promoCodes || []).find(
+    (p) => p.code.toUpperCase() === cleanPromoCode
+  );
+
+  let discountAmount = 0;
+  if (cleanPromoCode) {
+    if (cleanPromoCode === "VESTIGIA20") {
+      discountAmount = cartTotalBeforeDiscount * 0.2;
+    } else if (activePromo && activePromo.active) {
+      if (activePromo.type === "fixed") {
+        discountAmount = Math.min(cartTotalBeforeDiscount, activePromo.discount);
+      } else {
+        discountAmount = cartTotalBeforeDiscount * (activePromo.discount / 100);
+      }
+    }
+  }
+
+  const cartTotal = Math.max(0, cartTotalBeforeDiscount - discountAmount);
 
   const shippingCost =
     cartTotal === 0
@@ -197,14 +213,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const applyPromoCode = (code: string) => {
-    if (code.toUpperCase() === "VESTIGIA20") {
+    const cleanCode = code.trim().toUpperCase();
+    if (!cleanCode) {
+      setPromoError("Please enter a promotional code.");
+      return false;
+    }
+
+    if (cleanCode === "VESTIGIA20") {
       setPromoCode("VESTIGIA20");
       setPromoError(null);
       return true;
-    } else {
+    }
+
+    const found = (promoCodes || []).find((p) => p.code.toUpperCase() === cleanCode);
+    if (!found) {
       setPromoError("Invalid promotional code.");
       return false;
     }
+
+    if (!found.active) {
+      setPromoError("This promotional code is no longer active.");
+      return false;
+    }
+
+    if (found.expiry && new Date(found.expiry) < new Date()) {
+      setPromoError("This promotional code has expired.");
+      return false;
+    }
+
+    if (found.maxUses !== null && found.maxUses !== undefined && found.uses >= found.maxUses) {
+      setPromoError("This promotional code has reached its maximum usage limit.");
+      return false;
+    }
+
+    setPromoCode(found.code);
+    setPromoError(null);
+    return true;
   };
 
   const removePromoCode = () => {

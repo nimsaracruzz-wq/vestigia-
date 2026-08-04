@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAdmin } from "../AdminContext";
 
+import { Link } from "react-router-dom";
+import { Truck, ArrowRight } from "lucide-react";
+
 export default function AdminSettings() {
   const { settings, updateSettings } = useAdmin();
   const [formData, setFormData] = useState(settings);
@@ -21,9 +24,50 @@ export default function AdminSettings() {
     <div className="admin-page">
       <div className="admin-page-header">
         <div>
-          <h1>Settings</h1>
-          <p>Configure store preferences and policies.</p>
+          <h1>Store Settings</h1>
+          <p>Configure store preferences, currency, tax rates, and shipping matrices.</p>
         </div>
+      </div>
+
+      <div className="shipping-settings-quick-banner mb-6" style={{
+        background: "linear-gradient(135deg, #111827 0%, #1f2937 100%)",
+        color: "#fff",
+        padding: "1.5rem",
+        borderRadius: "12px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div style={{
+            background: "rgba(255, 255, 255, 0.1)",
+            padding: "1rem",
+            borderRadius: "50%",
+            display: "flex"
+          }}>
+            <Truck size={28} style={{ color: "#d97706" }} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 600 }}>Shipping Management System</h3>
+            <p style={{ margin: "4px 0 0", color: "#9ca3af", fontSize: "0.9rem" }}>
+              Configure global shipping regions, country eligibility, courier delivery rates & holiday suspension alerts.
+            </p>
+          </div>
+        </div>
+        <Link to="/admin/shipping" className="admin-btn primary" style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          background: "#d97706",
+          color: "#fff",
+          padding: "0.75rem 1.25rem",
+          borderRadius: "8px",
+          fontWeight: 600,
+          textDecoration: "none"
+        }}>
+          Manage Shipping Matrix <ArrowRight size={16} />
+        </Link>
       </div>
 
       <div className="admin-settings-layout">

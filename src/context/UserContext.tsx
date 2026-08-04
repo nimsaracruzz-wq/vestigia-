@@ -45,6 +45,11 @@ interface UserContextType {
   forgotPassword: (email: string) => Promise<{ success: boolean; devLink?: string; error?: string }>;
   resetPassword: (token: string, password: string) => Promise<{ success: boolean; error?: string }>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  sendVerificationCode: () => Promise<any>;
+  verifyEmailCode: (code: string) => Promise<any>;
+  updateEmail: (newEmail: string) => Promise<any>;
+  checkEmailStatus: (email: string) => Promise<{ case: string; name?: string; ordersCount?: number; message?: string }>;
+  activateAccount: (token?: string, password?: string, email?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   getOrders: () => Promise<any[]>;
 }
 
@@ -94,8 +99,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const name = cust.name || "";
     const [firstName, ...lastNameParts] = name.split(" ");
     const lastName = lastNameParts.join(" ");
-    const addresses = Array.isArray(cust.addresses) 
-      ? cust.addresses 
+    const addresses = Array.isArray(cust.addresses)
+      ? cust.addresses
       : (typeof cust.addresses === "string" ? JSON.parse(cust.addresses) : []);
     const defaultAddr = addresses.find((a: any) => a.isDefault) || addresses[0] || null;
 
@@ -278,6 +283,76 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sendVerificationCode = async () => {
+    try {
+      const data = await apiRequest("/customers/send-verification", {
+        method: "POST",
+      });
+      return { success: true, devCode: data.devCode, message: data.message };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  const verifyEmailCode = async (code: string) => {
+    try {
+      const data = await apiRequest("/customers/verify-email", {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      });
+      if (data.user) {
+        setUser(mapCustomerToProfile(data.user));
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  const updateEmail = async (newEmail: string) => {
+    try {
+      const data = await apiRequest("/customers/update-email", {
+        method: "PUT",
+        body: JSON.stringify({ newEmail }),
+      });
+      if (data.user) {
+        setUser(mapCustomerToProfile(data.user));
+      }
+      return { success: true, devCode: data.devCode };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  const checkEmailStatus = async (email: string) => {
+    try {
+      const data = await apiRequest("/customers/check-email", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      return data;
+    } catch (err: any) {
+      return { case: "NEW_CUSTOMER", email, message: err.message };
+    }
+  };
+
+  const activateAccount = async (token?: string, password?: string, email?: string) => {
+    try {
+      const data = await apiRequest("/customers/activate-account", {
+        method: "POST",
+        body: JSON.stringify({ token, password, email }),
+      });
+
+      if (data.token && data.user) {
+        localStorage.setItem("vestigia_customer_token", data.token);
+        setUser(mapCustomerToProfile(data.user));
+      }
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
   const getOrders = async () => {
     try {
       return await apiRequest("/customers/orders");
@@ -305,6 +380,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
         forgotPassword,
         resetPassword,
         changePassword,
+        sendVerificationCode,
+        verifyEmailCode,
+        updateEmail,
+        checkEmailStatus,
+        activateAccount,
         getOrders,
       }}
     >

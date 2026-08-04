@@ -1,13 +1,14 @@
 import { Outlet, NavLink, Link, useNavigate } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  BarChart2, 
-  Tag, 
-  BookOpen, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Users,
+  BarChart2,
+  Tag,
+  BookOpen,
+  Settings,
+  Truck,
   LogOut,
   Menu
 } from "lucide-react";
@@ -31,6 +32,7 @@ export default function AdminShell() {
     { name: "Customers", path: "/admin/customers", icon: <Users size={18} /> },
     { name: "Analytics", path: "/admin/analytics", icon: <BarChart2 size={18} /> },
     { name: "Promotions", path: "/admin/promotions", icon: <Tag size={18} /> },
+    { name: "Shipping", path: "/admin/shipping", icon: <Truck size={18} /> },
     { name: "Journal", path: "/admin/journal", icon: <BookOpen size={18} /> },
     { name: "Settings", path: "/admin/settings", icon: <Settings size={18} /> },
   ];
@@ -42,8 +44,8 @@ export default function AdminShell() {
         <div className="admin-brand">
           <Link to="/admin">VESTIGIA ADMIN</Link>
         </div>
-        <button 
-          className="admin-mobile-toggle" 
+        <button
+          className="admin-mobile-toggle"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           <Menu size={24} />
@@ -57,14 +59,14 @@ export default function AdminShell() {
             VESTIGIA <span>ADMIN</span>
           </Link>
         </div>
-        
+
         <nav className="admin-nav">
           <p className="admin-nav-label">Management</p>
           <ul>
             {navItems.slice(0, 7).map((item) => (
               <li key={item.path}>
-                <NavLink 
-                  to={item.path} 
+                <NavLink
+                  to={item.path}
                   end={item.exact}
                   className={({ isActive }) => isActive ? "admin-nav-link active" : "admin-nav-link"}
                   onClick={() => setMobileMenuOpen(false)}
@@ -79,7 +81,7 @@ export default function AdminShell() {
           <p className="admin-nav-label">System</p>
           <ul>
             <li>
-              <NavLink 
+              <NavLink
                 to="/admin/settings"
                 className={({ isActive }) => isActive ? "admin-nav-link active" : "admin-nav-link"}
                 onClick={() => setMobileMenuOpen(false)}
@@ -89,7 +91,7 @@ export default function AdminShell() {
               </NavLink>
             </li>
             <li>
-              <button 
+              <button
                 className="admin-nav-link logout-btn"
                 onClick={() => {
                   logout();
