@@ -1,12 +1,10 @@
 import 'dotenv/config';
 // Shipping Management System Enabled
-// Force reload to load updated Prisma client types
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import multer from 'multer';
 import { products as seedProducts } from './data.ts';
 import jwt from 'jsonwebtoken';
@@ -19,10 +17,19 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
+// ─── Prisma: SQLite locally, PostgreSQL on Railway ───────────────────────────
+let prisma: PrismaClient;
+if (process.env.DATABASE_PROVIDER === 'sqlite') {
+  // Local development with BetterSqlite3 adapter
+  const { PrismaBetterSqlite3 } = await import('@prisma/adapter-better-sqlite3');
+  const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL || 'file:./dev.db' });
+  prisma = new PrismaClient({ adapter } as any);
+} else {
+  // Railway / PostgreSQL — standard PrismaClient uses DATABASE_URL env var
+  prisma = new PrismaClient();
+}
 
 const app = express();
-const adapter = new PrismaBetterSqlite3({ url: './dev.db' });
-const prisma = new PrismaClient({ adapter });
 const PORT = process.env.PORT || 4000;
 const uploadDir = path.join(process.cwd(), 'public', 'uploads');
 
@@ -57,9 +64,30 @@ const DEFAULT_SETTINGS = {
   adminPassword: 'admin',
 };
 
-app.use(cors());
+// ─── CORS: allow localhost and Netlify domains ───────────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  /\.netlify\.app$/,
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow non-browser requests
+    const allowed = allowedOrigins.some(o =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    callback(allowed ? null : new Error('Not allowed by CORS'), allowed);
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use('/uploads', express.static(uploadDir));
+
+// ─── Health check (Railway uses this to verify the service is up) ─────────────
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 app.get('/', (_req, res) => {
   res.json({

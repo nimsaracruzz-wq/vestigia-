@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { API_BASE_URL } from "../config/api";
 import {
   products as initialProducts,
   journalArticles as initialJournal,
@@ -122,8 +123,6 @@ interface AdminContextType {
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
-
-const API_BASE_URL = "/api";
 
 function load<T>(key: string, fallback: T): T {
   try {

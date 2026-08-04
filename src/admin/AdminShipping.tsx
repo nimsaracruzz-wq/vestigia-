@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { API_BASE_URL } from "../config/api";
 import {
   Globe,
   Truck,
@@ -134,12 +135,12 @@ export default function AdminShipping() {
     setLoading(true);
     try {
       const [rRes, cRes, mRes, aRes, lRes, sRes] = await Promise.all([
-        fetch("/api/admin/shipping/regions").then((r) => r.json()),
-        fetch("/api/admin/shipping/countries").then((r) => r.json()),
-        fetch("/api/admin/shipping/methods").then((r) => r.json()),
-        fetch("/api/admin/shipping/announcements").then((r) => r.json()),
-        fetch("/api/admin/shipping/logs").then((r) => r.json()),
-        fetch("/api/admin/shipping/stats").then((r) => r.json()),
+        fetch(`${API_BASE_URL}/admin/shipping/regions`).then((r) => r.json()),
+        fetch(`${API_BASE_URL}/admin/shipping/countries`).then((r) => r.json()),
+        fetch(`${API_BASE_URL}/admin/shipping/methods`).then((r) => r.json()),
+        fetch(`${API_BASE_URL}/admin/shipping/announcements`).then((r) => r.json()),
+        fetch(`${API_BASE_URL}/admin/shipping/logs`).then((r) => r.json()),
+        fetch(`${API_BASE_URL}/admin/shipping/stats`).then((r) => r.json()),
       ]);
 
       if (Array.isArray(rRes)) setRegions(rRes);
@@ -179,8 +180,8 @@ export default function AdminShipping() {
 
     try {
       const url = editingRegion
-        ? `/api/admin/shipping/region/${editingRegion.id}`
-        : "/api/admin/shipping/region";
+        ? `${API_BASE_URL}/admin/shipping/region/${editingRegion.id}`
+        : `${API_BASE_URL}/admin/shipping/region`;
       const method = editingRegion ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -203,7 +204,7 @@ export default function AdminShipping() {
     if (!window.confirm(`Are you sure you want to delete region "${name}"? This will delete associated methods.`)) return;
 
     try {
-      const res = await fetch(`/api/admin/shipping/region/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE_URL}/admin/shipping/region/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete region");
       showToast(`Region "${name}" deleted`);
       fetchAllData();
@@ -238,8 +239,8 @@ export default function AdminShipping() {
 
     try {
       const url = editingCountry
-        ? `/api/admin/shipping/country/${editingCountry.id}`
-        : "/api/admin/shipping/country";
+        ? `${API_BASE_URL}/admin/shipping/country/${editingCountry.id}`
+        : `${API_BASE_URL}/admin/shipping/country`;
       const method = editingCountry ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -266,7 +267,7 @@ export default function AdminShipping() {
 
   const handleToggleCountryStatus = async (country: Country) => {
     try {
-      const res = await fetch(`/api/admin/shipping/country/${country.id}`, {
+      const res = await fetch(`${API_BASE_URL}/admin/shipping/country/${country.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isEnabled: !country.isEnabled }),
@@ -287,7 +288,7 @@ export default function AdminShipping() {
     if (selectedCountryIds.length === 0) return;
 
     try {
-      const res = await fetch("/api/admin/shipping/countries/bulk", {
+      const res = await fetch(`${API_BASE_URL}/admin/shipping/countries/bulk`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedCountryIds, isEnabled }),
@@ -333,8 +334,8 @@ export default function AdminShipping() {
 
     try {
       const url = editingMethod
-        ? `/api/admin/shipping/method/${editingMethod.id}`
-        : "/api/admin/shipping/method";
+        ? `${API_BASE_URL}/admin/shipping/method/${editingMethod.id}`
+        : `${API_BASE_URL}/admin/shipping/method`;
       const method = editingMethod ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -365,7 +366,7 @@ export default function AdminShipping() {
     if (!window.confirm(`Delete method "${name}"?`)) return;
 
     try {
-      const res = await fetch(`/api/admin/shipping/method/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE_URL}/admin/shipping/method/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete method");
       showToast(`Shipping method "${name}" deleted`);
       fetchAllData();
@@ -380,7 +381,7 @@ export default function AdminShipping() {
     if (!aMessage.trim()) return;
 
     try {
-      const res = await fetch("/api/admin/shipping/announcements", {
+      const res = await fetch(`${API_BASE_URL}/admin/shipping/announcements`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -406,7 +407,7 @@ export default function AdminShipping() {
 
   const handleDeleteAnnouncement = async (id: number) => {
     try {
-      await fetch(`/api/admin/shipping/announcements/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE_URL}/admin/shipping/announcements/${id}`, { method: "DELETE" });
       showToast("Announcement removed");
       fetchAllData();
     } catch (err: any) {
@@ -417,7 +418,7 @@ export default function AdminShipping() {
   // Export JSON
   const handleExportJSON = async () => {
     try {
-      const res = await fetch("/api/admin/shipping/export");
+      const res = await fetch(`${API_BASE_URL}/admin/shipping/export`);
       const data = await res.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);

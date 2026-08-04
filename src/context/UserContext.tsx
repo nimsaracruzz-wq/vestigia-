@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { API_BASE_URL } from "../config/api";
 
 type UserProfile = {
   firstName: string;
@@ -57,7 +58,6 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = "vestigia_user";
 const TOKEN_STORAGE_KEY = "vestigia_cust_token";
-const API_BASE_URL = "/api";
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);

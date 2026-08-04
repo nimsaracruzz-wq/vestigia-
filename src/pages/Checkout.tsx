@@ -8,6 +8,7 @@ import { useCart } from "../context/CartContext";
 import { useCurrency } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
 import { useAdmin } from "../admin/AdminContext";
+import { API_BASE_URL } from "../config/api";
 
 // Initialize Stripe (using test key)
 const stripePromise = loadStripe("pk_test_51234567890123456789012345678901234567890123");
@@ -276,7 +277,7 @@ function CheckoutContent() {
     const validateCountryShipping = async () => {
       setShippingValidationLoading(true);
       try {
-        const res = await fetch(`/api/shipping/methods/${encodeURIComponent(shippingForm.country)}`);
+        const res = await fetch(`${API_BASE_URL}/shipping/methods/${encodeURIComponent(shippingForm.country)}`);
         const data = await res.json();
 
         if (!data.isEnabled) {
@@ -451,7 +452,7 @@ function CheckoutContent() {
         })),
       };
 
-      await fetch("http://127.0.0.1:4000/api/orders", {
+      await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
