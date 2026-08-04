@@ -64,20 +64,38 @@ const DEFAULT_SETTINGS = {
   adminPassword: 'admin',
 };
 
-// ─── CORS: allow localhost and Netlify domains ───────────────────────────────
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:4173',
+// ─── CORS ────────────────────────────────────────────────────────────────────
+const isDevMode = process.env.NODE_ENV !== 'production';
+const allowedOrigins: (string | RegExp)[] = [
+  // Local dev — any localhost port
+  /^http:\/\/localhost(:\d+)?$/,
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+  // LAN / mobile access (192.168.x.x, 10.x.x.x, 172.x.x.x)
+  /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
+  /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
+  /^http:\/\/172\.\d+\.\d+\.\d+(:\d+)?$/,
+  // Tunnel tools
+  /\.loca\.lt$/,           // localtunnel
+  /\.ngrok\.io$/,          // ngrok (legacy)
+  /\.ngrok-free\.app$/,    // ngrok (free tier)
+  /\.trycloudflare\.com$/, // Cloudflare tunnel
+  // Production
   /\.netlify\.app$/,
-  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL as string] : []),
 ];
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow non-browser requests
-    const allowed = allowedOrigins.some(o =>
+    // Allow requests with no origin (server-to-server, Postman, curl)
+    if (!origin) return callback(null, true);
+    const allowed = isDevMode || allowedOrigins.some(o =>
       typeof o === 'string' ? o === origin : o.test(origin)
     );
-    callback(allowed ? null : new Error('Not allowed by CORS'), allowed);
+    if (allowed) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'), false);
+    }
   },
   credentials: true,
 }));
