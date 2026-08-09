@@ -15,6 +15,7 @@ import Footer from "./components/layout/Footer";
 import MobileMenu from "./components/layout/MobileMenu";
 
 // Common UI components
+import Preloader from "./components/common/Preloader";
 import CartDrawer from "./components/common/CartDrawer";
 import SearchOverlay from "./components/common/SearchOverlay";
 import QuickShopModal from "./components/common/QuickShopModal";
@@ -48,6 +49,8 @@ import Analytics from "./admin/pages/Analytics";
 import Promotions from "./admin/pages/Promotions";
 import AdminJournal from "./admin/pages/AdminJournal";
 import AdminSettings from "./admin/pages/AdminSettings";
+import AdminNotifications from "./admin/pages/AdminNotifications";
+import AdminNewsletter from "./admin/pages/AdminNewsletter";
 import AdminShipping from "./admin/AdminShipping";
 
 // ScrollToTop helper component to reset window scroll position on route change
@@ -85,27 +88,22 @@ function MainAppShell() {
         <ScrollToTop />
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Home onQuickShop={setQuickProduct} />} />
-            <Route path="/shop" element={<Shop onQuickShop={setQuickProduct} />} />
-            <Route path="/product/:id" element={<ProductDetail onQuickShop={setQuickProduct} />} />
+            <Route path="/" element={<Home onQuickShop={(p) => setQuickProduct(p)} />} />
+            <Route path="/shop" element={<Shop onQuickShop={(p) => setQuickProduct(p)} />} />
+            <Route path="/product/:id" element={<ProductDetail onQuickShop={(p) => setQuickProduct(p)} />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/account" element={<Account />} />
-            <Route path="/activate-account" element={<ActivateAccount />} />
-            <Route path="/lookbook" element={<Lookbook onQuickShop={setQuickProduct} />} />
+            <Route path="/activate" element={<ActivateAccount />} />
+            <Route path="/lookbook" element={<Lookbook onQuickShop={(p) => setQuickProduct(p)} />} />
             <Route path="/journal" element={<Journal />} />
             <Route path="/about" element={<About />} />
             <Route path="/story" element={<Story />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
-            <Route path="/returns" element={<RefundPolicy />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/shipping-policy" element={<ShippingPolicy />} />
-            <Route path="/shipping" element={<ShippingPolicy />} />
             <Route path="/contact" element={<ContactUs />} />
-            <Route path="/contact-us" element={<ContactUs />} />
             <Route path="/faq" element={<FAQ />} />
-            <Route path="/faqs" element={<FAQ />} />
           </Routes>
         </AnimatePresence>
       </main>
@@ -133,6 +131,8 @@ function AdminAppShell() {
         <Route path="promotions" element={<Promotions />} />
         <Route path="shipping" element={<AdminShipping />} />
         <Route path="journal" element={<AdminJournal />} />
+        <Route path="newsletter" element={<AdminNewsletter />} />
+        <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>
     </Routes>
@@ -147,6 +147,7 @@ export default function App() {
       <CurrencyProvider>
         <UserProvider>
           <CartProvider>
+            <Preloader />
             <BrowserRouter>
               <ScrollToTop />
               <Routes>

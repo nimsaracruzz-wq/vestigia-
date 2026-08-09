@@ -69,287 +69,76 @@ export type JournalArticle = {
 
 export const heroProducts: Product[] = [
   {
-    id: 1,
-    name: "VESTIGIA SIGNATURE TEE",
+    id: 17,
+    name: "VESTIGIA Aurelius Oversized Tee - Black",
+    slug: "vestigia-aurelius-oversized-tee-black",
     category: "Clothing",
     productType: "Premium Heavyweight Oversized T-Shirt",
-    price: 78,
+    price: 79.99,
     badge: "First Release",
-    colors: ["#f3eedf"], // Cream/Off-white
-    image: "/images/products/signature_front.png",
+    colors: ["Black"],
+    image: "/uploads/1784373355678-vestigia-black-oversized-tshirt-model-main.png",
     images: [
-      "/images/products/signature_front.png",
-      "/images/products/signature_back.png",
-      "/images/products/signature_detail.png",
-      "/images/products/signature_model.png"
+      "/uploads/1784373355678-vestigia-black-oversized-tshirt-model-main.png",
+      "/uploads/1784373364148-vestigia-black-oversized-tshirt-model-front.png",
+      "/uploads/1784373366893-vestigia-black-oversized-tshirt-model-back.png",
+      "/uploads/1784373369879-vestigia-black-oversized-tshirt-front.png",
+      "/uploads/1784373372882-vestigia-black-oversized-tshirt-back.png"
     ],
-    alt: "VESTIGIA Signature Tee - Premium heavyweight cream cotton oversized T-shirt",
-    sizes: ["XS", "S", "M", "L", "XL"],
-    description: "The VESTIGIA Signature Tee establishes the foundation of our first release. Designed with a structured oversized silhouette, considered proportions, and understated brand detailing, it is created as an everyday piece that becomes part of the wearer's own story.",
+    alt: "VESTIGIA Aurelius Oversized Tee - Black",
+    sizes: ["S", "M", "L", "XL", "2XL", "3XL"],
+    description: "VESTIGIA Aurelius Oversized Tee - Black\n\nWhere timeless heritage meets modern streetwear. The Aurelius Oversized Tee features a deep black finish accented with signature gold VESTIGIA detailing, creating a bold yet refined aesthetic.",
     details: [
-      "Premium heavyweight cotton construction (280 GSM)",
-      "Structured oversized silhouette",
-      "Contemporary shoulders and ribbed collar",
-      "Minimal charcoal VESTIGIA brand print at center chest",
-      "Proudly made in Sri Lanka",
-      "Designed in Italy"
+      "Premium oversized fit",
+      "Classic black with gold detailing",
+      "Signature VESTIGIA front graphic",
+      "Double gold sleeve stripes",
+      "Drop-shoulder silhouette",
+      "Unisex design"
     ],
     care: [
       "Machine wash cold inside out with similar colors",
       "Hang to dry naturally in shade",
-      "Warm iron on reverse side if needed",
-      "Do not dry clean or bleach"
+      "Warm iron on reverse side if needed"
     ],
     rating: 4.9,
-    reviews: [
-      { id: 1, author: "Lorenzo M.", rating: 5, date: "June 28, 2026", comment: "The weight of the fabric is incredible. It sits perfectly structured and doesn't lose shape after washing." },
-      { id: 2, author: "Aanya P.", rating: 5, date: "July 02, 2026", comment: "Beautifully minimal. The off-white shade is warm and looks very premium." }
-    ],
-    sizeChart: {
-      unit: "in",
-      columns: ["Size", "Chest", "Length", "Shoulders"],
-      rows: [
-        { size: "XS", chest: "42", length: "27.5", shoulders: "20.5" },
-        { size: "S",  chest: "44", length: "28.5", shoulders: "21.5" },
-        { size: "M",  chest: "46", length: "29.5", shoulders: "22.5" },
-        { size: "L",  chest: "48", length: "30.5", shoulders: "23.5" },
-        { size: "XL", chest: "50", length: "31.5", shoulders: "24.5" }
-      ],
-      notes: "This silhouette is designed to be oversized. We recommend ordering your normal size."
-    }
+    reviews: []
   },
   {
-    id: 2,
-    name: "VESTIGIA ORIGIN TEE",
+    id: 18,
+    name: "VESTIGIA Aurelius Oversized Tee - White",
+    slug: "vestigia-aurelius-oversized-tee-white",
     category: "Clothing",
-    productType: "Premium Graphic T-Shirt",
-    price: 85,
-    badge: "Exclusive",
-    colors: ["#1c1a1a"], // Charcoal black
-    image: "/images/products/origin_front.png",
+    productType: "Premium Heavyweight Oversized T-Shirt",
+    price: 79.99,
+    badge: "EXCLUSIVE",
+    colors: ["White"],
+    image: "/uploads/1784380538861-vestigia-white-oversized-tshirt-model-main.png",
     images: [
-      "/images/products/origin_front.png",
-      "/images/products/origin_back.png",
-      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1000&q=85"
+      "/uploads/1784380538861-vestigia-white-oversized-tshirt-model-main.png",
+      "/uploads/1784380541857-vestigia-white-oversized-tshirt-model-front.png",
+      "/uploads/1784380546321-vestigia-white-oversized-tshirt-model-back.png",
+      "/uploads/1784380554561-vestigia-white-oversized-tshirt-front.png",
+      "/uploads/1784380549246-vestigia-white-oversized-tshirt-back.png"
     ],
-    alt: "VESTIGIA Origin Tee - Premium washed charcoal graphic T-shirt",
-    sizes: ["XS", "S", "M", "L", "XL"],
-    description: "The VESTIGIA Origin Tee reflects the beginning of the brand and the connection between places, cultures, and identity. Contemporary proportions meet restrained graphic expression to create a distinctive piece from the first VESTIGIA release.",
+    alt: "VESTIGIA Aurelius Oversized Tee - White",
+    sizes: ["S", "M", "L", "XL", "2XL", "3XL"],
+    description: "VESTIGIA Aurelius Oversized Tee - White\n\nWhere timeless heritage meets modern streetwear. The Aurelius Oversized Tee - White features a crisp white finish accented with signature gold VESTIGIA detailing.",
     details: [
-      "Premium midweight combed cotton construction (220 GSM)",
-      "Contemporary relaxed fit",
-      "Restrained line-art coordinates graphic printed on back",
-      "Small VESTIGIA front chest branding",
-      "Proudly made in Sri Lanka",
-      "Designed in Italy"
+      "Premium oversized fit",
+      "Classic white with gold detailing",
+      "Signature VESTIGIA front graphic",
+      "Double gold sleeve stripes",
+      "Drop-shoulder silhouette",
+      "Unisex design"
     ],
     care: [
       "Machine wash cold inside out with similar colors",
-      "Tumble dry low or line dry in shade",
-      "Cool iron on reverse; do not iron directly on print",
-      "Do not bleach"
-    ],
-    rating: 4.8,
-    reviews: [
-      { id: 1, author: "Matteo S.", rating: 5, date: "June 30, 2026", comment: "The coordinate map graphic on the back is beautiful and understated. Fits perfectly relaxed." }
-    ],
-    sizeChart: {
-      unit: "in",
-      columns: ["Size", "Chest", "Length", "Shoulders"],
-      rows: [
-        { size: "XS", chest: "40", length: "27", shoulders: "19.5" },
-        { size: "S",  chest: "42", length: "28", shoulders: "20.5" },
-        { size: "M",  chest: "44", length: "29", shoulders: "21.5" },
-        { size: "L",  chest: "46", length: "30", shoulders: "22.5" },
-        { size: "XL", chest: "48", length: "31", shoulders: "23.5" }
-      ],
-      notes: "This silhouette is designed for a contemporary relaxed fit."
-    }
-  },
-  {
-    id: 3,
-    name: "VESTIGIA ESSENTIAL TEE",
-    category: "Clothing",
-    productType: "Minimal Everyday T-Shirt",
-    price: 68,
-    badge: "Core Collection",
-    colors: ["#8b8882"], // Stone grey
-    image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "VESTIGIA Essential Tee - Minimal stone grey everyday T-shirt",
-    sizes: ["XS", "S", "M", "L", "XL"],
-    description: "The VESTIGIA Essential Tee focuses on simplicity, proportion, and everyday versatility. Clean lines, a relaxed silhouette, and subtle VESTIGIA detailing create a piece designed to remain relevant beyond a single season.",
-    details: [
-      "Premium lightweight soft-combed cotton (180 GSM)",
-      "Classic relaxed silhouette",
-      "Completely minimal design with raw detailing",
-      "Subtle tone-on-tone print at the back neck collar",
-      "Proudly made in Sri Lanka",
-      "Designed in Italy"
-    ],
-    care: [
-      "Machine wash warm with similar colors",
-      "Line dry in shade",
-      "Medium steam iron"
-    ],
-    rating: 4.7,
-    reviews: [
-      { id: 1, author: "Isabella R.", rating: 5, date: "June 25, 2026", comment: "The ultimate layering tee. Extremely soft, breathable fabric, and a clean neckline." }
-    ],
-    sizeChart: {
-      unit: "in",
-      columns: ["Size", "Chest", "Length", "Shoulders"],
-      rows: [
-        { size: "XS", chest: "38", length: "26.5", shoulders: "18.5" },
-        { size: "S",  chest: "40", length: "27.5", shoulders: "19.5" },
-        { size: "M",  chest: "42", length: "28.5", shoulders: "20.5" },
-        { size: "L",  chest: "44", length: "29.5", shoulders: "21.5" },
-        { size: "XL", chest: "46", length: "30.5", shoulders: "22.5" }
-      ],
-      notes: "This silhouette is designed to be standard and relaxed."
-    }
-  },
-  {
-    id: 4,
-    name: "VESTIGIA CLASSIC TROUSERS",
-    category: "Clothing",
-    productType: "Premium Cotton-Linen Trousers",
-    price: 120,
-    badge: "New Arrival",
-    colors: ["#1c1a1a", "#8b8882"],
-    image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "VESTIGIA Classic Trousers - Premium tailored cotton-linen trousers in charcoal black and stone grey",
-    sizes: ["XS", "S", "M", "L", "XL"],
-    description: "Tailored trousers designed for contemporary elegance and comfort. Featuring a clean front crease, subtle side slit pockets, and crafted from a premium cotton-linen blend fabric that breathes naturally.",
-    details: [
-      "Premium cotton-linen blend (220 GSM)",
-      "Tailored slim-straight fit",
-      "Clean flat-front waistband with belt loops",
-      "Concealed hook and zip closure",
-      "Proudly made in Sri Lanka",
-      "Designed in Italy"
-    ],
-    care: [
-      "Dry clean recommended",
-      "Machine wash cold delicate cycle if necessary",
-      "Iron low heat on reverse side",
-      "Do not tumble dry"
-    ],
-    rating: 4.6,
-    reviews: [
-      { id: 1, author: "Sofia G.", rating: 5, date: "July 08, 2026", comment: "The blend of cotton and linen is excellent. Keeps structured but feels incredibly light." }
-    ],
-    sizeChart: {
-      unit: "in",
-      columns: ["Size", "Waist", "Inseam", "Hips"],
-      rows: [
-        { size: "XS", waist: "28", inseam: "30", hips: "36" },
-        { size: "S",  waist: "30", inseam: "30.5", hips: "38" },
-        { size: "M",  waist: "32", inseam: "31", hips: "40" },
-        { size: "L",  waist: "34", inseam: "31.5", hips: "42" },
-        { size: "XL", waist: "36", inseam: "32", hips: "44" }
-      ],
-      notes: "Runs true to size. If between sizes, we recommend ordering one size up."
-    }
-  },
-  {
-    id: 5,
-    name: "VESTIGIA OVERSIZED HOODIE",
-    category: "Clothing",
-    productType: "Heavyweight Double-Faced Hoodie",
-    price: 110,
-    badge: "Core Collection",
-    colors: ["#8b8882", "#f3eedf"],
-    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "VESTIGIA Oversized Hoodie - Premium double-faced heavyweight hoodie in stone grey and cream",
-    sizes: ["XS", "S", "M", "L", "XL"],
-    description: "A premium double-faced heavyweight hoodie with drop shoulders, clean finish seams, and zero exterior drawcords. Engineered for comfort and architectural form, maintaining its structured shape throughout the day.",
-    details: [
-      "Ultra-heavyweight cotton fleece (450 GSM)",
-      "Double-lined hood without drawcords",
-      "Kangaroo pocket with concealed side entries",
-      "Ribbed cuffs and waistband",
-      "Proudly made in Sri Lanka",
-      "Designed in Italy"
-    ],
-    care: [
-      "Machine wash cold inside out on gentle cycle",
-      "Dry flat in shade",
-      "Do not tumble dry",
-      "Warm iron if needed"
+      "Hang to dry naturally in shade",
+      "Warm iron on reverse side if needed"
     ],
     rating: 4.9,
-    reviews: [
-      { id: 1, author: "Marco K.", rating: 5, date: "July 10, 2026", comment: "Outstanding thickness. The hood stands up perfectly. Truly a premium piece." }
-    ],
-    sizeChart: {
-      unit: "in",
-      columns: ["Size", "Chest", "Length", "Sleeve"],
-      rows: [
-        { size: "XS", chest: "44", length: "26.5", sleeve: "31.5" },
-        { size: "S",  chest: "46", length: "27.5", sleeve: "32.5" },
-        { size: "M",  chest: "48", length: "28.5", sleeve: "33.5" },
-        { size: "L",  chest: "50", length: "29.5", sleeve: "34.5" },
-        { size: "XL", chest: "52", length: "30.5", sleeve: "35.5" }
-      ],
-      notes: "Designed for a generous oversized fit. Size down for a more standard fit."
-    }
-  },
-  {
-    id: 6,
-    name: "VESTIGIA ORIGIN CAP",
-    category: "Accessories",
-    productType: "Organic Cotton Monogram Cap",
-    price: 45,
-    badge: "Essential",
-    colors: ["#1c1a1a"],
-    image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=1000&q=85",
-    images: [
-      "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&w=1000&q=85",
-      "https://images.unsplash.com/photo-1534215754734-18e55d13e346?auto=format&fit=crop&w=1000&q=85"
-    ],
-    alt: "VESTIGIA Origin Cap - Organic cotton monogram cap in charcoal black",
-    sizes: ["OS"],
-    description: "Constructed from organic cotton twill, the Origin Cap features an adjustable metal buckle strap and a clean embroidered brand monogram on the front panel. A timeless accessory designed to complete any minimal outfit.",
-    details: [
-      "100% organic cotton twill",
-      "6-panel structured construction",
-      "Embroidered tone-on-tone VESTIGIA monogram front graphic",
-      "Adjustable metal buckle backstrap",
-      "Proudly made in Sri Lanka",
-      "Designed in Italy"
-    ],
-    care: [
-      "Hand wash cold only",
-      "Do not bleach or dry clean",
-      "Reshape while damp and dry flat in shade"
-    ],
-    rating: 4.7,
-    reviews: [
-      { id: 1, author: "Lucas V.", rating: 4.7, date: "July 12, 2026", comment: "Great fit and build quality. The monogram is very subtle, which I love." }
-    ],
-    sizeChart: {
-      unit: "in",
-      columns: ["Size", "Circumference", "Brim Width"],
-      rows: [
-        { size: "OS", circumference: "21.5 - 24.0", brimWidth: "2.75" }
-      ],
-      notes: "One size fits most with adjustable metal backstrap."
-    }
+    reviews: []
   }
 ];
 

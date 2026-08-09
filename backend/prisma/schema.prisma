@@ -6,8 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = env("DATABASE_PROVIDER")
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
 }
 
 model AdminUser {
@@ -195,16 +194,17 @@ model PromoCode {
 }
 
 model StoreSettings {
-  id                  Int     @id @default(1)
-  storeName           String
-  tagline             String
-  currency            String
-  announcementText    String
-  announcementEnabled Boolean
-  shippingThreshold   Float
+  id                           Int     @id @default(1)
+  storeName                    String
+  tagline                      String
+  currency                     String
+  announcementText             String
+  announcementEnabled          Boolean
+  shippingThreshold            Float
   complimentaryShippingEnabled Boolean @default(true)
-  taxRate             Float
-  adminPassword       String // fallback for testing
+  taxRate                      Float
+  orderNotificationEmail       String? @default("owner@thevestigia.com")
+  adminPassword                String  // fallback for testing
 }
 
 model JournalArticle {

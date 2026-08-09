@@ -2,10 +2,27 @@ import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RefreshCw, Truck, ShieldCheck, ArrowLeft, Mail, Clock } from "lucide-react";
+import { SEOHead } from "../components/common/SEOHead";
+
+const returnJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Refund & Return Policy — VESTIGIA®",
+  "description": "VESTIGIA® offers a 30-day complimentary return policy for unworn garments. Learn about exchanges, refunds, and global shipping returns.",
+  "url": "https://thevestigia.com/refund-policy/",
+  "isPartOf": { "@id": "https://thevestigia.com/#website" },
+  "mainEntity": {
+    "@type": "MerchantReturnPolicy",
+    "applicableCountry": "IT",
+    "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+    "merchantReturnDays": 30,
+    "returnMethod": "https://schema.org/ReturnByMail",
+    "returnFees": "https://schema.org/FreeReturn"
+  }
+};
 
 export default function RefundPolicy() {
   useEffect(() => {
-    document.title = "Refund & Return Policy | VESTIGIA";
     window.scrollTo(0, 0);
   }, []);
 
@@ -17,6 +34,14 @@ export default function RefundPolicy() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
+      <SEOHead
+        title="Refund & Return Policy | VESTIGIA® Client Care"
+        description="VESTIGIA® offers a 30-day complimentary return policy for unworn garments. Learn about exchanges, refunds, and global shipping returns."
+        canonicalUrl="https://thevestigia.com/refund-policy/"
+        ogImage="https://thevestigia.com/images/products/vestigia_logo.png"
+        ogType="website"
+        jsonLd={returnJsonLd}
+      />
       <header className="policy-hero">
         <div className="policy-hero__inner">
           <Link to="/" className="policy-back-link">

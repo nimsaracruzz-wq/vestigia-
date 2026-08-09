@@ -9,6 +9,7 @@ import { useCurrency } from "../context/CurrencyContext";
 import { useUser } from "../context/UserContext";
 import { useAdmin } from "../admin/AdminContext";
 import { API_BASE_URL } from "../config/api";
+import { formatPhoneNumber } from "../utils/phoneUtils";
 
 // Initialize Stripe (using test key)
 const stripePromise = loadStripe("pk_test_51234567890123456789012345678901234567890123");
@@ -788,7 +789,10 @@ function CheckoutContent() {
                         type="tel"
                         className={shippingErrors.phone ? "input-error" : ""}
                         value={shippingForm.phone}
-                        onChange={(e) => setShippingForm({ ...shippingForm, phone: e.target.value })}
+                        onChange={(e) => {
+                          const formatted = formatPhoneNumber(e.target.value, shippingForm.phoneCountry);
+                          setShippingForm({ ...shippingForm, phone: formatted });
+                        }}
                         placeholder="123 456 7890"
                         required
                       />
@@ -1113,13 +1117,19 @@ function CheckoutContent() {
                 transition={{ duration: 0.5 }}
               >
                 <div className="success-hero-section">
-                  <div className="success-icon-wrapper">
-                    <CheckCircle2 size={32} className="success-icon-svg" />
+                  {/* VESTIGIA emblem \u2014 premium confirmation moment */}
+                  <div className="success-emblem-wrap">
+                    <img
+                      src="/images/products/vestigia_logo.png"
+                      alt="VESTIGIA"
+                      className="vst-emblem vst-emblem--lg vst-emblem--shadow"
+                    />
                   </div>
                   <h1>Thank you, {shippingForm.firstName}.</h1>
                   <p className="success-subheading">Your order is confirmed and is now being processed.</p>
                   <p className="order-number-receipt">Receipt ID: <strong>{orderNumber}</strong></p>
                 </div>
+
 
                 <div className="success-details-layout">
                   {/* Left Column: Tracking and Info */}

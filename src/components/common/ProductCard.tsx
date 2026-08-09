@@ -24,12 +24,20 @@ export default function ProductCard({ product, onQuickShop }: ProductCardProps) 
   return (
     <article 
       className="product-card"
+      itemScope
+      itemType="https://schema.org/Product"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <div className="product-media">
         <Link to={`/product/${product.slug || product.id}`} aria-label={`View details for ${product.name}`}>
-          <img src={currentImage} alt={product.alt} loading="lazy" style={{ transition: 'all 0.3s ease' }} />
+          <img
+            src={currentImage}
+            alt={product.alt || `${product.name} - VESTIGIA Luxury Apparel`}
+            loading="lazy"
+            itemProp="image"
+            style={{ transition: 'all 0.3s ease', aspectRatio: '3/4', objectFit: 'cover', width: '100%' }}
+          />
         </Link>
         {product.badge && <span className="badge">{product.badge}</span>}
         <motion.button

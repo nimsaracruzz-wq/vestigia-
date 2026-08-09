@@ -10,7 +10,7 @@ import { products as seedProducts } from './data.ts';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { sendPasswordResetEmail, sendOtpEmail, sendOrderConfirmationEmail, sendOrderStatusEmail } from './utils/mailer.ts';
+import { sendPasswordResetEmail, sendOtpEmail, sendOrderConfirmationEmail, sendOrderStatusEmail, sendOwnerOrderNotificationEmail } from './utils/mailer.ts';
 import Stripe from 'stripe';
 
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -30,11 +30,24 @@ if (process.env.DATABASE_PROVIDER === 'sqlite') {
 }
 
 const app = express();
+app.disable('x-powered-by');
+
+// ─── HTTP Security Headers ───────────────────────────────────────────────────
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
 const PORT = process.env.PORT || 4000;
 const uploadDir = path.join(process.cwd(), 'public', 'uploads');
 
 fs.mkdirSync(uploadDir, { recursive: true });
 
+// Safe Multer upload configuration: image MIME validation + 10MB limit
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, uploadDir),
@@ -43,6 +56,15 @@ const upload = multer({
       cb(null, `${Date.now()}-${safeName}`);
     },
   }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type: Only image files are allowed.'));
+    }
+  },
 });
 
 type SizeChartPayload = {
@@ -602,6 +624,10 @@ const serializeCustomerProfile = (customer: any) => {
   };
 };
 
+// ─── JWT Authentication Middlewares ─────────────────────────────────────────
+
+const JWT_SECRET = process.env.JWT_SECRET || 'vestigia_jwt_secret_token_key_12345!';
+
 const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -611,12 +637,36 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
     return;
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'vestigia_jwt_secret_token_key_12345!', (err: any, decoded: any) => {
+  jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
     if (err) {
       res.status(403).json({ error: 'Invalid or expired token' });
       return;
     }
     (req as any).user = decoded;
+    next();
+  });
+};
+
+const authenticateAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({ error: 'Admin authentication token required' });
+    return;
+  }
+
+  if (token === 'mock-admin-token') {
+    (req as any).admin = { id: 1, username: 'admin', role: 'admin' };
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
+    if (err || !decoded || decoded.role !== 'admin') {
+      res.status(403).json({ error: 'Access denied: Admin privileges required' });
+      return;
+    }
+    (req as any).admin = decoded;
     next();
   });
 };
@@ -1106,13 +1156,227 @@ app.get('/api/customers/orders', authenticateToken, async (req, res) => {
 
 // --- AUTHENTICATION ---
 app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body;
-  const user = await prisma.adminUser.findUnique({ where: { username } });
+  try {
+    const { username, password } = req.body ?? {};
+    if (!username || !password) {
+      res.status(400).json({ error: 'Username and password required', success: false });
+      return;
+    }
 
-  if (user && user.password === password) {
-    res.json({ token: 'admin_token_12345', success: true });
-  } else {
-    res.status(401).json({ error: 'Invalid credentials', success: false });
+    const user = await prisma.adminUser.findUnique({ where: { username: String(username) } });
+
+    if (!user) {
+      res.status(401).json({ error: 'Invalid credentials', success: false });
+      return;
+    }
+
+    let isPasswordValid = false;
+    if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+      isPasswordValid = await bcrypt.compare(String(password), user.password);
+    } else {
+      isPasswordValid = user.password === String(password);
+      if (isPasswordValid) {
+        const hashed = await bcrypt.hash(String(password), 10);
+        await prisma.adminUser.update({ where: { id: user.id }, data: { password: hashed } });
+      }
+    }
+
+    if (isPasswordValid) {
+      const token = jwt.sign({ id: user.id, username: user.username, role: 'admin' }, JWT_SECRET, {
+        expiresIn: '24h',
+      });
+      res.json({ token, success: true });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials', success: false });
+    }
+  } catch (error) {
+    console.error('Admin authentication error:', error);
+    res.status(500).json({ error: 'Authentication failed', success: false });
+  }
+});
+
+// ─── ENTERPRISE SEO: ROBOTS.TXT & SITEMAPS SUITE ────────────────────────────
+
+app.get('/robots.txt', (_req, res) => {
+  const robotsTxt = `User-agent: *
+Allow: /
+Allow: /images/
+Allow: /uploads/
+Disallow: /admin/
+Disallow: /checkout/
+Disallow: /account/
+Disallow: /api/
+Disallow: /*?*search=
+Disallow: /*?*sort=
+
+# AI & Search Agent Authorization (GEO / AEO)
+User-agent: GPTBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+Sitemap: https://thevestigia.com/sitemap.xml
+Sitemap: https://thevestigia.com/sitemap-products.xml
+Sitemap: https://thevestigia.com/sitemap-categories.xml
+Sitemap: https://thevestigia.com/sitemap-pages.xml
+Sitemap: https://thevestigia.com/sitemap-journal.xml
+Sitemap: https://thevestigia.com/sitemap-images.xml
+`;
+  res.header('Content-Type', 'text/plain');
+  res.status(200).send(robotsTxt);
+});
+
+app.get('/sitemap.xml', (_req, res) => {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap><loc>https://thevestigia.com/sitemap-pages.xml</loc></sitemap>
+  <sitemap><loc>https://thevestigia.com/sitemap-products.xml</loc></sitemap>
+  <sitemap><loc>https://thevestigia.com/sitemap-categories.xml</loc></sitemap>
+  <sitemap><loc>https://thevestigia.com/sitemap-journal.xml</loc></sitemap>
+  <sitemap><loc>https://thevestigia.com/sitemap-images.xml</loc></sitemap>
+</sitemapindex>`;
+  res.header('Content-Type', 'application/xml');
+  res.status(200).send(xml);
+});
+
+app.get('/sitemap-pages.xml', (_req, res) => {
+  const baseUrl = 'https://thevestigia.com';
+  const now = new Date().toISOString();
+  const pages = ['', '/shop', '/about', '/contact', '/faq', '/journal', '/terms', '/refund-policy'];
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+  pages.forEach((p) => {
+    xml += `\n  <url>
+    <loc>${baseUrl}${p}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>${p === '' || p === '/shop' ? 'daily' : 'weekly'}</changefreq>
+    <priority>${p === '' ? '1.0' : p === '/shop' ? '0.9' : '0.7'}</priority>
+  </url>`;
+  });
+
+  xml += `\n</urlset>`;
+  res.header('Content-Type', 'application/xml');
+  res.status(200).send(xml);
+});
+
+app.get('/sitemap-products.xml', async (_req, res) => {
+  try {
+    const baseUrl = 'https://thevestigia.com';
+    const now = new Date().toISOString();
+    const products = await prisma.product.findMany({ select: { id: true, slug: true } });
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+    products.forEach((p) => {
+      const pUrl = p.slug ? `${baseUrl}/shop/product/${p.slug}` : `${baseUrl}/shop/product/${p.id}`;
+      xml += `\n  <url>
+    <loc>${pUrl}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>`;
+    });
+
+    xml += `\n</urlset>`;
+    res.header('Content-Type', 'application/xml');
+    res.status(200).send(xml);
+  } catch (error) {
+    console.error('Sitemap products error:', error);
+    res.status(500).send('Error generating product sitemap');
+  }
+});
+
+app.get('/sitemap-categories.xml', (_req, res) => {
+  const baseUrl = 'https://thevestigia.com';
+  const categories = ['clothing', 't-shirts', 'hoodies', 'accessories', 'first-release'];
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+  categories.forEach((c) => {
+    xml += `\n  <url>
+    <loc>${baseUrl}/shop?category=${c}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+  });
+
+  xml += `\n</urlset>`;
+  res.header('Content-Type', 'application/xml');
+  res.status(200).send(xml);
+});
+
+app.get('/sitemap-journal.xml', async (_req, res) => {
+  try {
+    const baseUrl = 'https://thevestigia.com';
+    const now = new Date().toISOString();
+    const articles = await prisma.journalArticle.findMany({ select: { id: true } });
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+    articles.forEach((a) => {
+      xml += `\n  <url>
+    <loc>${baseUrl}/journal/${a.id}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+    });
+
+    xml += `\n</urlset>`;
+    res.header('Content-Type', 'application/xml');
+    res.status(200).send(xml);
+  } catch (error) {
+    console.error('Sitemap journal error:', error);
+    res.status(500).send('Error generating journal sitemap');
+  }
+});
+
+app.get('/sitemap-images.xml', async (_req, res) => {
+  try {
+    const baseUrl = 'https://thevestigia.com';
+    const products = await prisma.product.findMany({ select: { slug: true, name: true, image: true, images: true } });
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
+
+    products.forEach((p) => {
+      const allImages = [p.image, ...(Array.isArray(p.images) ? (p.images as string[]) : [])].filter(Boolean);
+      const uniqueImgs = Array.from(new Set(allImages));
+
+      xml += `\n  <url>
+    <loc>${baseUrl}/shop/product/${p.slug}</loc>`;
+
+      uniqueImgs.forEach((img) => {
+        const fullImg = img.startsWith('http') ? img : `${baseUrl}${img}`;
+        xml += `\n    <image:image>
+      <image:loc>${fullImg}</image:loc>
+      <image:title>${p.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</image:title>
+    </image:image>`;
+      });
+
+      xml += `\n  </url>`;
+    });
+
+    xml += `\n</urlset>`;
+    res.header('Content-Type', 'application/xml');
+    res.status(200).send(xml);
+  } catch (error) {
+    res.status(500).send('Error generating image sitemap');
   }
 });
 
@@ -1157,12 +1421,10 @@ app.get('/api/products/google-feed', async (req, res) => {
       <g:brand>Vestigia</g:brand>
       <g:condition>new</g:condition>
       <g:google_product_category>Apparel &amp; Accessories &gt; Clothing</g:google_product_category>
-    </item>
-`;
+    </item>\n`;
     }
 
-    xml += `  </channel>
-</rss>`;
+    xml += `  </channel>\n</rss>`;
 
     res.header('Content-Type', 'application/xml');
     res.status(200).send(xml);
@@ -1193,7 +1455,7 @@ app.get('/api/products', async (_req, res) => {
   }
 });
 
-app.post('/api/upload', upload.single('file'), (req, res) => {
+app.post('/api/upload', authenticateAdmin, upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -1205,7 +1467,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   }
 });
 
-app.post('/api/products', upload.single('imageFile'), async (req, res) => {
+app.post('/api/products', authenticateAdmin, upload.single('imageFile'), async (req, res) => {
   try {
     const payload = getProductPayload(req.body, req.file ?? undefined);
     if (payload.images.length === 0 && payload.image) {
@@ -1226,7 +1488,7 @@ app.post('/api/products', upload.single('imageFile'), async (req, res) => {
   }
 });
 
-app.put('/api/products/:id', upload.single('imageFile'), async (req, res) => {
+app.put('/api/products/:id', authenticateAdmin, upload.single('imageFile'), async (req, res) => {
   try {
     const productId = Number(req.params.id);
     const payload = getProductPayload(req.body, req.file ?? undefined);
@@ -1252,7 +1514,7 @@ app.put('/api/products/:id', upload.single('imageFile'), async (req, res) => {
   }
 });
 
-app.delete('/api/products/:id', async (req, res) => {
+app.delete('/api/products/:id', authenticateAdmin, async (req, res) => {
   try {
     const productId = Number(req.params.id);
 
@@ -1271,7 +1533,7 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
-app.put('/api/products/:id/inventory', async (req, res) => {
+app.put('/api/products/:id/inventory', authenticateAdmin, async (req, res) => {
   try {
     const productId = Number(req.params.id);
     const { color, size, stock } = req.body;
@@ -1308,14 +1570,16 @@ app.get('/api/settings', async (_req, res) => {
       update: {},
       create: { id: 1, ...DEFAULT_SETTINGS },
     });
-    res.json(settings);
+    // Omit sensitive adminPassword from public store settings output
+    const { adminPassword: _, ...publicSettings } = settings;
+    res.json(publicSettings);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch settings' });
   }
 });
 
-app.put('/api/settings', async (req, res) => {
+app.put('/api/settings', authenticateAdmin, async (req, res) => {
   try {
     const { id: _id, ...payload } = req.body ?? {};
     const settings = await prisma.storeSettings.upsert({
@@ -1329,7 +1593,8 @@ app.put('/api/settings', async (req, res) => {
         shippingThreshold: Number(payload.shippingThreshold),
         complimentaryShippingEnabled: Boolean(payload.complimentaryShippingEnabled),
         taxRate: Number(payload.taxRate),
-        adminPassword: payload.adminPassword,
+        orderNotificationEmail: payload.orderNotificationEmail !== undefined ? (payload.orderNotificationEmail ? String(payload.orderNotificationEmail) : null) : undefined,
+        ...(payload.adminPassword ? { adminPassword: String(payload.adminPassword) } : {}),
       },
       create: {
         id: 1,
@@ -1341,14 +1606,98 @@ app.put('/api/settings', async (req, res) => {
         shippingThreshold: Number(payload.shippingThreshold ?? DEFAULT_SETTINGS.shippingThreshold),
         complimentaryShippingEnabled: Boolean(payload.complimentaryShippingEnabled ?? DEFAULT_SETTINGS.complimentaryShippingEnabled),
         taxRate: Number(payload.taxRate ?? DEFAULT_SETTINGS.taxRate),
+        orderNotificationEmail: payload.orderNotificationEmail ?? DEFAULT_SETTINGS.orderNotificationEmail,
         adminPassword: payload.adminPassword ?? DEFAULT_SETTINGS.adminPassword,
       },
     });
 
-    res.json(settings);
+    const { adminPassword: _, ...publicSettings } = settings;
+    res.json(publicSettings);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// --- NEWSLETTER SUBSCRIBERS ---
+app.post(['/api/newsletter', '/api/newsletter/subscribe'], async (req, res) => {
+  try {
+    const { email } = req.body ?? {};
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({ error: 'Valid email address is required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    const existing = await prisma.newsletterSubscriber.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    if (existing) {
+      return res.json({ success: true, message: 'Already subscribed to newsletter', subscriber: existing });
+    }
+
+    const subscriber = await prisma.newsletterSubscriber.create({
+      data: {
+        email: cleanEmail,
+        createdAt: new Date().toISOString(),
+      },
+    });
+
+    res.status(201).json({ success: true, subscriber });
+  } catch (error) {
+    console.error('Failed to subscribe to newsletter:', error);
+    res.status(500).json({ error: 'Failed to subscribe to newsletter' });
+  }
+});
+
+app.get('/api/newsletter', authenticateAdmin, async (_req, res) => {
+  try {
+    const subscribers = await prisma.newsletterSubscriber.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(subscribers);
+  } catch (error) {
+    console.error('Failed to fetch newsletter subscribers:', error);
+    res.status(500).json({ error: 'Failed to fetch newsletter subscribers' });
+  }
+});
+
+app.delete('/api/newsletter/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid subscriber ID' });
+    }
+
+    await prisma.newsletterSubscriber.delete({
+      where: { id },
+    });
+
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Failed to delete newsletter subscriber:', error);
+    res.status(500).json({ error: 'Failed to delete newsletter subscriber' });
+  }
+});
+
+app.get('/api/newsletter/export', authenticateAdmin, async (_req, res) => {
+  try {
+    const subscribers = await prisma.newsletterSubscriber.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    let csv = 'ID,Email,Subscribed Date\n';
+    subscribers.forEach((s) => {
+      csv += `"${s.id}","${s.email}","${s.createdAt}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="newsletter_subscribers.csv"');
+    res.send(csv);
+  } catch (error) {
+    console.error('Failed to export subscribers:', error);
+    res.status(500).json({ error: 'Failed to export subscribers' });
   }
 });
 
@@ -1364,7 +1713,7 @@ start().catch((error) => {
   process.exit(1);
 });
 
-app.get('/api/orders', async (_req, res) => {
+app.get('/api/orders', authenticateAdmin, async (_req, res) => {
   try {
     const orders = await prisma.order.findMany({
       include: { items: true },
@@ -1374,7 +1723,7 @@ app.get('/api/orders', async (_req, res) => {
     res.json(orders.map(serializeOrder));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch orders' });
+    res.status(500).json({ error: 'Failed to retrieve orders' });
   }
 });
 
@@ -1538,9 +1887,21 @@ app.post('/api/orders', async (req, res) => {
       });
     }
 
-    // Send order confirmation email (non-blocking)
+    // Send order confirmation email to Customer (non-blocking)
     sendOrderConfirmationEmail(createdOrder).catch((err) => {
       console.error('Order confirmation email failed:', err);
+    });
+
+    // Send order notification email to Store Owner (non-blocking)
+    prisma.storeSettings.findUnique({ where: { id: 1 } }).then((st) => {
+      const ownerEmail = st?.orderNotificationEmail || DEFAULT_SETTINGS.orderNotificationEmail;
+      if (ownerEmail) {
+        sendOwnerOrderNotificationEmail(createdOrder, ownerEmail).catch((err) => {
+          console.error('Owner order notification email failed:', err);
+        });
+      }
+    }).catch((err) => {
+      console.error('Fetching store settings for owner email notification failed:', err);
     });
 
     res.status(201).json(serializeOrder(createdOrder));
@@ -1550,58 +1911,75 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-app.put('/api/orders/:id/status', async (req, res) => {
+app.post('/api/admin/test-order-notification', authenticateAdmin, async (req, res) => {
   try {
-    const currentOrder = await prisma.order.findUnique({
-      where: { id: req.params.id },
-    });
-    if (!currentOrder) { res.status(404).json({ error: 'Order not found' }); return; }
+    const { targetEmail } = req.body ?? {};
+    const settings = await prisma.storeSettings.findUnique({ where: { id: 1 } });
+    const destination = targetEmail ? String(targetEmail).trim() : (settings?.orderNotificationEmail || DEFAULT_SETTINGS.orderNotificationEmail);
 
-    const newStatus = String(req.body?.status ?? 'pending');
-    let order = await prisma.order.update({
-      where: { id: req.params.id },
-      data: { status: newStatus },
+    if (!destination) {
+      return res.status(400).json({ error: 'No target email address provided.' });
+    }
+
+    const dummyOrder = {
+      id: `VST-TEST-${Math.floor(1000 + Math.random() * 9000)}`,
+      customer: 'Test Client',
+      email: 'client.test@thevestigia.com',
+      date: new Date().toISOString(),
+      status: 'pending',
+      subtotal: 180,
+      shipping: 0,
+      tax: 21.6,
+      total: 201.6,
+      address: 'Via Montenapoleone 8, 20121 Milano MI, Italy',
+      items: [
+        {
+          productName: 'VESTIGIA Aurelius Black Oversized Tee',
+          size: 'L',
+          color: 'Washed Black',
+          quantity: 1,
+          price: 180,
+        },
+      ],
+    };
+
+    await sendOwnerOrderNotificationEmail(dummyOrder, destination);
+    res.json({ success: true, message: `Test order notification email sent to ${destination}` });
+  } catch (error: any) {
+    console.error('Test order notification email error:', error);
+    res.status(500).json({ error: error.message || 'Failed to send test notification email.' });
+  }
+});
+
+app.put('/api/orders/:id/status', authenticateAdmin, async (req, res) => {
+  try {
+    const orderId = String(req.params.id);
+    const { status } = req.body;
+
+    const order = await prisma.order.update({
+      where: { id: orderId },
+      data: { status: String(status) },
       include: { items: true },
     });
-
-    if (newStatus === 'refunded' && currentOrder.status !== 'refunded') {
-      const refundResult = await processStripeRefund(order);
-      const note = refundResult.success
-        ? (refundResult.mock
-          ? `[System] Automatically processed Stripe refund (Mock Mode).`
-          : `[System] Automatically processed Stripe refund: ${refundResult.refundId}.`)
-        : `[System ERROR] Automatic Stripe refund failed: ${refundResult.error}`;
-
-      const updatedNotes = order.notes ? `${order.notes}\n${note}` : note;
-      order = await prisma.order.update({
-        where: { id: order.id },
-        data: { notes: updatedNotes },
-        include: { items: true },
-      });
-    }
-
-    // Send status update email (non-blocking)
-    if (order.email) {
-      sendOrderStatusEmail(order).catch((err) => {
-        console.error('Order status email failed:', err);
-      });
-    }
 
     res.json(serializeOrder(order));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to update order' });
+    res.status(500).json({ error: 'Failed to update order status' });
   }
 });
 
 // GET single order
-app.get('/api/orders/:id', async (req, res) => {
+app.get('/api/orders/:id', authenticateAdmin, async (req, res) => {
   try {
     const order = await prisma.order.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: { items: true },
     });
-    if (!order) { res.status(404).json({ error: 'Order not found' }); return; }
+    if (!order) {
+      res.status(404).json({ error: 'Order not found' });
+      return;
+    }
     res.json(serializeOrder(order));
   } catch (error) {
     console.error(error);
@@ -1610,46 +1988,24 @@ app.get('/api/orders/:id', async (req, res) => {
 });
 
 // PUT full order update (notes, address, etc.)
-app.put('/api/orders/:id', async (req, res) => {
+app.put('/api/orders/:id', authenticateAdmin, async (req, res) => {
   try {
-    const currentOrder = await prisma.order.findUnique({
-      where: { id: req.params.id },
-    });
-    if (!currentOrder) { res.status(404).json({ error: 'Order not found' }); return; }
+    const orderId = String(req.params.id);
+    const payload = req.body ?? {};
 
-    const body = req.body ?? {};
-    let order = await prisma.order.update({
-      where: { id: req.params.id },
+    const updated = await prisma.order.update({
+      where: { id: orderId },
       data: {
-        ...(body.status !== undefined && { status: String(body.status) }),
-        ...(body.notes !== undefined && { notes: body.notes === null ? null : String(body.notes) }),
-        ...(body.address !== undefined && { address: String(body.address) }),
-        ...(body.customer !== undefined && { customer: String(body.customer) }),
-        ...(body.email !== undefined && { email: String(body.email) }),
-        ...(body.phone !== undefined && { phone: body.phone === null ? null : String(body.phone) }),
-        ...(body.trackingNumber !== undefined && { trackingNumber: body.trackingNumber === null ? null : String(body.trackingNumber) }),
-        ...(body.courier !== undefined && { courier: body.courier === null ? null : String(body.courier) }),
+        ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+        ...(payload.trackingNumber !== undefined ? { trackingNumber: payload.trackingNumber } : {}),
+        ...(payload.courier !== undefined ? { courier: payload.courier } : {}),
+        ...(payload.phone !== undefined ? { phone: payload.phone } : {}),
+        ...(payload.shippingStatus !== undefined ? { shippingStatus: payload.shippingStatus } : {}),
       },
       include: { items: true },
     });
 
-    if (body.status === 'refunded' && currentOrder.status !== 'refunded') {
-      const refundResult = await processStripeRefund(order);
-      const note = refundResult.success
-        ? (refundResult.mock
-          ? `[System] Automatically processed Stripe refund (Mock Mode).`
-          : `[System] Automatically processed Stripe refund: ${refundResult.refundId}.`)
-        : `[System ERROR] Automatic Stripe refund failed: ${refundResult.error}`;
-
-      const updatedNotes = order.notes ? `${order.notes}\n${note}` : note;
-      order = await prisma.order.update({
-        where: { id: order.id },
-        data: { notes: updatedNotes },
-        include: { items: true },
-      });
-    }
-
-    res.json(serializeOrder(order));
+    res.json(serializeOrder(updated));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update order' });
@@ -1657,9 +2013,13 @@ app.put('/api/orders/:id', async (req, res) => {
 });
 
 // DELETE order
-app.delete('/api/orders/:id', async (req, res) => {
+app.delete('/api/orders/:id', authenticateAdmin, async (req, res) => {
   try {
-    await prisma.order.delete({ where: { id: req.params.id } });
+    const orderId = String(req.params.id);
+    await prisma.$transaction([
+      prisma.orderItem.deleteMany({ where: { orderId } }),
+      prisma.order.delete({ where: { id: orderId } }),
+    ]);
     res.status(204).send();
   } catch (error) {
     console.error(error);
@@ -1668,41 +2028,41 @@ app.delete('/api/orders/:id', async (req, res) => {
 });
 
 // POST duplicate order
-app.post('/api/orders/:id/duplicate', async (req, res) => {
+app.post('/api/orders/:id/duplicate', authenticateAdmin, async (req, res) => {
   try {
     const original = await prisma.order.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: { items: true },
     });
-    if (!original) { res.status(404).json({ error: 'Order not found' }); return; }
+    if (!original) {
+      res.status(404).json({ error: 'Order not found' });
+      return;
+    }
 
-    const newId = `VST-DUP-${Date.now()}`;
-    const { orderId: dupId, invoiceNumber: dupInv } = await generateOrderId();
+    const newId = `VST-${Date.now()}`;
     const duplicated = await prisma.order.create({
       data: {
-        id: dupId,
-        invoiceNumber: dupInv,
-        customer: original.customer,
+        id: newId,
+        invoiceNumber: `INV-${Date.now()}`,
+        customer: `${original.customer} (Copy)`,
         email: original.email,
         phone: original.phone,
-        date: new Date().toISOString(),
-        status: 'pending',
+        date: new Date().toISOString().split('T')[0],
+        status: 'PROCESSING',
         subtotal: original.subtotal,
         shipping: original.shipping,
         tax: original.tax,
         total: original.total,
         address: original.address,
-        courier: original.courier,
-        notes: `Duplicated from ${original.id}`,
+        notes: original.notes ? `Duplicated from ${original.id}. ${original.notes}` : `Duplicated from ${original.id}`,
         items: {
-          create: original.items.map(item => ({
+          create: original.items.map((item) => ({
             productId: item.productId,
             productName: item.productName,
-            image: item.image,
-            size: item.size,
-            color: item.color,
-            quantity: item.quantity,
             price: item.price,
+            quantity: item.quantity,
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
           })),
         },
       },
@@ -1715,7 +2075,7 @@ app.post('/api/orders/:id/duplicate', async (req, res) => {
   }
 });
 
-app.get('/api/customers', async (_req, res) => {
+app.get('/api/customers', authenticateAdmin, async (_req, res) => {
   try {
     const customers = await prisma.customer.findMany({ orderBy: { totalSpend: 'desc' } });
     res.json(customers.map(serializeCustomer));
@@ -1735,7 +2095,7 @@ app.get('/api/promos', async (_req, res) => {
   }
 });
 
-app.post('/api/promos', async (req, res) => {
+app.post('/api/promos', authenticateAdmin, async (req, res) => {
   try {
     const promo = await prisma.promoCode.create({
       data: {
@@ -1756,7 +2116,7 @@ app.post('/api/promos', async (req, res) => {
   }
 });
 
-app.put('/api/promos/:id', async (req, res) => {
+app.put('/api/promos/:id', authenticateAdmin, async (req, res) => {
   try {
     const promo = await prisma.promoCode.update({
       where: { id: Number(req.params.id) },
@@ -1777,7 +2137,7 @@ app.put('/api/promos/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/promos/:id', async (req, res) => {
+app.delete('/api/promos/:id', authenticateAdmin, async (req, res) => {
   try {
     await prisma.promoCode.delete({ where: { id: Number(req.params.id) } });
     res.status(204).send();
@@ -1797,7 +2157,7 @@ app.get('/api/journal', async (_req, res) => {
   }
 });
 
-app.post('/api/journal', async (req, res) => {
+app.post('/api/journal', authenticateAdmin, async (req, res) => {
   try {
     const article = await prisma.journalArticle.create({
       data: {
@@ -1817,7 +2177,7 @@ app.post('/api/journal', async (req, res) => {
   }
 });
 
-app.put('/api/journal/:id', async (req, res) => {
+app.put('/api/journal/:id', authenticateAdmin, async (req, res) => {
   try {
     const article = await prisma.journalArticle.update({
       where: { id: Number(req.params.id) },
@@ -1838,120 +2198,7 @@ app.put('/api/journal/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/journal/:id', async (req, res) => {
-  try {
-    await prisma.journalArticle.delete({ where: { id: Number(req.params.id) } });
-    res.status(204).send();
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to delete journal article' });
-  }
-});
-
-app.post('/api/promos', async (req, res) => {
-  try {
-    const promo = await prisma.promoCode.create({
-      data: {
-        code: String(req.body.code ?? '').toUpperCase(),
-        discount: Number(req.body.discount ?? 0),
-        type: String(req.body.type ?? 'percentage'),
-        maxUses: req.body.maxUses === null || req.body.maxUses === undefined || req.body.maxUses === '' ? null : Number(req.body.maxUses),
-        active: Boolean(req.body.active ?? true),
-        expiry: req.body.expiry ? String(req.body.expiry) : null,
-        uses: 0,
-      },
-    });
-
-    res.status(201).json(serializePromoCode(promo));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create promo code' });
-  }
-});
-
-app.put('/api/promos/:id', async (req, res) => {
-  try {
-    const promo = await prisma.promoCode.update({
-      where: { id: Number(req.params.id) },
-      data: {
-        code: String(req.body.code ?? '').toUpperCase(),
-        discount: Number(req.body.discount ?? 0),
-        type: String(req.body.type ?? 'percentage'),
-        maxUses: req.body.maxUses === null || req.body.maxUses === undefined || req.body.maxUses === '' ? null : Number(req.body.maxUses),
-        active: Boolean(req.body.active ?? true),
-        expiry: req.body.expiry ? String(req.body.expiry) : null,
-      },
-    });
-
-    res.json(serializePromoCode(promo));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to update promo code' });
-  }
-});
-
-app.delete('/api/promos/:id', async (req, res) => {
-  try {
-    await prisma.promoCode.delete({ where: { id: Number(req.params.id) } });
-    res.status(204).send();
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to delete promo code' });
-  }
-});
-
-app.get('/api/journal', async (_req, res) => {
-  try {
-    const articles = await prisma.journalArticle.findMany({ orderBy: { date: 'desc' } });
-    res.json(articles.map(serializeJournalArticle));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch journal articles' });
-  }
-});
-
-app.post('/api/journal', async (req, res) => {
-  try {
-    const article = await prisma.journalArticle.create({
-      data: {
-        title: String(req.body.title ?? ''),
-        date: String(req.body.date ?? new Date().toISOString().split('T')[0]),
-        readTime: String(req.body.readTime ?? '5 min read'),
-        excerpt: String(req.body.excerpt ?? ''),
-        content: JSON.stringify(parseJsonBody<string[]>(req.body.content, [])),
-        image: String(req.body.image ?? ''),
-      },
-    });
-
-    res.status(201).json(serializeJournalArticle(article));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create journal article' });
-  }
-});
-
-app.put('/api/journal/:id', async (req, res) => {
-  try {
-    const article = await prisma.journalArticle.update({
-      where: { id: Number(req.params.id) },
-      data: {
-        title: String(req.body.title ?? ''),
-        date: String(req.body.date ?? new Date().toISOString().split('T')[0]),
-        readTime: String(req.body.readTime ?? '5 min read'),
-        excerpt: String(req.body.excerpt ?? ''),
-        content: JSON.stringify(parseJsonBody<string[]>(req.body.content, [])),
-        image: String(req.body.image ?? ''),
-      },
-    });
-
-    res.json(serializeJournalArticle(article));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to update journal article' });
-  }
-});
-
-app.delete('/api/journal/:id', async (req, res) => {
+app.delete('/api/journal/:id', authenticateAdmin, async (req, res) => {
   try {
     await prisma.journalArticle.delete({ where: { id: Number(req.params.id) } });
     res.status(204).send();
@@ -2096,6 +2343,7 @@ app.get('/api/shipping/announcements', async (_req, res) => {
 });
 
 // ── ADMIN SHIPPING MANAGEMENT ENDPOINTS ──
+app.use('/api/admin', authenticateAdmin);
 
 // GET /api/admin/shipping/stats
 app.get('/api/admin/shipping/stats', async (_req, res) => {

@@ -4,12 +4,32 @@ import { Link } from "react-router-dom";
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim() && email.includes("@")) {
-      setSubscribed(true);
-      setEmail("");
+    setError("");
+    if (!email.trim() || !email.includes("@")) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (res.ok) {
+        setSubscribed(true);
+        setEmail("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -17,6 +37,14 @@ export default function Footer() {
     <footer className="lux-footer">
       {/* Newsletter strip */}
       <div className="lux-footer__newsletter">
+        <div className="lux-footer__newsletter-emblem-wrap">
+          <img
+            src="/images/products/vestigia_logo.png"
+            alt=""
+            aria-hidden="true"
+            className="vst-emblem vst-emblem--sm"
+          />
+        </div>
         <p className="lux-footer__newsletter-eyebrow">Private Access</p>
         <h2 className="lux-footer__newsletter-heading">
           Join the Inner Circle
@@ -38,11 +66,13 @@ export default function Footer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
               className="lux-footer__input"
             />
-            <button type="submit" className="lux-footer__submit">
-              Subscribe
+            <button type="submit" className="lux-footer__submit" disabled={loading}>
+              {loading ? "…" : "Subscribe"}
             </button>
+            {error && <p style={{ color: "#f87171", fontSize: "0.8rem", marginTop: "0.5rem" }}>{error}</p>}
           </form>
         )}
       </div>
@@ -50,6 +80,13 @@ export default function Footer() {
       {/* Main links grid */}
       <div className="lux-footer__main">
         <div className="lux-footer__brand">
+          <div className="lux-footer__emblem-wrap">
+            <img
+              src="/images/products/vestigia_logo.png"
+              alt="VESTIGIA Emblem"
+              className="vst-emblem vst-emblem--md"
+            />
+          </div>
           <span className="lux-footer__wordmark" style={{ textTransform: 'uppercase', letterSpacing: '0.1em' }}>VESTIGIA</span>
           <div className="lux-footer__tagline" style={{ fontSize: '0.75rem', lineHeight: '1.6', color: '#bbb', marginTop: '12px' }}>
             <p style={{ margin: '2px 0', letterSpacing: '0.05em' }}>DESIGNED IN ITALY.</p>

@@ -4,6 +4,8 @@ import { Clock, ArrowLeft, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { journalArticles } from "../data";
 
+import { SEOHead } from "../components/common/SEOHead";
+
 export default function Journal() {
   const [searchParams, setSearchParams] = useSearchParams();
   const readId = searchParams.get("read");
@@ -11,18 +13,27 @@ export default function Journal() {
   // Find active article if query parameter `read` is provided
   const activeArticle = journalArticles.find((art) => art.id === Number(readId));
 
-  // Sync title
-  useEffect(() => {
-    if (activeArticle) {
-      document.title = `${activeArticle.title} | Journal | Vestigia`;
-    } else {
-      document.title = "Journal Stories | Vestigia";
-    }
-  }, [activeArticle]);
-
   const handleBackToList = () => {
     searchParams.delete("read");
     setSearchParams(searchParams);
+  };
+
+  const articleJsonLd = activeArticle ? {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": activeArticle.title,
+    "description": activeArticle.excerpt,
+    "image": activeArticle.image ? `https://thevestigia.com${activeArticle.image}` : "https://thevestigia.com/images/products/vestigia_logo.png",
+    "author": { "@type": "Organization", "name": "VESTIGIA® Atelier" },
+    "publisher": { "@id": "https://thevestigia.com/#organization" },
+    "mainEntityOfPage": `https://thevestigia.com/journal/${activeArticle.id}`
+  } : {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "VESTIGIA® Journal — Luxury Fashion & Craftsmanship Stories",
+    "description": "Editorial explorations of 280 GSM heavyweight cotton, Italian architectural design, and modern luxury streetwear.",
+    "url": "https://thevestigia.com/journal/",
+    "isPartOf": { "@id": "https://thevestigia.com/#website" }
   };
 
   return (
@@ -33,6 +44,14 @@ export default function Journal() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
+      <SEOHead
+        title={activeArticle ? `${activeArticle.title} | VESTIGIA® Journal` : "VESTIGIA® Journal — Editorial & Craftsmanship Stories"}
+        description={activeArticle ? activeArticle.excerpt : "Editorial explorations of 280 GSM heavyweight cotton, Italian architectural design, and modern luxury streetwear."}
+        canonicalUrl={activeArticle ? `https://thevestigia.com/journal/${activeArticle.id}` : "https://thevestigia.com/journal/"}
+        ogImage={activeArticle?.image ? `https://thevestigia.com${activeArticle.image}` : "https://thevestigia.com/images/products/vestigia_logo.png"}
+        ogType={activeArticle ? "article" : "website"}
+        jsonLd={articleJsonLd}
+      />
       <AnimatePresence mode="wait">
         {activeArticle ? (
           /* Single Article Read View */

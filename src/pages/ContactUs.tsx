@@ -2,6 +2,22 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle2, ArrowLeft } from "lucide-react";
+import { SEOHead } from "../components/common/SEOHead";
+
+const contactJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  "name": "Contact Client Concierge — VESTIGIA®",
+  "description": "Get in touch with VESTIGIA® Client Concierge for order inquiries, sizing assistance, or bespoke assistance.",
+  "url": "https://thevestigia.com/contact/",
+  "isPartOf": { "@id": "https://thevestigia.com/#website" },
+  "mainEntity": {
+    "@type": "ContactPoint",
+    "email": "concierge@thevestigia.com",
+    "contactType": "customer service",
+    "availableLanguage": ["English", "Italian"]
+  }
+};
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({
@@ -15,7 +31,6 @@ export default function ContactUs() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = "Contact Us & Client Concierge | VESTIGIA";
     window.scrollTo(0, 0);
   }, []);
 
@@ -36,6 +51,14 @@ export default function ContactUs() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
+      <SEOHead
+        title="Contact Client Concierge | VESTIGIA®"
+        description="Get in touch with VESTIGIA® Client Concierge for order inquiries, sizing assistance, or bespoke assistance."
+        canonicalUrl="https://thevestigia.com/contact/"
+        ogImage="https://thevestigia.com/images/products/vestigia_logo.png"
+        ogType="website"
+        jsonLd={contactJsonLd}
+      />
       {/* Hero Header */}
       <header className="policy-hero">
         <div className="policy-hero__inner">

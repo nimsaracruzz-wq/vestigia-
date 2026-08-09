@@ -7,8 +7,10 @@ import {
   BarChart2,
   Tag,
   BookOpen,
+  Mail,
   Settings,
   Truck,
+  Bell,
   LogOut,
   Menu
 } from "lucide-react";
@@ -34,7 +36,7 @@ export default function AdminShell() {
     { name: "Promotions", path: "/admin/promotions", icon: <Tag size={18} /> },
     { name: "Shipping", path: "/admin/shipping", icon: <Truck size={18} /> },
     { name: "Journal", path: "/admin/journal", icon: <BookOpen size={18} /> },
-    { name: "Settings", path: "/admin/settings", icon: <Settings size={18} /> },
+    { name: "Newsletter", path: "/admin/newsletter", icon: <Mail size={18} /> },
   ];
 
   return (
@@ -63,7 +65,7 @@ export default function AdminShell() {
         <nav className="admin-nav">
           <p className="admin-nav-label">Management</p>
           <ul>
-            {navItems.slice(0, 7).map((item) => (
+            {navItems.map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
@@ -80,6 +82,16 @@ export default function AdminShell() {
 
           <p className="admin-nav-label">System</p>
           <ul>
+            <li>
+              <NavLink
+                to="/admin/notifications"
+                className={({ isActive }) => isActive ? "admin-nav-link active" : "admin-nav-link"}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Bell size={18} />
+                <span>Notifications</span>
+              </NavLink>
+            </li>
             <li>
               <NavLink
                 to="/admin/settings"

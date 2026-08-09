@@ -5,17 +5,30 @@ import { type Product } from "../data";
 import { useAdmin } from "../admin/AdminContext";
 import ProductCard from "../components/common/ProductCard";
 
+import { SEOHead } from "../components/common/SEOHead";
+
 type ShopProps = {
   onQuickShop: (product: Product) => void;
 };
 
+const shopJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Shop The First Release — VESTIGIA® Luxury Apparel",
+  "description": "Explore the complete VESTIGIA® Collection. Italian architectural design, 280 GSM heavyweight organic cotton, and refined streetwear silhouettes.",
+  "url": "https://thevestigia.com/shop/",
+  "isPartOf": { "@id": "https://thevestigia.com/#website" },
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://thevestigia.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Shop", "item": "https://thevestigia.com/shop/" }
+    ]
+  }
+};
+
 export default function Shop({ onQuickShop }: ShopProps) {
   const { products } = useAdmin();
-
-  // Set document title for SEO
-  useEffect(() => {
-    document.title = "Shop — The First Release — VESTIGIA";
-  }, []);
 
   return (
     <motion.div
@@ -26,6 +39,14 @@ export default function Shop({ onQuickShop }: ShopProps) {
       transition={{ duration: 0.4 }}
       style={{ background: '#fff', minHeight: '100vh' }}
     >
+      <SEOHead
+        title="Shop The First Release | VESTIGIA® Luxury Apparel"
+        description="Explore the complete VESTIGIA® Collection. Italian architectural design, 280 GSM heavyweight organic cotton, and refined streetwear silhouettes."
+        canonicalUrl="https://thevestigia.com/shop/"
+        ogImage="https://thevestigia.com/images/products/vestigia_logo.png"
+        ogType="website"
+        jsonLd={shopJsonLd}
+      />
       {/* Top Banner */}
       <div className="shop-header-banner" style={{ padding: '80px 24px 60px', textAlign: 'center', background: '#f6f3ed' }}>
         <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', marginBottom: '12px' }}>

@@ -411,123 +411,380 @@ function printInvoice(order: Order) {
 // ─── Premium Packing Slip ─────────────────────────────────────────────────────
 
 function printPackingSlip(order: Order) {
-  const win = window.open("", "_blank", "width=680,height=820");
+  const win = window.open("", "_blank", "width=720,height=900");
   if (!win) return;
-  const itemsHTML = order.items.map((i, idx) => `
-    <tr>
-      <td style="padding:4px 0;">
-        <input type="checkbox" style="margin-right:8px;" />
-        <strong>${i.productName}</strong>
-      </td>
-      <td style="text-align:center;padding:4px 8px;">${i.size !== 'OS' ? i.size : '—'}${i.color ? ' / '+i.color : ''}</td>
-      <td style="text-align:center;padding:4px 8px;font-weight:700;font-size:15px;">${i.quantity}</td>
-      <td style="text-align:center;padding:4px 8px;">
-        <span style="display:inline-block;width:18px;height:18px;border:2px solid #111;border-radius:3px;"></span>
-      </td>
-    </tr>`).join('');
-  const barcodeLines = order.id.split('').map((c,i)=>`<div style="display:inline-block;width:${(i%3===0?3:2)}px;height:48px;background:#111;margin-right:1px;"></div>`).join('');
+
+  const totalQty = order.items.reduce((s, i) => s + i.quantity, 0);
+
+  const itemsHTML = order.items.map((i) => {
+    const itemAny = i as any;
+    const size = itemAny.selectedSize || i.size || 'OS';
+    const color = itemAny.selectedColor || i.color || '';
+    const variantStr = [size !== 'OS' ? `Size: ${size}` : '', color ? `Color: ${color}` : ''].filter(Boolean).join(' / ') || 'Standard';
+
+    return `
+      <tr>
+        <td style="padding: 12px 14px; font-weight: 600; color: #171412;">
+          <div style="font-size: 13px;">${i.productName}</div>
+        </td>
+        <td style="text-align: center; padding: 12px; font-size: 11px; font-weight: 600; color: #444;">
+          <span style="display: inline-block; padding: 3px 8px; background: #f0eee8; border-radius: 4px; border: 1px solid #e2ded6;">
+            ${variantStr}
+          </span>
+        </td>
+        <td style="text-align: center; padding: 12px; font-size: 14px; font-weight: 700; color: #171412;">
+          ${i.quantity}
+        </td>
+        <td style="text-align: center; padding: 12px;">
+          <span style="display: inline-block; width: 20px; height: 20px; border: 2px solid #171412; border-radius: 4px; background: #fff;"></span>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const barcodeLines = order.id.split('').map((c, i) =>
+    `<div style="display:inline-block;width:${(i % 3 === 0 ? 3 : 2)}px;height:42px;background:#171412;margin-right:1.5px;"></div>`
+  ).join('');
+
   win.document.write(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Packing Slip — ${order.id}</title>
+  <title>VESTIGIA — Packaging Slip — ${order.id}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Inter',sans-serif;color:#111;font-size:13px;line-height:1.5;}
-    .page{max-width:640px;margin:0 auto;padding:32px 36px;}
-    .top-bar{background:#111;color:#fff;padding:14px 20px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
-    .top-bar-brand{font-size:16px;font-weight:700;letter-spacing:0.12em;}
-    .top-bar-doc{font-size:11px;color:#aaa;letter-spacing:0.08em;text-transform:uppercase;}
-    .section{margin-bottom:20px;}
-    .section-title{font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#aaa;margin-bottom:8px;}
-    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;background:#f9f9f9;border-radius:8px;padding:16px;border:1px solid #eee;margin-bottom:20px;}
-    .info-item label{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#aaa;display:block;margin-bottom:3px;}
-    .info-item p{font-size:12px;font-weight:500;color:#111;}
-    .ship-box{background:#fff;border:2px solid #111;border-radius:10px;padding:16px 20px;margin-bottom:20px;}
-    .ship-to-label{font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#888;margin-bottom:6px;}
-    .ship-to-name{font-size:16px;font-weight:700;margin-bottom:4px;}
-    .ship-to-addr{font-size:13px;color:#555;line-height:1.6;}
-    table{width:100%;border-collapse:collapse;}
-    thead tr{background:#111;color:#fff;border-radius:6px;}
-    th{padding:9px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;}
-    td{padding:10px 12px;border-bottom:1px solid #eee;font-size:13px;vertical-align:middle;}
-    tr:last-child td{border-bottom:none;}
-    .barcode-section{margin-top:24px;text-align:center;padding:20px;background:#f9f9f9;border:1px dashed #ddd;border-radius:8px;}
-    .barcode-label{font-family:monospace;font-size:12px;font-weight:700;letter-spacing:0.25em;color:#111;margin-bottom:10px;}
-    .return-note{margin-top:20px;padding:12px 16px;background:#fffbf0;border:1px solid #fde68a;border-radius:8px;font-size:11px;color:#92400e;line-height:1.6;}
-    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 12mm;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: #171412;
+      background: #fff;
+      font-size: 12px;
+      line-height: 1.5;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .slip-card {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 36px 32px;
+      background: #fff;
+    }
+
+    /* Top Brand Medallion */
+    .slip-brand-header {
+      text-align: center;
+      padding-bottom: 22px;
+      border-bottom: 2px solid #171412;
+      margin-bottom: 24px;
+    }
+
+    .slip-logo {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      margin: 0 auto 10px auto;
+      display: block;
+    }
+
+    .slip-wordmark {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      color: #171412;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .slip-subheading {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #777;
+    }
+
+    /* Grid Meta Details */
+    .slip-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      background: #f9f8f5;
+      border: 1px solid #e8e5df;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .slip-meta-item label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #888;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .slip-meta-item p {
+      font-size: 12px;
+      font-weight: 600;
+      color: #171412;
+    }
+
+    /* Address Grid */
+    .slip-address-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .slip-address-box {
+      border: 2px solid #171412;
+      border-radius: 8px;
+      padding: 18px 20px;
+      background: #fff;
+    }
+
+    .slip-origin-box {
+      border: 1px solid #e5e2dc;
+      border-radius: 8px;
+      padding: 18px 20px;
+      background: #fcfbf9;
+    }
+
+    .address-title {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .address-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #171412;
+      margin-bottom: 6px;
+    }
+
+    .address-lines {
+      font-size: 12px;
+      color: #444;
+      line-height: 1.6;
+    }
+
+    /* Items Section */
+    .slip-section-header {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #171412;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    table.slip-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 28px;
+      border: 1px solid #e8e5df;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table.slip-table thead tr {
+      background: #171412;
+      color: #fff;
+    }
+
+    table.slip-table th {
+      padding: 11px 14px;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      text-align: left;
+    }
+
+    table.slip-table tbody td {
+      border-bottom: 1px solid #eee;
+    }
+
+    table.slip-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Barcode Box */
+    .slip-barcode-box {
+      text-align: center;
+      padding: 20px;
+      background: #faf9f6;
+      border: 1px dashed #d5d2cb;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .slip-barcode-code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.35em;
+      color: #171412;
+      margin-bottom: 8px;
+    }
+
+    /* Guarantee & Care Note */
+    .slip-note-box {
+      background: #fffdf5;
+      border: 1px solid #f3ebd3;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      font-size: 11px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .slip-note-box strong {
+      color: #171412;
+    }
+
+    /* Footer Motto */
+    .slip-footer {
+      border-top: 1px solid #eaeaea;
+      padding-top: 16px;
+      text-align: center;
+      font-size: 10px;
+      color: #888;
+      line-height: 1.6;
+    }
+
+    .slip-motto {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      color: #171412;
+      margin-top: 6px;
+      text-transform: uppercase;
+    }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .slip-card { padding: 0; }
+    }
   </style>
 </head>
 <body>
-<div class="page">
+<div class="slip-card">
   <!-- Header -->
-  <div class="top-bar">
-    <div>
-      <div class="top-bar-brand">VESTIGIA</div>
-      <div class="top-bar-doc">Packing Slip</div>
+  <div class="slip-brand-header">
+    <img src="/images/products/vestigia_logo.png" alt="VESTIGIA" class="slip-logo" />
+    <div class="slip-wordmark">VESTIGIA</div>
+    <div class="slip-subheading">Packaging Slip &amp; Order Verification Record</div>
+  </div>
+
+  <!-- Order Meta Grid -->
+  <div class="slip-meta-grid">
+    <div class="slip-meta-item">
+      <label>Order Reference</label>
+      <p>${order.id}</p>
     </div>
-    <div style="text-align:right;">
-      <div style="font-size:15px;font-weight:700;letter-spacing:0.05em;">${order.id}</div>
-      <div style="font-size:11px;color:#aaa;margin-top:2px;">${fmtDate(order.date)}</div>
+    <div class="slip-meta-item">
+      <label>Receipt ID</label>
+      <p>${order.invoiceNumber ?? order.id}</p>
+    </div>
+    <div class="slip-meta-item">
+      <label>Order Date</label>
+      <p>${fmtDate(order.date, true)}</p>
+    </div>
+    <div class="slip-meta-item">
+      <label>Total Items</label>
+      <p>${totalQty} item(s)</p>
     </div>
   </div>
 
-  <!-- Order Meta -->
-  <div class="info-grid">
-    <div class="info-item"><label>Order Number</label><p>${order.id}</p></div>
-    <div class="info-item"><label>Invoice Number</label><p>${order.invoiceNumber ?? '—'}</p></div>
-    <div class="info-item"><label>Order Date</label><p>${fmtDate(order.date, true)}</p></div>
-    <div class="info-item"><label>Items Count</label><p>${order.items.reduce((s,i)=>s+i.quantity,0)} piece(s)</p></div>
-    ${order.courier ? `<div class="info-item"><label>Courier</label><p>${order.courier}</p></div>` : ''}
-    ${order.trackingNumber ? `<div class="info-item"><label>Tracking #</label><p style="font-family:monospace;">${order.trackingNumber}</p></div>` : ''}
-  </div>
+  <!-- Address Grid -->
+  <div class="slip-address-grid">
+    <!-- Ship To Destination -->
+    <div class="slip-address-box">
+      <div class="address-title">▶ Ship To (Recipient Destination)</div>
+      <div class="address-name">${order.customer}</div>
+      <div class="address-lines">${order.address.replace(/,\s*/g, '<br/>')}</div>
+      ${order.phone ? `<div style="margin-top: 10px; font-size: 11px; font-weight: 500; color: #555;">📞 ${order.phone}</div>` : ''}
+      ${order.email ? `<div style="font-size: 11px; color: #555;">✉ ${order.email}</div>` : ''}
+    </div>
 
-  <!-- Ship To -->
-  <div class="ship-box">
-    <div class="ship-to-label">&#x25B6; Ship To</div>
-    <div class="ship-to-name">${order.customer}</div>
-    <div class="ship-to-addr">${order.address.replace(/,\s*/g, '<br/>')}</div>
-    ${order.phone ? `<div style="margin-top:8px;font-size:12px;color:#555;">&#x260E; ${order.phone}</div>` : ''}
+    <!-- Origin Dispatch Center -->
+    <div class="slip-origin-box">
+      <div class="address-title">Dispatch Atelier</div>
+      <div class="address-name" style="font-size: 14px;">VESTIGIA Fulfillment</div>
+      <div class="address-lines">
+        International Dispatch Center<br/>
+        Colombo / Milan Logistics Hub<br/>
+        Email: atelier@vestigia.com
+      </div>
+      ${order.courier ? `<div style="margin-top: 8px; font-size: 11px; font-weight: 600; color: #171412;">Courier: ${order.courier}</div>` : ''}
+      ${order.trackingNumber ? `<div style="font-size: 11px; font-weight: 600; color: #171412; font-family: monospace;">Track: ${order.trackingNumber}</div>` : ''}
+    </div>
   </div>
 
   <!-- Items Checklist -->
-  <div class="section">
-    <div class="section-title">Items Checklist — Please verify before sealing</div>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:50%;">Item</th>
-          <th style="text-align:center;width:20%;">Variant</th>
-          <th style="text-align:center;width:12%;">Qty</th>
-          <th style="text-align:center;width:18%;">Packed ✓</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${itemsHTML}
-      </tbody>
-    </table>
+  <div class="slip-section-header">
+    <span>Packed Items Inspection Checklist</span>
+    <span style="font-weight: 500; color: #777;">Verify before sealing parcel</span>
   </div>
 
-  <!-- Barcode Simulation -->
-  <div class="barcode-section">
-    <div class="barcode-label">${order.id}</div>
-    <div style="display:flex;justify-content:center;align-items:flex-end;gap:1px;margin-bottom:6px;">
+  <table class="slip-table">
+    <thead>
+      <tr>
+        <th style="width: 50%;">Garment / Item Name</th>
+        <th style="text-align: center; width: 22%;">Variant</th>
+        <th style="text-align: center; width: 13%;">Qty</th>
+        <th style="text-align: center; width: 15%;">Inspected</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsHTML}
+    </tbody>
+  </table>
+
+  <!-- Order Barcode Section -->
+  <div class="slip-barcode-box">
+    <div class="slip-barcode-code">${order.id}</div>
+    <div style="display: flex; justify-content: center; align-items: flex-end; gap: 1px; margin-bottom: 6px;">
       ${barcodeLines}
     </div>
-    <div style="font-size:10px;color:#888;margin-top:4px;">Scan to verify order</div>
+    <div style="font-size: 10px; color: #888; letter-spacing: 0.1em;">Warehouse Dispatch Code &bull; Scan for Order History</div>
   </div>
 
-  <!-- Return Note -->
-  <div class="return-note">
-    <strong>Returns &amp; Exchanges:</strong> If you need to return or exchange any item, please contact us within 14 days of delivery at support@vestigia.com. Include your order number and a brief reason. Items must be unworn, in original packaging.
+  <!-- Customer Guarantee & Return Note -->
+  <div class="slip-note-box">
+    <strong>Complimentary Returns &amp; Assistance:</strong> If you wish to request an exchange or complimentary return, please contact our concierge within 14 days of receipt at <strong>support@vestigia.com</strong> with your Order Reference (${order.id}). Garments must be unworn in original brand packaging.
   </div>
 
-  <div style="margin-top:20px;text-align:center;font-size:10px;color:#aaa;">
-    VESTIGIA &middot; Designed in Italy &middot; Made in Sri Lanka &middot; www.vestigia.com
+  <!-- Footer Motto -->
+  <div class="slip-footer">
+    <div>VESTIGIA &bull; Milan, Italy &bull; Colombo, Sri Lanka</div>
+    <div class="slip-motto">DESIGNED IN ITALY. MADE IN SRI LANKA. LEAVE YOUR MARK.</div>
   </div>
 </div>
-</body></html>`);
+</body>
+</html>`);
+
   win.document.close();
   win.focus();
   setTimeout(() => win.print(), 600);
@@ -1172,7 +1429,10 @@ export default function Orders() {
           <h1 style={{ margin: "0 0 5px", fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" }}>Orders</h1>
           <p style={{ margin: 0, color: "#888", fontSize: 14 }}>Manage fulfillments, track shipments, and update order statuses.</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={() => window.location.href = "/admin/notifications"} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #f59e0b", borderRadius: 8, background: "#fffbeb", cursor: "pointer", fontWeight: 600, fontSize: 13, color: "#b45309" }}>
+            <Bell size={14} /> Order Email Alerts
+          </button>
           <button onClick={() => exportOrdersCSV(filtered)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #e5e5e5", borderRadius: 8, background: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 13, color: "#555" }}>
             <Download size={14} /> Export All CSV
           </button>

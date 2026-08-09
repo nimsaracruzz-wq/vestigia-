@@ -344,7 +344,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
 
       if (data.token && data.user) {
-        localStorage.setItem("vestigia_customer_token", data.token);
+        setToken(data.token);
         setUser(mapCustomerToProfile(data.user));
       }
       return { success: true, message: data.message };

@@ -2,10 +2,19 @@ import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FileText, Scale, ArrowLeft, Mail, Clock } from "lucide-react";
+import { SEOHead } from "../components/common/SEOHead";
+
+const termsJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Terms of Service — VESTIGIA®",
+  "description": "Review VESTIGIA® terms of service, client purchase conditions, privacy protections, and legal governance.",
+  "url": "https://thevestigia.com/terms/",
+  "isPartOf": { "@id": "https://thevestigia.com/#website" }
+};
 
 export default function TermsOfService() {
   useEffect(() => {
-    document.title = "Terms of Service | VESTIGIA";
     window.scrollTo(0, 0);
   }, []);
 
@@ -17,6 +26,14 @@ export default function TermsOfService() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
+      <SEOHead
+        title="Terms of Service | VESTIGIA® Legal Terms"
+        description="Review VESTIGIA® terms of service, client purchase conditions, privacy protections, and legal governance."
+        canonicalUrl="https://thevestigia.com/terms/"
+        ogImage="https://thevestigia.com/images/products/vestigia_logo.png"
+        ogType="website"
+        jsonLd={termsJsonLd}
+      />
       <header className="policy-hero">
         <div className="policy-hero__inner">
           <Link to="/" className="policy-back-link">

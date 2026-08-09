@@ -51,8 +51,15 @@ export default function Header({ onCartToggle, onMenuToggle, onSearchToggle }: H
       </nav>
 
       <Link className="brand" to="/" aria-label="VESTIGIA home">
+        <img
+          src="/images/products/vestigia_logo.png"
+          alt=""
+          aria-hidden="true"
+          className="header-emblem"
+        />
         VESTIGIA
       </Link>
+
 
       <div className="header-actions">
         <button className="icon-button" type="button" onClick={onSearchToggle} aria-label="Search site">

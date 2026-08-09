@@ -4,7 +4,11 @@ import { useAdmin } from "../../admin/AdminContext";
 export default function Announcement() {
   const { settings } = useAdmin();
 
-  if (!settings.announcementEnabled) {
+  const isEnabled =
+    settings.announcementEnabled === true ||
+    String(settings.announcementEnabled) === "true";
+
+  if (!isEnabled || !settings.announcementText || !settings.announcementText.trim()) {
     return null;
   }
 

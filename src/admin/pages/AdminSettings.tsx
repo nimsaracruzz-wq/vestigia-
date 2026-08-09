@@ -110,6 +110,26 @@ export default function AdminSettings() {
 
           <div className="admin-panel mb-8">
             <div className="admin-panel-header">
+              <h2>Order Notifications &amp; Owner Alerts</h2>
+            </div>
+            <div className="admin-panel-content">
+              <div className="admin-form-group">
+                <label style={{ fontWeight: 600 }}>Owner Order Notification Email</label>
+                <input 
+                  type="email" 
+                  value={formData.orderNotificationEmail || ""}
+                  onChange={e => setFormData({...formData, orderNotificationEmail: e.target.value})}
+                  placeholder="owner@thevestigia.com"
+                />
+                <p className="admin-form-help" style={{ fontSize: "0.82rem", color: "#6b7280", marginTop: "6px" }}>
+                  Instant order receipt notifications will be sent to this email address whenever a customer places an order. You can change this email anytime.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-panel mb-8">
+            <div className="admin-panel-header">
               <h2>Top Bar Announcement</h2>
             </div>
             <div className="admin-panel-content">

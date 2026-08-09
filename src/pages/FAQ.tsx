@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { HelpCircle, ChevronDown, ArrowLeft, Mail, ShieldCheck, Truck, RefreshCw } from "lucide-react";
+import { HelpCircle, ChevronDown, ArrowLeft } from "lucide-react";
+import { SEOHead } from "../components/common/SEOHead";
 
 type FAQItem = {
   question: string;
@@ -38,12 +39,12 @@ const FAQ_DATA: FAQItem[] = [
   {
     category: "Products & Sizing",
     question: "How do VESTIGIA garments fit?",
-    answer: "Our fits are designed in Italy with a refined, tailored silhouette. We recommend selecting your true size. Detailed garment measurements are available on each Product Detail page size chart."
+    answer: "Our garments feature a refined contemporary oversized silhouette with relaxed shoulders. We recommend choosing your standard size for the intended structured drop-shoulder fit, or sizing down for a closer fit."
   },
   {
     category: "Products & Sizing",
-    question: "What materials do you use?",
-    answer: "We utilize premium heavy-grade organic cotton (260+ GSM), luxury linen blends, and Italian woven trims crafted for softness, structure, and longevity."
+    question: "What fabric quality does VESTIGIA use?",
+    answer: "We use 280 GSM (Grams per Square Meter) combed organic heavyweight cotton jersey, offering exceptional structure, softness, and longevity."
   },
   {
     category: "Account & Payments",

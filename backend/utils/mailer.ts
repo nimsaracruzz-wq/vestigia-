@@ -777,3 +777,92 @@ export const sendWelcomeAccountEmail = async (
     html: buildEmailBase(content, `Welcome to Vestigia, ${name}. Click to set your account password.`),
   });
 };
+
+// ─── 6. Owner Order Notification Email ────────────────────────────────────────
+
+export const sendOwnerOrderNotificationEmail = async (order: OrderData, ownerEmail: string): Promise<void> => {
+  const itemsHtml = buildOrderItemsTable(order.items);
+  const content = `
+    <div class="email-body">
+      <div class="section-label" style="letter-spacing:0.25em;color:${GOLD_DARK};font-weight:600;">NEW STORE ORDER RECEIVED</div>
+      <div class="gold-line"></div>
+      <h1 class="headline">New Order<br /><em>${order.id}</em></h1>
+      <p class="body-text">
+        A new order has been placed on <strong>VESTIGIA®</strong> by <strong>${order.customer}</strong>.
+      </p>
+
+      <!-- Info Grid -->
+      <div class="info-grid" style="margin:28px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid ${BORDER_LIGHT};">
+          <tr>
+            <td style="padding:20px;border-right:1px solid ${BORDER_LIGHT};border-bottom:1px solid ${BORDER_LIGHT};width:50%;vertical-align:top;">
+              <div class="info-cell-label">Customer Name</div>
+              <div class="info-cell-value" style="font-weight:500;">${order.customer}</div>
+              <div style="font-size:12px;color:${MUTED_LIGHT};margin-top:4px;">${order.email}</div>
+            </td>
+            <td style="padding:20px;border-bottom:1px solid ${BORDER_LIGHT};vertical-align:top;">
+              <div class="info-cell-label">Order Date &amp; Time</div>
+              <div class="info-cell-value">${fmtDate(order.date)}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px;border-right:1px solid ${BORDER_LIGHT};vertical-align:top;">
+              <div class="info-cell-label">Total Revenue</div>
+              <div class="info-cell-value" style="color:${GOLD};font-weight:600;font-size:18px;">${fmt(order.total)}</div>
+            </td>
+            <td style="padding:20px;vertical-align:top;">
+              <div class="info-cell-label">Shipping Address</div>
+              <div class="info-cell-value">${order.address || '—'}</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Order Items Summary -->
+      <div class="order-summary">
+        <div style="background-color:${BG_LIGHT};padding:14px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size:9px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:${MUTED_LIGHT};">Purchased Item</td>
+              <td style="font-size:9px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:${MUTED_LIGHT};text-align:right;">Subtotal</td>
+            </tr>
+          </table>
+        </div>
+        ${itemsHtml}
+        <!-- Totals Breakdown -->
+        <div style="padding:16px 20px;border-top:1px solid ${BORDER_LIGHT};">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:8px;">Subtotal</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${fmt(order.subtotal)}</td>
+            </tr>
+            <tr>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:8px;">Shipping</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${order.shipping === 0 ? 'Complimentary' : fmt(order.shipping)}</td>
+            </tr>
+            <tr>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:16px;">Tax</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:16px;">${fmt(order.tax)}</td>
+            </tr>
+            <tr style="border-top:1px solid ${BORDER_LIGHT};">
+              <td style="font-size:15px;font-weight:500;color:${TEXT_LIGHT};padding-top:14px;font-family:'Cormorant Garamond',Georgia,serif;letter-spacing:0.02em;">Total Collected</td>
+              <td style="font-size:15px;font-weight:500;color:${GOLD};text-align:right;padding-top:14px;">${fmt(order.total)}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <p class="body-text" style="font-size:12px;margin-bottom:0;">
+        Log into the <strong style="font-weight:500;color:${TEXT_LIGHT};">VESTIGIA Admin Console</strong> to process this order and print the packing slip.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || 'no-reply@gmail.com',
+    to: ownerEmail,
+    subject: `🚨 [New Order] ${order.id} — ${fmt(order.total)} from ${order.customer}`,
+    html: buildEmailBase(content, `New order ${order.id} received from ${order.customer} for ${fmt(order.total)}.`),
+  });
+};

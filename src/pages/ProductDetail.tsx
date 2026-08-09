@@ -7,6 +7,7 @@ import { useCart } from "../context/CartContext";
 import { useAdmin } from "../admin/AdminContext";
 import { useCurrency } from "../context/CurrencyContext";
 import ProductCard from "../components/common/ProductCard";
+import Gallery from "../components/ProductGallery/Gallery";
 
 const normalizeChartKey = (label: string) =>
   label.trim().toLowerCase().replace(/\s+/g, "_");
@@ -323,32 +324,13 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       </div>
 
       <div className="pdp-layout-grid">
-        {/* Left Column: Image Gallery */}
+        {/* Left Column: Ultra-Luxury Image Gallery */}
         <div className="pdp-gallery-column">
-          <div className="pdp-main-image-wrapper">
-            <motion.img
-              key={activeImageIndex}
-              src={product.images[activeImageIndex] || product.image}
-              alt={`${product.name} view`}
-              initial={{ opacity: 0.8 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            />
-          </div>
-          {product.images && product.images.length > 1 && (
-            <div className="pdp-thumbnails-grid">
-              {product.images.map((img, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`pdp-thumb-btn ${activeImageIndex === idx ? "active" : ""}`}
-                  onClick={() => setActiveImageIndex(idx)}
-                >
-                  <img src={img} alt={`${product.name} thumbnail ${idx + 1}`} />
-                </button>
-              ))}
-            </div>
-          )}
+          <Gallery
+            images={product.images && product.images.length > 0 ? product.images : [product.image]}
+            alt={product.name}
+            aspectRatio="3/4"
+          />
         </div>
 
         {/* Right Column: Information Panel */}

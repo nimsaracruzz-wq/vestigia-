@@ -6,25 +6,57 @@ import { type Product } from "../data";
 import { useAdmin } from "../admin/AdminContext";
 import ProductCard from "../components/common/ProductCard";
 
+import { SEOHead } from "../components/common/SEOHead";
+
 type HomeProps = {
   onQuickShop: (product: Product) => void;
 };
 
+const homeJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://thevestigia.com/#webpage",
+      "url": "https://thevestigia.com/",
+      "name": "VESTIGIA® — Refined Luxury Apparel & Oversized Streetwear | Italy",
+      "description": "VESTIGIA® is an independent contemporary luxury apparel brand designed in Italy and crafted in Sri Lanka. Discover our 280 GSM heavyweight organic cotton oversized T-shirts.",
+      "isPartOf": { "@id": "https://thevestigia.com/#website" },
+      "about": { "@id": "https://thevestigia.com/#organization" },
+      "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://thevestigia.com/" }
+        ]
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://thevestigia.com/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Where are VESTIGIA garments designed and produced?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "VESTIGIA garments are designed in Italy under architectural design principles and ethically handcrafted by artisan tailors in Sri Lanka using 280 GSM heavyweight organic cotton."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What makes VESTIGIA 280 GSM heavyweight cotton unique?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our 280 GSM (Grams per Square Meter) combed organic jersey provides exceptional structural form, durability, and a relaxed drop-shoulder drape without losing shape over time."
+          }
+        }
+      ]
+    }
+  ]
+};
+
 export default function Home({ onQuickShop }: HomeProps) {
   const { products } = useAdmin();
-
-  // Update document title for SEO
-  useEffect(() => {
-    document.title = "VESTIGIA — Designed in Italy. Made in Sri Lanka.";
-  }, []);
-
-
-  const slideUp = {
-    initial: { opacity: 0, y: 30 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, margin: "-100px" },
-    transition: { duration: 0.6 },
-  };
 
   // Dynamically find Black and White Aurelius products
   const blackProduct = products.find(
@@ -43,6 +75,14 @@ export default function Home({ onQuickShop }: HomeProps) {
       transition={{ duration: 0.5 }}
       className="home-page-container"
     >
+      <SEOHead
+        title="VESTIGIA® | Luxury Clothing & Premium Essentials"
+        description="VESTIGIA® is an independent contemporary luxury apparel brand designed in Italy and crafted in Sri Lanka. Discover our 280 GSM heavyweight organic cotton oversized T-shirts."
+        canonicalUrl="https://thevestigia.com/"
+        ogImage="https://thevestigia.com/images/products/vestigia_logo.png"
+        ogType="website"
+        jsonLd={homeJsonLd}
+      />
       {/* SECTION 01 — HERO */}
       <section className="hero" id="top">
         <img
@@ -112,6 +152,14 @@ export default function Home({ onQuickShop }: HomeProps) {
       {/* SECTION 02 — BRAND INTRODUCTION */}
       <section className="section brand-intro" style={{ padding: '120px 24px', textAlign: 'center', background: '#f6f3ed' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+          {/* Primary emblem — prestige placement */}
+          <div className="about-hero-emblem-wrap">
+            <img
+              src="/images/products/vestigia_logo.png"
+              alt="VESTIGIA Emblem"
+              className="vst-emblem vst-emblem--lg vst-emblem--shadow"
+            />
+          </div>
           <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', marginBottom: '16px' }}>
             The VESTIGIA Philosophy
           </p>
@@ -177,123 +225,81 @@ export default function Home({ onQuickShop }: HomeProps) {
         </div>
       </section>
 
-      {/* SECTION 05 — ORIGIN STORY */}
+      {/* SECTION 05 — PHILOSOPHY */}
       <section className="section origin-story-block" style={{ padding: '80px 24px', background: '#fff' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '48px', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ overflow: 'hidden', order: 2 }}>
             <img
-              src="https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1200&q=85"
-              alt="Mediterranean foliage close up with warm sunlight, connecting cultures"
+              src="/images/products/Vestigia_Hero.png"
+              alt="VESTIGIA luxury editorial fashion campaign featuring modern architectural minimalism"
+              loading="lazy"
               style={{ width: '100%', objectFit: 'cover', maxHeight: '500px' }}
             />
           </div>
           <div style={{ padding: '0 16px', order: 1 }}>
             <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', marginBottom: '12px' }}>
-              Our Origin
+              OUR PHILOSOPHY
             </p>
             <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(2rem, 3vw, 2.5rem)', fontWeight: 400, margin: '0 0 20px', lineHeight: 1.2 }}>
-              TWO PLACES. ONE IDENTITY.
+              Crafted Beyond Time.
             </h2>
             <p style={{ color: '#444', lineHeight: 1.8, marginBottom: '32px', fontSize: '0.95rem' }}>
-              VESTIGIA was born from the connection between Italy and Sri Lanka.
-              Guided by contemporary Italian creative direction and brought to life through Sri Lankan garment production,
-              we create clothing shaped by different places and a shared vision.
+              VESTIGIA creates timeless luxury essentials inspired by Italian design philosophy and crafted with uncompromising attention to detail. Every piece is designed to outlast trends and become part of your story.
             </p>
             <Link className="primary-link dark" to="/story">
-              Discover Our Story
+              Discover Our Story &rarr;
             </Link>
           </div>
         </div>
       </section>
 
-      {/* SECTION 06 — CAMPAIGN */}
+      {/* SECTION 06 — DESIGN LANGUAGE */}
       <section className="lookbook-full-bleed-scene" style={{ position: 'relative', overflow: 'hidden', height: '60vh', minHeight: '400px' }}>
         <img
-          src="/images/products/signature_model.png"
-          alt="VESTIGIA campaign visual"
+          src="https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1600&q=85"
+          alt="Italian-inspired modern architectural details and luxury fashion design studio aesthetic"
+          loading="lazy"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '24px', textAlign: 'center', color: '#fff' }}>
           <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>
-            Italy × Sri Lanka
+            DESIGN LANGUAGE
           </p>
           <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 400, margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Different origins. Shared vision.
+            Inspired by Italian Elegance.
           </h2>
           <p style={{ maxWidth: '580px', fontSize: '0.95rem', opacity: 0.9, lineHeight: 1.6 }}>
-            From creative direction in Italy to production in Sri Lanka, VESTIGIA exists between cultures, perspectives, and places.
+            Clean silhouettes, refined proportions, and contemporary Italian aesthetics define every collection, creating elevated essentials that combine modern luxury with timeless style.
           </p>
         </div>
       </section>
 
-      {/* SECTION 07 — CRAFTSMANSHIP / PRODUCTION */}
+      {/* SECTION 07 — CRAFTSMANSHIP */}
       <section className="section craftsmanship-block" style={{ padding: '80px 24px', background: '#f6f3ed' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '48px', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ padding: '0 16px' }}>
             <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', marginBottom: '12px' }}>
-              Made in Sri Lanka
+              CRAFTSMANSHIP
             </p>
             <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(2rem, 3vw, 2.5rem)', fontWeight: 400, margin: '0 0 20px', lineHeight: 1.2 }}>
-              MADE WITH INTENTION.
+              Made With Precision.
             </h2>
             <p style={{ color: '#444', lineHeight: 1.8, marginBottom: '24px', fontSize: '0.95rem' }}>
-              Our garments are produced in Sri Lanka, home to a globally established apparel manufacturing industry.
-              VESTIGIA focuses on considered construction, quality, and clothing designed to become part of the wearer's own story.
+              Each VESTIGIA garment is carefully produced using premium materials, expert craftsmanship, and meticulous quality control to deliver exceptional comfort, durability, and lasting quality.
             </p>
           </div>
           <div style={{ overflow: 'hidden' }}>
             <img
               src="/images/products/signature_detail.png"
-              alt="Close-up of premium knitwear fabric, seams, and detail print of VESTIGIA garment"
+              alt="Close-up of VESTIGIA luxury 280 GSM organic cotton fabric texture, fine stitching, and gold embroidery"
+              loading="lazy"
               style={{ width: '100%', objectFit: 'cover', maxHeight: '450px' }}
             />
           </div>
         </div>
       </section>
 
-      {/* SECTION 08 — NEWSLETTER */}
-      <section className="section journal-newsletter-strip" style={{ padding: '100px 24px', background: '#fff', borderBottom: '1px solid #eaeaea' }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.8rem', fontWeight: 400, marginBottom: '12px' }}>
-            JOIN THE VESTIGIA COMMUNITY.
-          </h2>
-          <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '32px' }}>
-            Early access to releases, stories, and everything that comes next.
-          </p>
-
-          <form style={{ display: 'flex', gap: '8px', maxWidth: '420px', margin: '0 auto' }} onSubmit={(e) => e.preventDefault()}>
-            <input
-              type="email"
-              placeholder="YOUR EMAIL ADDRESS"
-              required
-              style={{
-                flex: 1,
-                padding: '12px 16px',
-                border: '1px solid #111',
-                fontSize: '0.85rem',
-                outline: 'none',
-                background: 'transparent',
-                letterSpacing: '0.05em'
-              }}
-            />
-            <button
-              type="submit"
-              style={{
-                background: '#111',
-                color: '#fff',
-                padding: '12px 24px',
-                fontSize: '0.8rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                fontWeight: 600
-              }}
-            >
-              Join VESTIGIA
-            </button>
-          </form>
-        </div>
-      </section>
     </motion.div>
   );
 }
