@@ -270,6 +270,23 @@ async function generateOrderId(): Promise<{ orderId: string; invoiceNumber: stri
   };
 }
 
+const vestigiaSeedProductIds = seedProducts
+  .map((product) => Number(product.id))
+  .filter((id) => Number.isFinite(id));
+
+const vestigiaOrderWhere = {
+  items: {
+    some: {
+      OR: [
+        { productId: { in: vestigiaSeedProductIds } },
+        { productName: { contains: 'VESTIGIA' } },
+        { image: { contains: 'vestigia' } },
+        { image: { contains: 'Vestigia' } },
+      ],
+    },
+  },
+};
+
 const serializeCustomer = (customer: any) => ({
   id: customer.id,
   name: customer.name,
@@ -1716,6 +1733,7 @@ start().catch((error) => {
 app.get('/api/orders', authenticateAdmin, async (_req, res) => {
   try {
     const orders = await prisma.order.findMany({
+      where: vestigiaOrderWhere,
       include: { items: true },
       orderBy: { date: 'desc' },
     });
@@ -2077,8 +2095,52 @@ app.post('/api/orders/:id/duplicate', authenticateAdmin, async (req, res) => {
 
 app.get('/api/customers', authenticateAdmin, async (_req, res) => {
   try {
-    const customers = await prisma.customer.findMany({ orderBy: { totalSpend: 'desc' } });
-    res.json(customers.map(serializeCustomer));
+    const orders = await prisma.order.findMany({
+      where: vestigiaOrderWhere,
+      select: {
+        email: true,
+        total: true,
+        date: true,
+      },
+    });
+
+    const statsByEmail = new Map<string, { orders: number; totalSpend: number; lastOrder: string }>();
+    for (const order of orders) {
+      const email = order.email.toLowerCase().trim();
+      const current = statsByEmail.get(email);
+      if (!current) {
+        statsByEmail.set(email, {
+          orders: 1,
+          totalSpend: order.total,
+          lastOrder: order.date,
+        });
+        continue;
+      }
+
+      current.orders += 1;
+      current.totalSpend += order.total;
+      if (new Date(order.date).getTime() > new Date(current.lastOrder).getTime()) {
+        current.lastOrder = order.date;
+      }
+    }
+
+    const customers = await prisma.customer.findMany({
+      where: { email: { in: Array.from(statsByEmail.keys()) } },
+    });
+
+    const serialized = customers
+      .map((customer) => {
+        const stats = statsByEmail.get(customer.email.toLowerCase().trim());
+        return {
+          ...serializeCustomer(customer),
+          orders: stats?.orders ?? 0,
+          totalSpend: stats?.totalSpend ?? 0,
+          lastOrder: stats?.lastOrder ?? customer.lastOrder ?? customer.joined,
+        };
+      })
+      .sort((a, b) => b.totalSpend - a.totalSpend);
+
+    res.json(serialized);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch customers' });

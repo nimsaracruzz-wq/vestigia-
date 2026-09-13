@@ -832,7 +832,7 @@ function CheckoutContent() {
                         onChange={(e) => setSameAsShipping(e.target.checked)}
                         style={{ accentColor: "#171412", width: "16px", height: "16px" }}
                       />
-                      <span>☑ Billing address is same as shipping address</span>
+                      <span>Billing address is same as shipping address</span>
                     </label>
 
                     {!sameAsShipping && (
@@ -900,7 +900,7 @@ function CheckoutContent() {
                           onChange={(e) => setAutoCreateAccount(e.target.checked)}
                           style={{ accentColor: "#171412", width: "16px", height: "16px" }}
                         />
-                        <span>☑ Create my Vestigia account automatically after purchase (Recommended)</span>
+                        <span>Create my Vestigia account automatically after purchase (Recommended)</span>
                       </label>
                     )}
 
@@ -911,7 +911,7 @@ function CheckoutContent() {
                         onChange={(e) => setIsGiftOrder(e.target.checked)}
                         style={{ accentColor: "#171412", width: "16px", height: "16px" }}
                       />
-                      <span>🎁 This is a gift order (Include complimentary gift packaging)</span>
+                      <span> This is a gift order (Include complimentary gift packaging)</span>
                     </label>
 
                     {isGiftOrder && (

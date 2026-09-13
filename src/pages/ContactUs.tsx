@@ -86,8 +86,8 @@ export default function ContactUs() {
                 <Mail size={18} style={{ color: "#111", marginTop: "2px", flexShrink: 0 }} />
                 <div>
                   <strong style={{ display: "block", fontSize: "0.84rem", color: "#111" }}>Email Concierge</strong>
-                  <a href="mailto:support@vestigia.com" style={{ fontSize: "0.82rem", color: "#666", textDecoration: "underline" }}>
-                    support@vestigia.com
+                  <a href="mailto:support@thevestigia.com" style={{ fontSize: "0.82rem", color: "#666", textDecoration: "underline" }}>
+                    support@thevestigia.com
                   </a>
                 </div>
               </div>
@@ -96,7 +96,7 @@ export default function ContactUs() {
                 <Phone size={18} style={{ color: "#111", marginTop: "2px", flexShrink: 0 }} />
                 <div>
                   <strong style={{ display: "block", fontSize: "0.84rem", color: "#111" }}>Direct Advisory Line</strong>
-                  <span style={{ fontSize: "0.82rem", color: "#666" }}>+39 02 8945 7700 (Italy)</span>
+                  <span style={{ fontSize: "0.82rem", color: "#666" }}>+39 329 728 5468 (Italy)</span>
                 </div>
               </div>
 
@@ -112,9 +112,9 @@ export default function ContactUs() {
               <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", paddingTop: "12px", borderTop: "1px solid #eee" }}>
                 <MapPin size={18} style={{ color: "#111", marginTop: "2px", flexShrink: 0 }} />
                 <div>
-                  <strong style={{ display: "block", fontSize: "0.84rem", color: "#111" }}>Design Studio</strong>
-                  <span style={{ fontSize: "0.82rem", color: "#666", display: "block" }}>Via Montenapoleone 18</span>
-                  <span style={{ fontSize: "0.82rem", color: "#666", display: "block" }}>20121 Milano, Italy</span>
+                  <strong style={{ display: "block", fontSize: "0.84rem", color: "#111" }}>Head Office</strong>
+                  <span style={{ fontSize: "0.82rem", color: "#666", display: "block" }}>Via Giacomo Puccini 8/1</span>
+                  <span style={{ fontSize: "0.82rem", color: "#666", display: "block" }}>Camposampiero Padua,Italy</span>
                 </div>
               </div>
             </div>

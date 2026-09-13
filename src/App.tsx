@@ -74,48 +74,51 @@ function MainAppShell() {
   const isCheckout = location.pathname === "/checkout";
 
   return (
-    <div className="site-shell">
-      {!isCheckout && <Announcement />}
-      {!isCheckout && (
-        <Header
-          onCartToggle={openCart}
-          onMenuToggle={() => setMenuOpen(true)}
-          onSearchToggle={() => setSearchOpen(true)}
-        />
-      )}
+    <>
+      <Preloader />
+      <div className="site-shell">
+        {!isCheckout && <Announcement />}
+        {!isCheckout && (
+          <Header
+            onCartToggle={openCart}
+            onMenuToggle={() => setMenuOpen(true)}
+            onSearchToggle={() => setSearchOpen(true)}
+          />
+        )}
 
-      <main className={isCheckout ? "main-content-area checkout-mode" : "main-content-area"}>
-        <ScrollToTop />
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Home onQuickShop={(p) => setQuickProduct(p)} />} />
-            <Route path="/shop" element={<Shop onQuickShop={(p) => setQuickProduct(p)} />} />
-            <Route path="/product/:id" element={<ProductDetail onQuickShop={(p) => setQuickProduct(p)} />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="/activate" element={<ActivateAccount />} />
-            <Route path="/lookbook" element={<Lookbook onQuickShop={(p) => setQuickProduct(p)} />} />
-            <Route path="/journal" element={<Journal />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/story" element={<Story />} />
-            <Route path="/refund-policy" element={<RefundPolicy />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/shipping-policy" element={<ShippingPolicy />} />
-            <Route path="/contact" element={<ContactUs />} />
-            <Route path="/faq" element={<FAQ />} />
-          </Routes>
-        </AnimatePresence>
-      </main>
+        <main className={isCheckout ? "main-content-area checkout-mode" : "main-content-area"}>
+          <ScrollToTop />
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<Home onQuickShop={(p) => setQuickProduct(p)} />} />
+              <Route path="/shop" element={<Shop onQuickShop={(p) => setQuickProduct(p)} />} />
+              <Route path="/product/:id" element={<ProductDetail onQuickShop={(p) => setQuickProduct(p)} />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/activate" element={<ActivateAccount />} />
+              <Route path="/lookbook" element={<Lookbook onQuickShop={(p) => setQuickProduct(p)} />} />
+              <Route path="/journal" element={<Journal />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/story" element={<Story />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
+              <Route path="/contact" element={<ContactUs />} />
+              <Route path="/faq" element={<FAQ />} />
+            </Routes>
+          </AnimatePresence>
+        </main>
 
-      {!isCheckout && <Footer />}
+        {!isCheckout && <Footer />}
 
-      {/* Global drawers & modals */}
-      <CartDrawer open={cartOpen} onClose={closeCart} />
-      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onCartToggle={openCart} />
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <QuickShopModal product={quickProduct} onClose={() => setQuickProduct(null)} />
-    </div>
+        {/* Global drawers & modals */}
+        <CartDrawer open={cartOpen} onClose={closeCart} />
+        <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onCartToggle={openCart} />
+        <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+        <QuickShopModal product={quickProduct} onClose={() => setQuickProduct(null)} />
+      </div>
+    </>
   );
 }
 
@@ -147,7 +150,6 @@ export default function App() {
       <CurrencyProvider>
         <UserProvider>
           <CartProvider>
-            <Preloader />
             <BrowserRouter>
               <ScrollToTop />
               <Routes>
