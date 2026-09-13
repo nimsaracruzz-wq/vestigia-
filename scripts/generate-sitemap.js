@@ -1,8 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { PrismaClient } from "../backend/node_modules/@prisma/client/index.js";
-import { PrismaBetterSqlite3 } from "../backend/node_modules/@prisma/adapter-better-sqlite3/dist/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +33,8 @@ async function generateSitemap() {
 
   // Try fetching dynamic data from Prisma SQLite DB
   try {
+    const { PrismaClient } = await import("../backend/node_modules/@prisma/client/index.js");
+    const { PrismaBetterSqlite3 } = await import("../backend/node_modules/@prisma/adapter-better-sqlite3/dist/index.js");
     const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
     const prisma = new PrismaClient({ adapter });
 
