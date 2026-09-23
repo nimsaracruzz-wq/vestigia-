@@ -1,9 +1,14 @@
-import { useEffect } from "react";
+import { Reveal } from "../animation/Reveal";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import { heroProducts, type Product } from "../data";
 import { useAdmin } from "../admin/AdminContext";
+import { collectionPath } from "../utils/seo";
+import { SEOHead } from "../components/common/SEOHead";
+import { breadcrumbJsonLd } from "../utils/seo";
+import { moneyLabel } from "../utils/money";
+import { useCurrency } from "../context/CurrencyContext";
 
 type LookbookProps = {
   onQuickShop: (product: Product) => void;
@@ -11,34 +16,35 @@ type LookbookProps = {
 
 export default function Lookbook({ onQuickShop }: LookbookProps) {
   const { products } = useAdmin();
-
-  useEffect(() => {
-    document.title = "Lookbook | Summer 2026 Capsule | Vestigia";
-  }, []);
-
-  const slideUp = {
-    initial: { opacity: 0, y: 30 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, margin: "-100px" },
-    transition: { duration: 0.6 },
+  const { currency } = useCurrency();
+  const productPrice = (product: Product) => {
+    const price = product.prices?.[currency];
+    return price ? moneyLabel(price.priceMinor, currency) : "Unavailable in this market";
   };
+
 
   const lookbookProducts = [0, 1, 2].map((index) => products[index] ?? heroProducts[index]);
 
   return (
-    <motion.div
+    <div
       className="lookbook-page-shell"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
+      <SEOHead
+        title="Lookbook | Summer 2026 Capsule | VESTIGIA"
+        description="Explore the VESTIGIA summer editorial lookbook featuring refined silhouettes, heavyweight cotton, and contemporary luxury styling."
+        canonicalUrl="https://thevestigia.com/lookbook"
+        ogImage="https://images.unsplash.com/photo-1495385794356-15371f348c31?auto=format&fit=crop&w=1600&q=85"
+        jsonLd={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Lookbook", path: "/lookbook" },
+        ])}
+      />
       {/* Intro Header */}
-      <header className="lookbook-header-section">
+      <Reveal as="header" className="lookbook-header-section">
         <p>Summer Editorial 2026</p>
         <h1>Under the Solstice Sun</h1>
         <span>A cinematic study of raw fabrics, quiet statements, and fluid silhouettes.</span>
-      </header>
+      </Reveal>
 
       {/* Slide 1: Neutral Tailoring */}
       <section className="lookbook-scene-section">
@@ -65,7 +71,7 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
             <Plus size={18} />
           </button>
         </div>
-        <motion.div className="scene-caption-block" {...slideUp}>
+        <Reveal className="scene-caption-block">
           <span>Scene 01</span>
           <h2>Quiet Tailoring</h2>
           <p>
@@ -74,22 +80,22 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
           <div className="scene-products-list">
             <Link to={`/product/${lookbookProducts[0].slug || lookbookProducts[0].id}`} className="scene-product-link">
               <span>01. {lookbookProducts[0].name}</span>
-              <strong>${lookbookProducts[0].price.toFixed(2)}</strong>
+              <strong>{productPrice(lookbookProducts[0])}</strong>
             </Link>
             <Link to={`/product/${lookbookProducts[1].slug || lookbookProducts[1].id}`} className="scene-product-link">
               <span>02. {lookbookProducts[1].name}</span>
-              <strong>${lookbookProducts[1].price.toFixed(2)}</strong>
+              <strong>{productPrice(lookbookProducts[1])}</strong>
             </Link>
           </div>
-        </motion.div>
+        </Reveal>
       </section>
 
       {/* Quote Breakout */}
       <section className="lookbook-quote-breakout">
-        <motion.blockquote {...slideUp}>
+        <Reveal as="blockquote">
           "Style is a language of restraint. It is the art of leaving spaces unfilled, allowing the natural textures to breathe."
           <span>— Vestigia Studio</span>
-        </motion.blockquote>
+        </Reveal>
       </section>
 
       {/* Slide 2: Jewelry Accent */}
@@ -108,7 +114,7 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
             <Plus size={18} />
           </button>
         </div>
-        <motion.div className="scene-caption-block" {...slideUp}>
+        <Reveal className="scene-caption-block">
           <span>Scene 02</span>
           <h2>Organic Accents</h2>
           <p>
@@ -117,10 +123,10 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
           <div className="scene-products-list">
             <Link to={`/product/${lookbookProducts[2].slug || lookbookProducts[2].id}`} className="scene-product-link">
               <span>03. {lookbookProducts[2].name}</span>
-              <strong>${lookbookProducts[2].price.toFixed(2)}</strong>
+              <strong>{productPrice(lookbookProducts[2])}</strong>
             </Link>
           </div>
-        </motion.div>
+        </Reveal>
       </section>
 
       {/* Slide 3: Monochrome Silhouette */}
@@ -131,16 +137,16 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
             alt="Editorial model standing in monochromatic draped dress"
           />
           <div className="full-bleed-shade" />
-          <motion.div className="full-bleed-overlay-content" {...slideUp}>
+          <Reveal className="full-bleed-overlay-content">
             <span>Scene 03</span>
             <h2>Flowing Monochromes</h2>
             <p>A study of cotton poplin volume and structural shadows against the sky.</p>
-            <Link className="primary-link" to="/shop?category=Clothing">
+            <Link className="primary-link" to={collectionPath("Clothing")}>
               Shop clothing
             </Link>
-          </motion.div>
+          </Reveal>
         </div>
       </section>
-    </motion.div>
+    </div>
   );
 }

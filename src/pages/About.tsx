@@ -1,3 +1,4 @@
+import { Reveal, RevealImage } from "../animation/Reveal";
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import { SEOHead } from "../components/common/SEOHead";
@@ -45,10 +46,7 @@ export default function About() {
           borderBottom: "1px solid #eee8df",
         }}
       >
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
+        <Reveal
           style={{ maxWidth: "720px", margin: "0 auto" }}
         >
           <div style={{ display: "inline-block", marginBottom: "16px" }}>
@@ -85,7 +83,7 @@ export default function About() {
           >
             OUR STORY
           </h1>
-        </motion.div>
+        </Reveal>
       </header>
 
       {/* SECTION 1 — ORIGINS */}
@@ -102,17 +100,13 @@ export default function About() {
           className="story-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
             gap: "80px",
             alignItems: "center",
           }}
         >
           {/* Text Left */}
-          <motion.article
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.8 }}
+          <Reveal variant="fadeLeft" as="article"
           >
             <span
               style={{
@@ -155,14 +149,10 @@ export default function About() {
             >
               Inspired by Italian design and crafted in Sri Lanka, VESTIGIA creates timeless essentials that combine contemporary style with exceptional craftsmanship.
             </p>
-          </motion.article>
+          </Reveal>
 
           {/* Image Right */}
-          <motion.figure
-            initial={{ opacity: 0, scale: 0.97 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.9 }}
+          <RevealImage as="figure"
             style={{ margin: 0 }}
           >
             <div
@@ -199,7 +189,7 @@ export default function About() {
             >
               FIG 01. — THE SILHOUETTE
             </figcaption>
-          </motion.figure>
+          </RevealImage>
         </div>
       </section>
 
@@ -220,17 +210,13 @@ export default function About() {
             maxWidth: "1240px",
             margin: "0 auto",
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
             gap: "80px",
             alignItems: "center",
           }}
         >
           {/* Image Left */}
-          <motion.figure
-            initial={{ opacity: 0, scale: 0.97 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.9 }}
+          <RevealImage as="figure"
             style={{ margin: 0 }}
           >
             <div
@@ -266,14 +252,10 @@ export default function About() {
             >
               FIG 02. — FABRIC &amp; DETAIL
             </figcaption>
-          </motion.figure>
+          </RevealImage>
 
           {/* Text Right */}
-          <motion.article
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.8 }}
+          <Reveal variant="fadeLeft" as="article"
           >
             <span
               style={{
@@ -314,7 +296,7 @@ export default function About() {
             >
               Every garment is thoughtfully produced using premium materials, refined construction, and meticulous attention to every detail.
             </p>
-          </motion.article>
+          </Reveal>
         </div>
       </section>
 
@@ -329,11 +311,7 @@ export default function About() {
           textAlign: "center",
         }}
       >
-        <motion.article
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.8 }}
+        <Reveal variant="fadeLeft" as="article"
           style={{ maxWidth: "680px", margin: "0 auto 64px auto" }}
         >
           <span
@@ -374,14 +352,10 @@ export default function About() {
           >
             We don't chase trends. We create elevated essentials designed to be worn, appreciated, and remembered for years to come.
           </p>
-        </motion.article>
+        </Reveal>
 
         {/* Hero Architectural Campaign Image */}
-        <motion.figure
-          initial={{ opacity: 0, scale: 0.97 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.9 }}
+        <RevealImage as="figure"
           style={{ margin: 0 }}
         >
           <div
@@ -420,7 +394,7 @@ export default function About() {
           >
             FIG 03. — ENDURING ELEVATION
           </figcaption>
-        </motion.figure>
+        </RevealImage>
       </section>
 
       {/* CLOSING BRAND FOOTER EMBLEM BAR */}

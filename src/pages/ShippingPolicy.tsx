@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -10,16 +11,12 @@ export default function ShippingPolicy() {
   }, []);
 
   return (
-    <motion.div
+    <div
       className="policy-page-container"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
       {/* Hero Header */}
       <header className="policy-hero">
-        <div className="policy-hero__inner">
+        <Reveal className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -33,7 +30,7 @@ export default function ShippingPolicy() {
             <span><Clock size={14} /> Last Updated: August 2026</span>
             <span><Globe size={14} /> Worldwide Express Delivery</span>
           </div>
-        </div>
+        </Reveal>
       </header>
 
       {/* Main Content Layout */}
@@ -55,7 +52,7 @@ export default function ShippingPolicy() {
 
         {/* Policy Body */}
         <main className="policy-body">
-          <section id="shipping-overview" className="policy-section">
+          <Reveal as="section" id="shipping-overview" className="policy-section">
             <h2>1. Delivery Overview</h2>
             <p>
               We partner with global premier carriers (DHL Express, FedEx Priority, and UPS International) 
@@ -80,9 +77,9 @@ export default function ShippingPolicy() {
                 <p>All shipments are insured and require a signature upon delivery for ultimate peace of mind.</p>
               </div>
             </div>
-          </section>
+          </Reveal>
 
-          <section id="rates-timeframes" className="policy-section">
+          <Reveal as="section" id="rates-timeframes" className="policy-section">
             <h2>2. Rates & Estimated Timeframes</h2>
             <p>Delivery times and shipping costs vary depending on the destination region:</p>
 
@@ -122,35 +119,35 @@ export default function ShippingPolicy() {
                 </tr>
               </tbody>
             </table>
-          </section>
+          </Reveal>
 
-          <section id="tracking" className="policy-section">
+          <Reveal as="section" id="tracking" className="policy-section">
             <h2>3. Order Tracking & Dispatch</h2>
             <p>
               As soon as your package is scanned by our courier partner, you will receive a dispatch confirmation email 
               containing your official tracking link and real-time transit updates. You can also view real-time shipping status 
               directly within your <Link to="/account?tab=orders">VESTIGIA Account Orders</Link> portal.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="customs" className="policy-section">
+          <Reveal as="section" id="customs" className="policy-section">
             <h2>4. Customs, Duties & Taxes</h2>
             <p>
               Shipments may be subject to local import tariffs, customs duties, or value-added tax (VAT) depending on your destination country’s regulations. 
               These fees are levied once the shipment reaches your country and are the responsibility of the customer.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="address-changes" className="policy-section">
+          <Reveal as="section" id="address-changes" className="policy-section">
             <h2>5. Address Changes & Redirects</h2>
             <p>
               If you discover an error in your shipping address after placing an order, please contact our concierge immediately 
               at <a href="mailto:support@vestigia.com">support@vestigia.com</a> within <strong>2 hours</strong> of order confirmation. 
               Once an order has been dispatched with the courier, address changes must be requested directly via DHL On Demand Delivery or FedEx Delivery Manager.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="contact" className="policy-section policy-contact-card">
+          <Reveal as="section" id="contact" className="policy-section policy-contact-card">
             <Mail size={28} />
             <h3>Questions Regarding Delivery?</h3>
             <p>Our logistics specialists are standing by to assist with shipment tracking or delivery adjustments.</p>
@@ -158,9 +155,9 @@ export default function ShippingPolicy() {
               <a href="mailto:shipping@vestigia.com" className="primary-link dark">Email Shipping Team</a>
               <Link to="/contact" className="secondary-link">Visit Contact Us Page</Link>
             </div>
-          </section>
+          </Reveal>
         </main>
       </div>
-    </motion.div>
+    </div>
   );
 }

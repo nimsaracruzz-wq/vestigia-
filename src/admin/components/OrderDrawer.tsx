@@ -1,5 +1,6 @@
-import { X } from "lucide-react";
+import { Gift, X } from "lucide-react";
 import { type Order } from "../AdminContext";
+import { moneyLabel } from "../../utils/money";
 
 interface OrderDrawerProps {
   order: Order | null;
@@ -42,6 +43,13 @@ export function OrderDrawer({ order, onClose }: OrderDrawerProps) {
             <p>{order.address}</p>
           </div>
 
+          {order.giftOrder && (
+            <div style={{ margin: "16px 0", padding: "14px", background: "#fffaf0", border: "1px solid #ead9b9", color: "#795b2b" }}>
+              <p className="meta-label" style={{ display: "flex", alignItems: "center", gap: 6, color: "#795b2b" }}><Gift size={14} /> Gift packaging requested</p>
+              <p>{order.giftMessage || "Complimentary gift packaging requested. No message provided."}</p>
+            </div>
+          )}
+
           <div className="admin-order-items">
             <p className="meta-label">Items ({order.items.reduce((acc, i) => acc + i.quantity, 0)})</p>
             {order.items.map((item, idx) => (
@@ -50,10 +58,10 @@ export function OrderDrawer({ order, onClose }: OrderDrawerProps) {
                 <div className="admin-order-item-details">
                   <h4>{item.productName}</h4>
                   <p>Size: {item.size} | Color: {item.color}</p>
-                  <p>Qty: {item.quantity} × ${item.price.toFixed(2)}</p>
+                  <p>Qty: {item.quantity} × {moneyLabel(item.unitPriceMinor, order.currency)}</p>
                 </div>
                 <div className="admin-order-item-total">
-                  ${(item.quantity * item.price).toFixed(2)}
+                  {moneyLabel(item.totalMinor || item.subtotalMinor, order.currency)}
                 </div>
               </div>
             ))}
@@ -63,19 +71,19 @@ export function OrderDrawer({ order, onClose }: OrderDrawerProps) {
         <div className="admin-drawer-footer">
           <div className="admin-summary-row">
             <span>Subtotal</span>
-            <span>${order.subtotal.toFixed(2)}</span>
+            <span>{moneyLabel(order.subtotalMinor, order.currency)}</span>
           </div>
           <div className="admin-summary-row">
             <span>Shipping</span>
-            <span>${order.shipping.toFixed(2)}</span>
+            <span>{order.shippingMinor === 0 ? "Free" : moneyLabel(order.shippingMinor, order.currency)}</span>
           </div>
           <div className="admin-summary-row">
             <span>Tax</span>
-            <span>${order.tax.toFixed(2)}</span>
+            <span>{moneyLabel(order.taxMinor, order.currency)}</span>
           </div>
           <div className="admin-summary-row total">
             <span>Total</span>
-            <span>${order.total.toFixed(2)}</span>
+            <span>{moneyLabel(order.totalMinor, order.currency)}</span>
           </div>
         </div>
       </div>

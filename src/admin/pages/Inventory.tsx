@@ -1,3 +1,4 @@
+import { Reveal, RevealGroup } from "../../animation/Reveal";
 import { useState } from "react";
 import { useAdmin } from "../AdminContext";
 import { type Product } from "../../data";
@@ -48,16 +49,16 @@ export default function Inventory() {
 
   return (
     <div className="admin-page">
-      <div className="admin-page-header">
+      <Reveal className="admin-page-header">
         <div>
           <h1>Inventory Management</h1>
           <p>Track and update stock levels across all variants.</p>
         </div>
-      </div>
+      </Reveal>
 
       <div className="admin-dashboard-layout">
         {/* Left Col: Product List */}
-        <div className="admin-panel h-fit">
+        <Reveal variant="fade" className="admin-panel h-fit">
           <div className="admin-panel-toolbar">
             <div className="admin-search-wrapper">
               <Search size={16} />
@@ -88,10 +89,10 @@ export default function Inventory() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Reveal>
 
         {/* Right Col: Editor */}
-        <div className="admin-panel h-fit">
+        <Reveal variant="fade" className="admin-panel h-fit">
           {selectedProduct ? (
             <>
               <div className="admin-panel-header">
@@ -107,7 +108,7 @@ export default function Inventory() {
                       <span className="color-dot" style={{ backgroundColor: color, border: color === "#ffffff" ? "1px solid #ddd" : "none" }} />
                       Color: {color}
                     </h3>
-                    <div className="admin-grid-4">
+                    <RevealGroup className="admin-grid-4">
                       {selectedProduct.sizes.map(size => {
                         const key = `${color}_${size}`;
                         return (
@@ -122,7 +123,7 @@ export default function Inventory() {
                           </div>
                         );
                       })}
-                    </div>
+                    </RevealGroup>
                   </div>
                 ))}
               </div>
@@ -132,7 +133,7 @@ export default function Inventory() {
               Select a product from the list to manage its inventory.
             </div>
           )}
-        </div>
+        </Reveal>
       </div>
     </div>
   );

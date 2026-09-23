@@ -1,0 +1,21 @@
+CREATE TABLE "ProductPrice" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "productId" INTEGER NOT NULL,
+  "currency" TEXT NOT NULL,
+  "priceMinor" INTEGER NOT NULL,
+  "compareAtMinor" INTEGER,
+  "isActive" BOOLEAN NOT NULL DEFAULT true,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL,
+  CONSTRAINT "ProductPrice_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX "ProductPrice_productId_currency_key" ON "ProductPrice"("productId", "currency");
+CREATE INDEX "ProductPrice_currency_idx" ON "ProductPrice"("currency");
+ALTER TABLE "Order" ADD COLUMN "currency" TEXT NOT NULL DEFAULT 'USD';
+ALTER TABLE "Order" ADD COLUMN "subtotalMinor" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Order" ADD COLUMN "shippingMinor" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Order" ADD COLUMN "taxMinor" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Order" ADD COLUMN "totalMinor" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "OrderItem" ADD COLUMN "unitPriceMinor" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "OrderItem" ADD COLUMN "subtotalMinor" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "OrderItem" ADD COLUMN "currency" TEXT NOT NULL DEFAULT 'USD';

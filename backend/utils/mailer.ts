@@ -1,3 +1,4 @@
+import { formatMoney, requireCurrency, toMinor } from '../../shared/money.js';
 import nodemailer from 'nodemailer';
 
 // ─── SMTP Transporter ────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ export interface OrderItem {
 }
 
 export interface OrderData {
+  currency: string;
   id: string;
   customer: string;
   email: string;
@@ -442,8 +444,8 @@ function buildEmailBase(innerContent: string, preheader: string): string {
 
 // ─── Helper: Format Currency ──────────────────────────────────────────────────
 
-function fmt(amount: number, currency = 'EUR'): string {
-  return new Intl.NumberFormat('en-EU', { style: 'currency', currency }).format(amount);
+function fmt(amount: number, currency: string): string {
+  try { const code = requireCurrency(currency); return formatMoney(toMinor(String(amount), code), code) + ' ' + code; } catch { return 'Price requires review'; }
 }
 
 // ─── Helper: Format Date ──────────────────────────────────────────────────────
@@ -506,7 +508,7 @@ function statusMessage(status: string, customerName: string): { headline: string
 
 // ─── Helper: Order Items HTML ─────────────────────────────────────────────────
 
-function buildOrderItemsTable(items: OrderItem[], currency = 'EUR'): string {
+function buildOrderItemsTable(items: OrderItem[], currency: string): string {
   const rows = items.map(item => `
     <div class="order-item" style="display:table;width:100%;border-collapse:collapse;">
       <div style="display:table-cell;padding:16px 20px;border-top:1px solid ${BORDER_LIGHT};">
@@ -592,8 +594,140 @@ export const sendOtpEmail = async (email: string, otp: string, expiresInMinutes 
 
 // ─── 3. Order Confirmation Email ──────────────────────────────────────────────
 
+export const sendVerificationEmail = async (
+  email: string,
+  name: string,
+  verificationLink: string,
+  expiresInHours = 24,
+): Promise<void> => {
+  const content = `
+    <div class="email-body">
+      <div class="section-label">Account Verification</div>
+      <div class="gold-line"></div>
+      <h1 class="headline">Verify your<br /><em>Vestigia account.</em></h1>
+      <p class="body-text">
+        Hello ${name || 'there'}, thank you for creating a Vestigia account.
+        Please verify your email address to unlock sensitive account features.
+      </p>
+      <p class="body-text">
+        This link expires in <strong style="font-weight:500;color:${TEXT_LIGHT};">${expiresInHours} hours</strong>
+        and can only be used once.
+      </p>
+      <div style="margin:36px 0;">
+        <a href="${verificationLink}" class="btn-primary">Verify Account</a>
+      </div>
+      <div class="divider"></div>
+      <p class="body-text" style="font-size:12px;margin-bottom:0;">
+        If you did not create or update a Vestigia account, you can safely ignore this email.
+        Vestigia will never ask for your password by email.
+      </p>
+    </div>
+  `;
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || 'no-reply@gmail.com',
+    to: email,
+    subject: 'Verify your Vestigia account',
+    html: buildEmailBase(content, `Verify your Vestigia account. This link expires in ${expiresInHours} hours.`),
+  });
+};
+
+export const sendSecurityNoticeEmail = async (
+  email: string,
+  name: string,
+  message: string,
+): Promise<void> => {
+  const content = `
+    <div class="email-body">
+      <div class="section-label">Security Notice</div>
+      <div class="gold-line"></div>
+      <h1 class="headline">Important account<br /><em>security update.</em></h1>
+      <p class="body-text">Hello ${name || 'there'},</p>
+      <p class="body-text">${message}</p>
+      <div class="divider"></div>
+      <p class="body-text" style="font-size:12px;margin-bottom:0;">
+        Vestigia will never send your password by email. If this activity was not yours,
+        contact support immediately and reset your password.
+      </p>
+    </div>
+  `;
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || 'no-reply@gmail.com',
+    to: email,
+    subject: 'Vestigia account security notice',
+    html: buildEmailBase(content, 'Important security update for your Vestigia account.'),
+  });
+};
+
+export const sendNewsletterConfirmationEmail = async (
+  email: string,
+  confirmLink: string,
+  expiresInHours = 24,
+): Promise<void> => {
+  const content = `
+    <div class="email-body">
+      <div class="section-label">Inner Circle</div>
+      <div class="gold-line"></div>
+      <h1 class="headline">Confirm your<br /><em>Vestigia subscription.</em></h1>
+      <p class="body-text">
+        Thank you for joining the Vestigia Inner Circle. Please confirm your email address before we send collection notes,
+        exclusive launches, special offers, styling inspiration, and selected Vestigia updates.
+      </p>
+      <p class="body-text">
+        This confirmation link expires in <strong style="font-weight:500;color:${TEXT_LIGHT};">${expiresInHours} hours</strong>.
+      </p>
+      <div style="margin:36px 0;">
+        <a href="${confirmLink}" class="btn-primary">Confirm Subscription</a>
+      </div>
+      <div class="divider"></div>
+      <p class="body-text" style="font-size:12px;margin-bottom:0;">
+        If you did not request this subscription, you can safely ignore this email.
+      </p>
+    </div>
+  `;
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || 'no-reply@gmail.com',
+    to: email,
+    subject: 'Confirm your Vestigia subscription',
+    html: buildEmailBase(content, `Confirm your Vestigia subscription. This link expires in ${expiresInHours} hours.`),
+  });
+};
+
+export const sendNewsletterWelcomeEmail = async (
+  email: string,
+  unsubscribeLink: string,
+): Promise<void> => {
+  const content = `
+    <div class="email-body">
+      <div class="section-label">Welcome</div>
+      <div class="gold-line"></div>
+      <h1 class="headline">Welcome to the<br /><em>Vestigia Inner Circle.</em></h1>
+      <p class="body-text">
+        You'll now be among the first to hear about:
+      </p>
+      <ul class="body-text" style="padding-left:20px;margin-bottom:20px;">
+        <li>New collections</li>
+        <li>Exclusive launches</li>
+        <li>Special offers</li>
+        <li>Styling inspiration</li>
+        <li>Vestigia stories</li>
+        <li>Selected updates</li>
+      </ul>
+      <div class="divider"></div>
+      <p class="body-text" style="font-size:12px;margin-bottom:0;">
+        You can <a href="${unsubscribeLink}" style="color:${GOLD};">unsubscribe from Vestigia emails</a> at any time.
+      </p>
+    </div>
+  `;
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || 'no-reply@gmail.com',
+    to: email,
+    subject: 'Welcome to the Vestigia Inner Circle',
+    html: buildEmailBase(content, 'Welcome to the Vestigia Inner Circle.'),
+  });
+};
+
 export const sendOrderConfirmationEmail = async (order: OrderData): Promise<void> => {
-  const itemsHtml = buildOrderItemsTable(order.items);
+  const itemsHtml = buildOrderItemsTable(order.items, order.currency);
   const content = `
     <div class="email-body">
       <div class="section-label">Order Confirmed</div>
@@ -646,19 +780,19 @@ export const sendOrderConfirmationEmail = async (order: OrderData): Promise<void
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:8px;">Subtotal</td>
-              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${fmt(order.subtotal)}</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${fmt(order.subtotal, order.currency)}</td>
             </tr>
             <tr>
               <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:8px;">Shipping</td>
-              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${order.shipping === 0 ? 'Complimentary' : fmt(order.shipping)}</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${order.shipping === 0 ? 'Complimentary' : fmt(order.shipping, order.currency)}</td>
             </tr>
             <tr>
               <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:16px;">Tax</td>
-              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:16px;">${fmt(order.tax)}</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:16px;">${fmt(order.tax, order.currency)}</td>
             </tr>
             <tr style="border-top:1px solid ${BORDER_LIGHT};">
               <td style="font-size:15px;font-weight:500;color:${TEXT_LIGHT};padding-top:14px;font-family:'Cormorant Garamond',Georgia,serif;letter-spacing:0.02em;">Total</td>
-              <td style="font-size:15px;font-weight:500;color:${GOLD};text-align:right;padding-top:14px;">${fmt(order.total)}</td>
+              <td style="font-size:15px;font-weight:500;color:${GOLD};text-align:right;padding-top:14px;">${fmt(order.total, order.currency)}</td>
             </tr>
           </table>
         </div>
@@ -675,7 +809,7 @@ export const sendOrderConfirmationEmail = async (order: OrderData): Promise<void
     from: process.env.SMTP_FROM || 'no-reply@gmail.com',
     to: order.email,
     subject: `Order Confirmed — ${order.id}`,
-    html: buildEmailBase(content, `Your Vestigia order ${order.id} has been received. Total: ${fmt(order.total)}.`),
+    html: buildEmailBase(content, `Your Vestigia order ${order.id} has been received. Total: ${fmt(order.total, order.currency)}.`),
   });
 };
 
@@ -710,7 +844,7 @@ export const sendOrderStatusEmail = async (order: OrderData): Promise<void> => {
             </td>
             <td style="padding:20px;vertical-align:top;">
               <div class="info-cell-label">Order Total</div>
-              <div class="info-cell-value" style="color:${GOLD};font-size:16px;font-family:'Cormorant Garamond',Georgia,serif;">${fmt(order.total)}</div>
+              <div class="info-cell-value" style="color:${GOLD};font-size:16px;font-family:'Cormorant Garamond',Georgia,serif;">${fmt(order.total, order.currency)}</div>
             </td>
           </tr>
         </table>
@@ -781,7 +915,7 @@ export const sendWelcomeAccountEmail = async (
 // ─── 6. Owner Order Notification Email ────────────────────────────────────────
 
 export const sendOwnerOrderNotificationEmail = async (order: OrderData, ownerEmail: string): Promise<void> => {
-  const itemsHtml = buildOrderItemsTable(order.items);
+  const itemsHtml = buildOrderItemsTable(order.items, order.currency);
   const content = `
     <div class="email-body">
       <div class="section-label" style="letter-spacing:0.25em;color:${GOLD_DARK};font-weight:600;">NEW STORE ORDER RECEIVED</div>
@@ -808,7 +942,7 @@ export const sendOwnerOrderNotificationEmail = async (order: OrderData, ownerEma
           <tr>
             <td style="padding:20px;border-right:1px solid ${BORDER_LIGHT};vertical-align:top;">
               <div class="info-cell-label">Total Revenue</div>
-              <div class="info-cell-value" style="color:${GOLD};font-weight:600;font-size:18px;">${fmt(order.total)}</div>
+              <div class="info-cell-value" style="color:${GOLD};font-weight:600;font-size:18px;">${fmt(order.total, order.currency)}</div>
             </td>
             <td style="padding:20px;vertical-align:top;">
               <div class="info-cell-label">Shipping Address</div>
@@ -834,19 +968,19 @@ export const sendOwnerOrderNotificationEmail = async (order: OrderData, ownerEma
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:8px;">Subtotal</td>
-              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${fmt(order.subtotal)}</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${fmt(order.subtotal, order.currency)}</td>
             </tr>
             <tr>
               <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:8px;">Shipping</td>
-              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${order.shipping === 0 ? 'Complimentary' : fmt(order.shipping)}</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:8px;">${order.shipping === 0 ? 'Complimentary' : fmt(order.shipping, order.currency)}</td>
             </tr>
             <tr>
               <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};padding-bottom:16px;">Tax</td>
-              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:16px;">${fmt(order.tax)}</td>
+              <td style="font-size:12px;font-weight:300;color:${MUTED_LIGHT};text-align:right;padding-bottom:16px;">${fmt(order.tax, order.currency)}</td>
             </tr>
             <tr style="border-top:1px solid ${BORDER_LIGHT};">
               <td style="font-size:15px;font-weight:500;color:${TEXT_LIGHT};padding-top:14px;font-family:'Cormorant Garamond',Georgia,serif;letter-spacing:0.02em;">Total Collected</td>
-              <td style="font-size:15px;font-weight:500;color:${GOLD};text-align:right;padding-top:14px;">${fmt(order.total)}</td>
+              <td style="font-size:15px;font-weight:500;color:${GOLD};text-align:right;padding-top:14px;">${fmt(order.total, order.currency)}</td>
             </tr>
           </table>
         </div>
@@ -862,7 +996,7 @@ export const sendOwnerOrderNotificationEmail = async (order: OrderData, ownerEma
   await transporter.sendMail({
     from: process.env.SMTP_FROM || 'no-reply@gmail.com',
     to: ownerEmail,
-    subject: `🚨 [New Order] ${order.id} — ${fmt(order.total)} from ${order.customer}`,
-    html: buildEmailBase(content, `New order ${order.id} received from ${order.customer} for ${fmt(order.total)}.`),
+    subject: `🚨 [New Order] ${order.id} — ${fmt(order.total, order.currency)} from ${order.customer}`,
+    html: buildEmailBase(content, `New order ${order.id} received from ${order.customer} for ${fmt(order.total, order.currency)}.`),
   });
 };

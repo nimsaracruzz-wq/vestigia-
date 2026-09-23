@@ -1,3 +1,6 @@
+import { Reveal, RevealOverlay, RevealModal, RevealGroup } from "../../animation/Reveal";
+import RefundControl from "../components/RefundControl";
+import { formatMajor, moneyLabel, salesByCurrency } from "../../utils/money";
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useAdmin, type Order, type OrderStatus } from "../AdminContext";
 import {
@@ -6,7 +9,7 @@ import {
   AlertCircle, X, Bell, ShoppingBag, TrendingUp,
   Calendar, DollarSign, Users, Printer, Mail, MessageSquare, Phone,
   FileText, Copy, Trash2, Check, ChevronLeft, ChevronRight,
-  MapPin, Star, Save, Edit3,
+  MapPin, Star, Save, Edit3, Gift,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -50,9 +53,7 @@ function getStatusCfg(status: string) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function fmt(amount: number) {
-  return `€${amount.toFixed(2)}`;
-}
+const fmt = formatMajor;
 
 function fmtDate(dateStr: string, includeTime = false) {
   try {
@@ -114,7 +115,7 @@ function StatCard({ label, value, sub, icon, accent }: {
   icon: React.ReactNode; accent?: string;
 }) {
   return (
-    <div style={{
+    <Reveal style={{
       background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12,
       padding: "20px 22px", display: "flex", flexDirection: "column", gap: 12,
       boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
@@ -129,7 +130,7 @@ function StatCard({ label, value, sub, icon, accent }: {
         <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.03em", color: "#111", lineHeight: 1.1 }}>{value}</div>
         {sub && <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>{sub}</div>}
       </div>
-    </div>
+    </Reveal>
   );
 }
 
@@ -140,8 +141,8 @@ function ConfirmModal({ title, message, onConfirm, onCancel, danger = false, con
   danger?: boolean; confirmLabel?: string;
 }) {
   return (
-    <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "28px", maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+    <RevealOverlay onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <RevealModal onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "28px", maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
         <div style={{ width: 44, height: 44, borderRadius: "50%", background: danger ? "#fee2e2" : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
           {danger ? <XCircle size={22} color="#dc2626" /> : <AlertCircle size={22} color="#555" />}
         </div>
@@ -151,8 +152,8 @@ function ConfirmModal({ title, message, onConfirm, onCancel, danger = false, con
           <button onClick={onCancel} style={{ padding: "9px 18px", border: "1px solid #ddd", borderRadius: 8, background: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 14 }}>Cancel</button>
           <button onClick={onConfirm} style={{ padding: "9px 18px", border: "none", borderRadius: 8, background: danger ? "#ef4444" : "#111", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: 14 }}>{confirmLabel}</button>
         </div>
-      </div>
-    </div>
+      </RevealModal>
+    </RevealOverlay>
   );
 }
 
@@ -167,8 +168,8 @@ function StatusChangeModal({ order, onConfirm, onCancel, updateOrderStatus }: {
   const [sendEmail, setSendEmail] = useState(true);
 
   return (
-    <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 540, boxShadow: "0 24px 64px rgba(0,0,0,0.18)", overflow: "hidden" }}>
+    <RevealOverlay onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <RevealModal onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 540, boxShadow: "0 24px 64px rgba(0,0,0,0.18)", overflow: "hidden" }}>
         <div style={{ padding: "22px 26px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Change Order Status</h3>
@@ -225,8 +226,8 @@ function StatusChangeModal({ order, onConfirm, onCancel, updateOrderStatus }: {
             Update Status
           </button>
         </div>
-      </div>
-    </div>
+      </RevealModal>
+    </RevealOverlay>
   );
 }
 
@@ -241,8 +242,8 @@ function printInvoice(order: Order) {
       <td><strong>${i.productName}</strong><br/><span class="muted">SKU: VST-${String(i.productId).padStart(4,'0')}</span></td>
       <td class="center">${i.size !== 'OS' ? i.size : '—'}${i.color ? ` / ${i.color}` : ''}</td>
       <td class="center">${i.quantity}</td>
-      <td class="right">€${i.price.toFixed(2)}</td>
-      <td class="right"><strong>€${(i.price * i.quantity).toFixed(2)}</strong></td>
+      <td class="right">${moneyLabel(i.unitPriceMinor, order.currency)}</td>
+      <td class="right"><strong>${moneyLabel(i.subtotalMinor, order.currency)}</strong></td>
     </tr>`).join('');
   win.document.write(`<!DOCTYPE html>
 <html lang="en">
@@ -358,10 +359,10 @@ function printInvoice(order: Order) {
   <!-- Totals -->
   <div class="totals">
     <div class="totals-inner">
-      <div class="t-row sub"><span>Subtotal</span><span>€${order.subtotal.toFixed(2)}</span></div>
-      <div class="t-row sub"><span>Shipping</span><span>${order.shipping === 0 ? 'Free' : '€'+order.shipping.toFixed(2)}</span></div>
-      <div class="t-row sub"><span>Tax (VAT)</span><span>€${order.tax.toFixed(2)}</span></div>
-      <div class="t-row grand"><span>Total Due</span><span>€${order.total.toFixed(2)}</span></div>
+      <div class="t-row sub"><span>Subtotal</span><span>${moneyLabel(order.subtotalMinor, order.currency)}</span></div>
+      <div class="t-row sub"><span>Shipping</span><span>${order.shipping === 0 ? 'Free' : moneyLabel(order.shippingMinor, order.currency)}</span></div>
+      <div class="t-row sub"><span>Tax (VAT)</span><span>${moneyLabel(order.taxMinor, order.currency)}</span></div>
+      <div class="t-row grand"><span>Total Due</span><span>${moneyLabel(order.totalMinor, order.currency)}</span></div>
     </div>
   </div>
 
@@ -748,6 +749,8 @@ function printPackingSlip(order: Order) {
     <span style="font-weight: 500; color: #777;">Verify before sealing parcel</span>
   </div>
 
+  ${order.giftOrder ? `<div style="background:#fff8e8;border:1px solid #ead9b9;border-radius:6px;padding:12px 14px;margin-bottom:18px;color:#795b2b;"><strong style="display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">Complimentary gift packaging</strong><span style="font-size:12px;">${order.giftMessage ? `Gift message: ${order.giftMessage}` : 'Include complimentary gift packaging. No gift message provided.'}</span></div>` : ''}
+
   <table class="slip-table">
     <thead>
       <tr>
@@ -791,17 +794,20 @@ function printPackingSlip(order: Order) {
 }
 
 function exportOrdersCSV(orders: Order[]) {
-  const headers = ["Order ID", "Date", "Customer", "Email", "Status", "Subtotal", "Shipping", "Tax", "Total", "Address", "Items"];
+  const headers = ["Order ID", "Date", "Customer", "Email", "Status", "Gift Packaging", "Gift Message", "Currency", "Subtotal Minor", "Shipping Minor", "Tax Minor", "Total Minor", "Address", "Items"];
   const rows = orders.map(o => [
     o.id,
     fmtDate(o.date),
     o.customer,
     o.email,
     getStatusCfg(o.status).label,
-    o.subtotal.toFixed(2),
-    o.shipping.toFixed(2),
-    o.tax.toFixed(2),
-    o.total.toFixed(2),
+    o.giftOrder ? "Yes" : "No",
+    `"${(o.giftMessage ?? "").replace(/"/g, '""')}"`,
+    o.currency,
+    o.subtotalMinor,
+    o.shippingMinor,
+    o.taxMinor,
+    o.totalMinor,
     `"${o.address.replace(/"/g, '""')}"`,
     `"${o.items.map(i => `${i.productName} x${i.quantity}`).join("; ")}"`,
   ]);
@@ -864,8 +870,9 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 14, marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>Order {order.id}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <StatusBadge status={order.status} size="md" />
+            {order.giftOrder && <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 10px", background: "#f5efe3", color: "#795b2b", border: "1px solid #e4d5b8", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em" }}><Gift size={13} /> Gift packaging</span>}
             <span style={{ fontSize: 13, color: "#888" }}>{fmtDate(order.date, true)}</span>
             {order.invoiceNumber && <span style={{ fontSize: 12, color: "#aaa", fontFamily: "monospace" }}>· {order.invoiceNumber}</span>}
           </div>
@@ -959,6 +966,18 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
               </div>
             </div>
 
+            {order.giftOrder && (
+              <div style={{ background: "#fffaf0", border: "1px solid #ead9b9", borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ padding: "14px 20px", borderBottom: "1px solid #ead9b9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#795b2b" }}>Gift packaging</h3>
+                  <Gift size={15} color="#9a7539" />
+                </div>
+                <div style={{ padding: "16px 20px" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "#5f4b2b", lineHeight: 1.6 }}>{order.giftMessage || "Complimentary gift packaging requested. No message provided."}</p>
+                </div>
+              </div>
+            )}
+
             {/* Shipping */}
             <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between" }}>
@@ -1013,8 +1032,9 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
               <div style={{ padding: "14px 20px", borderBottom: "1px solid #eee" }}>
-                <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>Order Summary</h3>
+                <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>Order Summary · {order.currency}</h3><p>Payment: {order.paymentStatus}</p>{order.payments?.map((p, i) => <p key={i}>{moneyLabel(p.amountMinor, p.currency)} · {p.status}</p>)}{!order.pricingVersion && <p role="alert">Historical pricing requires review.</p>}
               </div>
+              <RefundControl order={order} />
               <div style={{ maxHeight: 240, overflowY: "auto" }}>
                 {order.items.map((item, i) => (
                   <div key={i} style={{ padding: "12px 16px", borderBottom: i < order.items.length - 1 ? "1px solid #f5f5f5" : "none", display: "flex", gap: 10, alignItems: "center" }}>
@@ -1024,21 +1044,21 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.productName}</div>
                       <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{item.size !== "OS" && `S:${item.size}`}{item.color && ` C:${item.color}`}</div>
-                      <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{item.quantity} × {fmt(item.price)}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{item.quantity} × {moneyLabel(item.unitPriceMinor, order.currency)}</div>
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111", flexShrink: 0 }}>{fmt(item.quantity * item.price)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111", flexShrink: 0 }}>{moneyLabel(item.subtotalMinor, order.currency)}</div>
                   </div>
                 ))}
               </div>
               <div style={{ padding: "14px 16px", background: "#fafafa", borderTop: "1px solid #eee" }}>
-                {[{ label: "Subtotal", val: order.subtotal }, { label: "Shipping", val: order.shipping }, { label: "Tax", val: order.tax }].map(r => (
+                {[{ label: "Subtotal", val: order.subtotal }, { label: "Discount", val: -order.discountMinor / (order.currency === "JPY" ? 1 : 100) }, { label: "Shipping", val: order.shipping }, { label: "Tax", val: order.tax }].map(r => (
                   <div key={r.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#555", marginBottom: 6 }}>
                     <span>{r.label}</span>
-                    <span>{r.val === 0 && r.label === "Shipping" ? "Free" : fmt(r.val)}</span>
+                    <span>{r.val === 0 && r.label === "Shipping" ? "Free" : fmt(r.val, order.currency)}</span>
                   </div>
                 ))}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, color: "#111", paddingTop: 10, borderTop: "1px solid #e5e5e5", marginTop: 4 }}>
-                  <span>Total</span><span>{fmt(order.total)}</span>
+                  <span>Total</span><span>{moneyLabel(order.totalMinor, order.currency)}</span>
                 </div>
               </div>
             </div>
@@ -1102,8 +1122,8 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
                     {item.color && <span>C:{item.color}</span>}
                   </td>
                   <td style={{ padding: "14px 20px", fontSize: 13, fontWeight: 600, borderBottom: "1px solid #f5f5f5" }}>{item.quantity}</td>
-                  <td style={{ padding: "14px 20px", fontSize: 13, color: "#555", borderBottom: "1px solid #f5f5f5" }}>{fmt(item.price)}</td>
-                  <td style={{ padding: "14px 20px", fontSize: 13, fontWeight: 700, borderBottom: "1px solid #f5f5f5" }}>{fmt(item.quantity * item.price)}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 13, color: "#555", borderBottom: "1px solid #f5f5f5" }}>{moneyLabel(item.unitPriceMinor, order.currency)}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 13, fontWeight: 700, borderBottom: "1px solid #f5f5f5" }}>{moneyLabel(item.subtotalMinor, order.currency)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1209,7 +1229,7 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
 // ─── Main Orders Page ─────────────────────────────────────────────────────────
 
 export default function Orders() {
-  const { orders, updateOrderStatus, updateOrderNotes, updateOrderShipping, deleteOrder, duplicateOrder } = useAdmin();
+  const { orders, updateOrderStatus, updateOrderNotes, updateOrderShipping, deleteOrder, duplicateOrder, adminDataError, refreshAdminData } = useAdmin();
 
   const [view, setView] = useState<ViewMode>("list");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -1355,7 +1375,7 @@ export default function Orders() {
     const txId = order.stripePaymentIntentId || "None";
     setConfirmModal({
       title: "Confirm Stripe Refund",
-      message: `Are you sure you want to issue a full refund of €${order.total.toFixed(2)} to ${order.customer}? This will trigger a live refund request to Stripe (Transaction: ${txId}) and mark the order as Refunded.`,
+      message: `Are you sure you want to issue a full refund of ${moneyLabel(order.totalMinor, order.currency)} to ${order.customer}? This will trigger a live refund request to Stripe (Transaction: ${txId}) and mark the order as Refunded.`,
       danger: true,
       confirmLabel: "Confirm & Refund",
       action: async () => {
@@ -1424,12 +1444,15 @@ export default function Orders() {
     <div className="admin-page">
 
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 26, flexWrap: "wrap", gap: 14 }}>
+      <Reveal style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 26, flexWrap: "wrap", gap: 14 }}>
         <div>
           <h1 style={{ margin: "0 0 5px", fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" }}>Orders</h1>
           <p style={{ margin: 0, color: "#888", fontSize: 14 }}>Manage fulfillments, track shipments, and update order statuses.</p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={() => { void refreshAdminData(); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #e5e5e5", borderRadius: 8, background: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 13, color: "#555" }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
           <button onClick={() => window.location.href = "/admin/notifications"} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #f59e0b", borderRadius: 8, background: "#fffbeb", cursor: "pointer", fontWeight: 600, fontSize: 13, color: "#b45309" }}>
             <Bell size={14} /> Order Email Alerts
           </button>
@@ -1437,22 +1460,31 @@ export default function Orders() {
             <Download size={14} /> Export All CSV
           </button>
         </div>
-      </div>
+      </Reveal>
+
+      {adminDataError && (
+        <div style={{ marginBottom: 18, padding: "12px 14px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: 10, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <span>{adminDataError}</span>
+          <button onClick={() => { void refreshAdminData(); }} style={{ border: "1px solid #fca5a5", background: "#fff", color: "#991b1b", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontWeight: 600 }}>
+            Try Again
+          </button>
+        </div>
+      )}
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12, marginBottom: 24 }}>
+      <RevealGroup style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12, marginBottom: 24 }}>
         <StatCard label="Total Orders"    value={stats.total}      icon={<ShoppingBag size={14} />} accent="#111" />
         <StatCard label="Pending"         value={stats.pending}    icon={<Clock size={14} />}       accent="#d97706" />
         <StatCard label="Processing"      value={stats.processing} icon={<RefreshCw size={14} />}   accent="#7c3aed" />
         <StatCard label="Shipped"         value={stats.shipped}    icon={<Truck size={14} />}       accent="#2563eb" />
         <StatCard label="Delivered"       value={stats.delivered}  icon={<CheckCircle size={14} />} accent="#16a34a" />
         <StatCard label="Cancelled"       value={stats.cancelled}  icon={<XCircle size={14} />}     accent="#6b7280" />
-        <StatCard label="Today's Sales"   value={fmt(stats.todaySales)}    icon={<DollarSign size={14} />} accent="#0ea5e9" sub="Revenue today" />
-        <StatCard label="Monthly Revenue" value={fmt(stats.monthRevenue)}  icon={<TrendingUp size={14} />} accent="#10b981" sub="This month" />
-      </div>
+        <StatCard label="Today's Sales"   value={salesByCurrency(orders.filter(o => new Date(o.date).toDateString() === new Date().toDateString()))}    icon={<DollarSign size={14} />} accent="#0ea5e9" sub="Revenue today" />
+        <StatCard label="Monthly Revenue" value={salesByCurrency(orders.filter(o => o.date.slice(0,7) === new Date().toISOString().slice(0,7)))}  icon={<TrendingUp size={14} />} accent="#10b981" sub="This month" />
+      </RevealGroup>
 
       {/* Table Panel */}
-      <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <Reveal variant="fade" style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
 
         {/* Toolbar */}
         <div style={{ padding: "14px 20px", background: "#fafafa", borderBottom: "1px solid #eee", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -1567,6 +1599,7 @@ export default function Orders() {
                   </td>
                   <td style={{ padding: "13px 16px", borderBottom: "1px solid #f5f5f5", cursor: "pointer" }} onClick={() => openDetail(order)}>
                     <span style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "#111" }}>{order.id}</span>
+                    {order.giftOrder && <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginLeft: 8, padding: "3px 6px", background: "#f5efe3", color: "#795b2b", borderRadius: 4, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}><Gift size={10} /> Gift</span>}
                   </td>
                   <td style={{ padding: "13px 16px", borderBottom: "1px solid #f5f5f5", cursor: "pointer" }} onClick={() => openDetail(order)}>
                     <div style={{ fontSize: 12, color: "#555" }}>{fmtDate(order.date)}</div>
@@ -1584,7 +1617,7 @@ export default function Orders() {
                     </span>
                   </td>
                   <td style={{ padding: "13px 16px", borderBottom: "1px solid #f5f5f5", cursor: "pointer" }} onClick={() => openDetail(order)}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>{fmt(order.total)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>{moneyLabel(order.totalMinor, order.currency)}</span>
                   </td>
                   <td style={{ padding: "13px 16px", borderBottom: "1px solid #f5f5f5", cursor: "pointer" }} onClick={() => openDetail(order)}>
                     <StatusBadge status={order.status} />
@@ -1634,7 +1667,7 @@ export default function Orders() {
             </div>
           </div>
         )}
-      </div>
+      </Reveal>
 
       {/* Modals */}
       {statusModalOrder && (

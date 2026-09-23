@@ -12,6 +12,7 @@ Disallow: /activate/
 Disallow: /api/
 Disallow: /*?*search=
 Disallow: /*?*sort=
+Disallow: /*?*category=
 
 # AI Search Engine Authorization (GEO / AEO)
 User-agent: GPTBot

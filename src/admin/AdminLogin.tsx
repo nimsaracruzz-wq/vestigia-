@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import { useState } from "react";
 import { Lock } from "lucide-react";
 
@@ -24,7 +25,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
 
   return (
     <div className="admin-login-wrapper">
-      <div className="admin-login-box">
+      <Reveal tone="admin" className="admin-login-box">
         <div className="admin-login-header">
           <Lock size={32} />
           <h1>Admin Portal</h1>
@@ -71,7 +72,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
         <div className="admin-login-footer">
           <a href="/">← Return to Storefront</a>
         </div>
-      </div>
+      </Reveal>
     </div>
   );
 }

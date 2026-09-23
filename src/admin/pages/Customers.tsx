@@ -1,3 +1,5 @@
+import { Reveal } from "../../animation/Reveal";
+import { moneyLabel, salesByCurrency } from "../../utils/money";
 import { useState, useMemo } from "react";
 import { useAdmin } from "../AdminContext";
 import { 
@@ -111,9 +113,9 @@ export default function Customers() {
         {/* LTV Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "24px" }}>
           {[
-            { label: "Lifetime Value", value: `€${selectedCustomer.totalSpend.toFixed(2)}`, icon: <DollarSign size={18} color="#15803d" /> },
+            { label: "Lifetime Value", value: salesByCurrency(orders.filter(o => o.email === selectedCustomer.email)), icon: <DollarSign size={18} color="#15803d" /> },
             { label: "Total Orders", value: selectedCustomer.orders, icon: <ShoppingBag size={18} color="#1d4ed8" /> },
-            { label: "Average Order Value", value: `€${avgOrderValue.toFixed(2)}`, icon: <Award size={18} color="#7c3aed" /> },
+            { label: "Average Order Value", value: "See sales by currency", icon: <Award size={18} color="#7c3aed" /> },
           ].map((stat, i) => (
             <div key={i} style={{ background: "#fff", border: "1px solid #eee", borderRadius: "12px", padding: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
@@ -163,7 +165,7 @@ export default function Customers() {
                             </div>
                             <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
                               <StatusBadge status={order.status} />
-                              <strong style={{ fontSize: "13px" }}>€{order.total.toFixed(2)}</strong>
+                              <strong style={{ fontSize: "13px" }}>{moneyLabel(order.totalMinor, order.currency)}</strong>
                               {isOpen ? <ChevronUp size={16} color="#888" /> : <ChevronDown size={16} color="#888" />}
                             </div>
                           </div>
@@ -189,7 +191,7 @@ export default function Customers() {
                                       </div>
                                     </div>
                                     <div style={{ fontSize: "13px", color: "#666" }}>
-                                      {item.quantity} x €{item.price.toFixed(2)}
+                                      {item.quantity} x {moneyLabel(item.unitPriceMinor, order.currency)}
                                     </div>
                                   </div>
                                 ))}
@@ -246,14 +248,14 @@ export default function Customers() {
 
   return (
     <div className="admin-page">
-      <div className="admin-page-header">
+      <Reveal className="admin-page-header">
         <div>
           <h1>Customers</h1>
           <p>View customer history and lifetime value.</p>
         </div>
-      </div>
+      </Reveal>
 
-      <div className="admin-panel">
+      <Reveal variant="fade" className="admin-panel">
         <div className="admin-panel-toolbar">
           <div className="admin-search-wrapper">
             <Search size={16} />
@@ -324,7 +326,7 @@ export default function Customers() {
                     <td>{new Date(customer.joined).toLocaleDateString()}</td>
                     <td>{customer.lastOrder ? new Date(customer.lastOrder).toLocaleDateString() : "—"}</td>
                     <td>{customer.orders}</td>
-                    <td><strong>€{customer.totalSpend.toFixed(2)}</strong></td>
+                    <td><strong>{salesByCurrency(orders.filter(o => o.email === customer.email))}</strong></td>
                   </tr>
                 );
               })}
@@ -338,7 +340,7 @@ export default function Customers() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Reveal>
     </div>
   );
 }

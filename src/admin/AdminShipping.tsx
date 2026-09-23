@@ -1,3 +1,4 @@
+import { Reveal, RevealOverlay, RevealModal } from "../animation/Reveal";
 import React, { useState, useEffect } from "react";
 import { API_BASE_URL } from "../config/api";
 import {
@@ -37,6 +38,7 @@ type Country = {
   countryName: string;
   isEnabled: boolean;
   currency: string;
+  taxRateBps: number | null;
   displayOrder: number;
   region?: { id: number; name: string };
 };
@@ -107,6 +109,7 @@ export default function AdminShipping() {
   const [cName, setCName] = useState("");
   const [cEnabled, setCEnabled] = useState(true);
   const [cCurrency, setCCurrency] = useState("USD");
+  const [cTaxRate, setCTaxRate] = useState("1");
 
   const [methodModalOpen, setMethodModalOpen] = useState(false);
   const [editingMethod, setEditingMethod] = useState<ShippingMethod | null>(null);
@@ -222,6 +225,7 @@ export default function AdminShipping() {
       setCName(country.countryName);
       setCEnabled(country.isEnabled);
       setCCurrency(country.currency || "USD");
+      setCTaxRate(country.taxRateBps == null ? "" : String(country.taxRateBps / 100));
     } else {
       setEditingCountry(null);
       setCRegionId(regions[0]?.id || 1);
@@ -229,6 +233,7 @@ export default function AdminShipping() {
       setCName("");
       setCEnabled(true);
       setCCurrency("USD");
+      setCTaxRate("1");
     }
     setCountryModalOpen(true);
   };
@@ -252,6 +257,7 @@ export default function AdminShipping() {
           countryName: cName.trim(),
           isEnabled: cEnabled,
           currency: cCurrency.trim().toUpperCase(),
+          taxRateBps: cTaxRate.trim() === "" ? null : Math.round(Number(cTaxRate) * 100),
         }),
       });
 
@@ -452,7 +458,7 @@ export default function AdminShipping() {
       )}
 
       {/* Header */}
-      <div className="admin-page-header">
+      <Reveal className="admin-page-header">
         <div>
           <h1 className="admin-page-title">
             <Truck size={24} /> Shipping Management System
@@ -469,7 +475,7 @@ export default function AdminShipping() {
             <RefreshCw size={16} /> Refresh
           </button>
         </div>
-      </div>
+      </Reveal>
 
       {/* Stats Summary Bar */}
       {stats && (
@@ -683,7 +689,7 @@ export default function AdminShipping() {
                       <th>Country</th>
                       <th>ISO Code</th>
                       <th>Region</th>
-                      <th>Currency</th>
+                      <th>Currency</th><th>Tax</th>
                       <th>Shipping Status</th>
                       <th style={{ textAlign: "right" }}>Actions</th>
                     </tr>
@@ -713,7 +719,7 @@ export default function AdminShipping() {
                             <code className="iso-code">{c.countryCode}</code>
                           </td>
                           <td>{c.region?.name || "Unassigned"}</td>
-                          <td>{c.currency}</td>
+                          <td>{c.currency}</td><td>{c.taxRateBps == null ? "Market default" : `${c.taxRateBps / 100}%`}</td>
                           <td>
                             <button
                               className={`status-toggle-btn ${c.isEnabled ? "enabled" : "disabled"}`}
@@ -875,8 +881,8 @@ export default function AdminShipping() {
 
       {/* REGION MODAL */}
       {regionModalOpen && (
-        <div className="admin-modal-overlay">
-          <div className="admin-modal">
+        <RevealOverlay className="admin-modal-overlay">
+          <RevealModal className="admin-modal">
             <h3>{editingRegion ? "Edit Region" : "Add Shipping Region"}</h3>
             <form onSubmit={handleSaveRegion}>
               <div className="form-group">
@@ -909,14 +915,14 @@ export default function AdminShipping() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </RevealModal>
+        </RevealOverlay>
       )}
 
       {/* COUNTRY MODAL */}
       {countryModalOpen && (
-        <div className="admin-modal-overlay">
-          <div className="admin-modal">
+        <RevealOverlay className="admin-modal-overlay">
+          <RevealModal className="admin-modal">
             <h3>{editingCountry ? "Edit Country" : "Add Shipping Country"}</h3>
             <form onSubmit={handleSaveCountry}>
               <div className="form-group">
@@ -958,6 +964,11 @@ export default function AdminShipping() {
                 />
               </div>
               <div className="form-group">
+                <label htmlFor="country-tax">Country tax (%)</label>
+                <input id="country-tax" type="number" min="0" max="100" step="0.01" value={cTaxRate} onChange={e => setCTaxRate(e.target.value)} className="admin-input" aria-describedby="country-tax-help" />
+                <small id="country-tax-help">Applied to merchandise after discounts. Blank uses the market rate; 0 means tax-free.</small>
+              </div>
+              <div className="form-group">
                 <label>Display Currency</label>
                 <input
                   type="text"
@@ -987,14 +998,14 @@ export default function AdminShipping() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </RevealModal>
+        </RevealOverlay>
       )}
 
       {/* METHOD MODAL */}
       {methodModalOpen && (
-        <div className="admin-modal-overlay">
-          <div className="admin-modal">
+        <RevealOverlay className="admin-modal-overlay">
+          <RevealModal className="admin-modal">
             <h3>{editingMethod ? "Edit Shipping Method" : "Add Courier Shipping Method"}</h3>
             <form onSubmit={handleSaveMethod}>
               <div className="form-group">
@@ -1087,14 +1098,14 @@ export default function AdminShipping() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </RevealModal>
+        </RevealOverlay>
       )}
 
       {/* ANNOUNCEMENT MODAL */}
       {announcementModalOpen && (
-        <div className="admin-modal-overlay">
-          <div className="admin-modal">
+        <RevealOverlay className="admin-modal-overlay">
+          <RevealModal className="admin-modal">
             <h3>Add Holiday Suspension or Banner Alert</h3>
             <form onSubmit={handleSaveAnnouncement}>
               <div className="form-group">
@@ -1142,8 +1153,8 @@ export default function AdminShipping() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </RevealModal>
+        </RevealOverlay>
       )}
     </div>
   );

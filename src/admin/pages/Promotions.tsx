@@ -1,3 +1,4 @@
+import { Reveal } from "../../animation/Reveal";
 import { useState } from "react";
 import { useAdmin } from "../AdminContext";
 import { Modal } from "../components/Modal";
@@ -30,7 +31,7 @@ export default function Promotions() {
 
   return (
     <div className="admin-page">
-      <div className="admin-page-header">
+      <Reveal className="admin-page-header">
         <div>
           <h1>Promotions</h1>
           <p>Create and manage discount codes.</p>
@@ -38,9 +39,9 @@ export default function Promotions() {
         <button onClick={() => setIsModalOpen(true)} className="admin-btn admin-btn-primary">
           <Plus size={16} /> Add Promo Code
         </button>
-      </div>
+      </Reveal>
 
-      <div className="admin-panel">
+      <Reveal variant="fade" className="admin-panel">
         <div className="admin-panel-content p-0">
           <table className="admin-table">
             <thead>
@@ -80,7 +81,7 @@ export default function Promotions() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Reveal>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Promo Code">
         <form onSubmit={handleSubmit} className="admin-form">

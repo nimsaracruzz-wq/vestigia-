@@ -31,10 +31,15 @@ export type Product = {
   category: "New" | "Clothing" | "Accessories" | "Sale";
   productType?: string;
   price: number;
+  basePriceMinor?: number | null;
+  baseCurrency?: import("../shared/money.js").Currency | null;
   compareAt?: number;
   badge?: string;
   colors: string[];
   image: string;
+  modelImage?: string;
+  productImage?: string;
+  prices?: Partial<Record<"USD" | "EUR" | "JPY" | "GBP", { priceMinor: number; compareAtMinor?: number | null; currency?: string; priceListId?: string; priceVersion?: number; mode?: string; isActive?: boolean }>>;
   images: string[];
   alt: string;
   sizes: string[];
@@ -48,6 +53,20 @@ export type Product = {
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
+  canonicalUrl?: string;
+  robotsIndex?: boolean;
+  robotsFollow?: boolean;
+  brand?: string;
+  sku?: string;
+  gtin?: string;
+  mpn?: string;
+  condition?: "new" | "used" | "refurbished";
+  googleProductCategory?: string;
+  material?: string;
+  gender?: string;
+  ageGroup?: string;
+  imageTitle?: string;
+  redirectFrom?: string[];
 };
 
 export type Collection = {

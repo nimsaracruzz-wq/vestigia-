@@ -1,9 +1,20 @@
+import { Reveal } from "../../animation/Reveal";
+import { moneyLabel } from "../../utils/money";
 import { useState } from "react";
 import { useAdmin } from "../AdminContext";
 import { Modal } from "../components/Modal";
 import { ProductForm } from "../components/ProductForm";
 import { type Product } from "../../data";
 import { Plus, Edit2, Trash2 } from "lucide-react";
+
+const seoChecks = (product: Product) => [
+  Boolean(product.slug),
+  Boolean(product.seoTitle && product.seoTitle.length <= 70),
+  Boolean(product.seoDescription && product.seoDescription.length <= 170),
+  Boolean(product.alt),
+  Boolean(product.sku),
+  product.robotsIndex !== false,
+];
 
 export default function Products() {
   const { products, addProduct, updateProduct, deleteProduct } = useAdmin();
@@ -15,6 +26,7 @@ export default function Products() {
     p.name.toLowerCase().includes(search.toLowerCase()) || 
     p.category.toLowerCase().includes(search.toLowerCase())
   );
+  const seoReadyCount = products.filter((product) => seoChecks(product).every(Boolean)).length;
 
   const handleAddClick = () => {
     setEditingProduct(null);
@@ -43,17 +55,31 @@ export default function Products() {
 
   return (
     <div className="admin-page">
-      <div className="admin-page-header">
+      <Reveal className="admin-page-header">
         <div>
           <h1>Products</h1>
-          <p>Manage your catalog, pricing, and inventory.</p>
+          <p>Manage your catalog, pricing, inventory, and product SEO.</p>
         </div>
         <button onClick={handleAddClick} className="admin-btn admin-btn-primary">
           <Plus size={16} /> Add Product
         </button>
-      </div>
+      </Reveal>
 
-      <div className="admin-panel">
+      <Reveal variant="fade" className="admin-panel">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", padding: "16px 16px 0" }}>
+          <Reveal className="admin-price-card">
+            <label>SEO Ready</label>
+            <strong>{seoReadyCount}/{products.length}</strong>
+          </Reveal>
+          <Reveal className="admin-price-card">
+            <label>Missing Meta Descriptions</label>
+            <strong>{products.filter((product) => !product.seoDescription).length}</strong>
+          </Reveal>
+          <Reveal className="admin-price-card">
+            <label>Missing SKU</label>
+            <strong>{products.filter((product) => !product.sku).length}</strong>
+          </Reveal>
+        </div>
         <div className="admin-panel-toolbar">
           <input 
             type="text" 
@@ -72,6 +98,7 @@ export default function Products() {
                 <th>Name</th>
                 <th>Category</th>
                 <th>Price</th>
+                <th>SEO</th>
                 <th>Status</th>
                 <th style={{ width: "100px" }} className="text-right">Actions</th>
               </tr>
@@ -84,7 +111,14 @@ export default function Products() {
                   </td>
                   <td><strong>{product.name}</strong></td>
                   <td>{product.category}</td>
-                  <td>${product.price.toFixed(2)}</td>
+                  <td>{product.basePriceMinor != null && product.baseCurrency ? moneyLabel(product.basePriceMinor, product.baseCurrency) : "Set base price in Pricing Control"}</td>
+                  <td>
+                    {seoChecks(product).every(Boolean) ? (
+                      <span className="admin-badge badge-success">Ready</span>
+                    ) : (
+                      <span className="admin-badge badge-warning">{seoChecks(product).filter(Boolean).length}/6</span>
+                    )}
+                  </td>
                   <td>
                     {product.badge ? (
                       <span className="admin-badge badge-warning">{product.badge}</span>
@@ -106,7 +140,7 @@ export default function Products() {
               ))}
               {filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-8">
+                  <td colSpan={7} className="text-center py-8">
                     No products found matching "{search}"
                   </td>
                 </tr>
@@ -114,7 +148,7 @@ export default function Products() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Reveal>
 
       <Modal 
         isOpen={isModalOpen} 

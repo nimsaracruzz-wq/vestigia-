@@ -1,3 +1,4 @@
+import { animationConfig } from "../../animation/config";
 import { Variants } from "framer-motion";
 
 /**
@@ -25,32 +26,11 @@ export const galleryFadeVariants: Variants = {
   },
 };
 
+// A short crossfade for image changes; the gallery frame only reveals once.
 export const slideVariants: Variants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 40 : -40,
-    opacity: 0,
-    scale: 0.98,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    scale: 1,
-    transition: {
-      x: { type: "spring", stiffness: 350, damping: 32 },
-      opacity: { duration: 0.22 },
-      scale: { duration: 0.22 },
-    },
-  },
-  exit: (direction: number) => ({
-    x: direction < 0 ? 40 : -40,
-    opacity: 0,
-    scale: 0.98,
-    transition: {
-      x: { type: "spring", stiffness: 350, damping: 32 },
-      opacity: { duration: 0.18 },
-      scale: { duration: 0.18 },
-    },
-  }),
+  enter: { opacity: 0 },
+  center: { opacity: 1, transition: { duration: animationConfig.duration.fast, ease: animationConfig.ease } },
+  exit: { opacity: 0, transition: { duration: 0.18 } },
 };
 
 export const fullscreenBackdropVariants: Variants = {

@@ -1,0 +1,1 @@
+ALTER TABLE "ShippingCountry" ADD COLUMN "taxRateBps" INTEGER DEFAULT 100;

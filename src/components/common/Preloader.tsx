@@ -10,42 +10,48 @@ export default function Preloader({ onComplete }: PreloaderProps) {
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
-    // Non-blocking initial load check
-    const handleLoad = () => {
-      setTimeout(() => {
-        setIsVisible(false);
-        if (onComplete) onComplete();
-      }, 1200); // Gentle fade out timing
+    const started = performance.now();
+    let completed = false;
+    let finishTimer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      if (completed) return;
+      completed = true;
+      setIsVisible(false);
+      onComplete?.();
     };
-
-    if (document.readyState === "complete") {
-      handleLoad();
-    } else {
-      window.addEventListener("load", handleLoad);
-      // Fallback timeout so the preloader never blocks the user
-      const fallback = setTimeout(handleLoad, 2500);
-      return () => {
-        window.removeEventListener("load", handleLoad);
-        clearTimeout(fallback);
-      };
-    }
-  }, [onComplete]);
+    const handleLoad = () => {
+      clearTimeout(finishTimer);
+      finishTimer = setTimeout(finish, Math.max(0, (shouldReduceMotion ? 0 : 650) - (performance.now() - started)));
+    };
+    const fallback = setTimeout(finish, 2500);
+    if (document.readyState === "complete") handleLoad();
+    else window.addEventListener("load", handleLoad, { once: true });
+    return () => {
+      completed = true;
+      window.removeEventListener("load", handleLoad);
+      clearTimeout(finishTimer);
+      clearTimeout(fallback);
+    };
+  }, [onComplete, shouldReduceMotion]);
 
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
           key="vestigia-minimal-preloader"
-          initial={{ opacity: 0 }}
+          role="status"
+          aria-label="Loading Vestigia"
+          initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.65, ease: [0.4, 0, 0.2, 1] } }}
+          exit={{ opacity: 0, transition: { duration: shouldReduceMotion ? 0 : 0.3, ease: [0.4, 0, 0.2, 1] } }}
           transition={{ duration: 0.75, ease: "easeInOut" }}
           style={{
             position: "fixed",
             top: 0,
             left: 0,
-            width: "100vw",
-            height: "100vh",
+            right: 0,
+            bottom: 0,
+            pointerEvents: "none",
             backgroundColor: "#0A0A0A",
             zIndex: 999999,
             display: "flex",
@@ -69,8 +75,10 @@ export default function Preloader({ onComplete }: PreloaderProps) {
           >
             {/* 1. STATIONARY CENTER LAYER: Roman Profile Head */}
             <img
-              src="/images/vestigia_head.png"
-              alt="VESTIGIA Emblem"
+              src="/images/vestigia_head-320.png"
+              alt=""
+              width={160}
+              height={160}
               style={{
                 position: "absolute",
                 top: 0,
@@ -85,7 +93,9 @@ export default function Preloader({ onComplete }: PreloaderProps) {
 
             {/* 2. ROTATING WHOLE RING LAYER: Complete Outer Circular Gold Ornamental Border */}
             <motion.img
-              src="/images/vestigia_whole_ring.png"
+              src="/images/vestigia_whole_ring-320.png"
+              width={160}
+              height={160}
               alt=""
               aria-hidden="true"
               animate={shouldReduceMotion ? { rotate: 0 } : { rotate: 360 }}

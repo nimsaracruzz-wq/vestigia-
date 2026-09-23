@@ -1,3 +1,4 @@
+import { Reveal } from "../../animation/Reveal";
 import { useEffect, useState } from "react";
 import { useAdmin } from "../AdminContext";
 
@@ -22,12 +23,12 @@ export default function AdminSettings() {
 
   return (
     <div className="admin-page">
-      <div className="admin-page-header">
+      <Reveal className="admin-page-header">
         <div>
           <h1>Store Settings</h1>
           <p>Configure store preferences, currency, tax rates, and shipping matrices.</p>
         </div>
-      </div>
+      </Reveal>
 
       <div className="shipping-settings-quick-banner mb-6" style={{
         background: "linear-gradient(135deg, #111827 0%, #1f2937 100%)",
@@ -72,7 +73,7 @@ export default function AdminSettings() {
 
       <div className="admin-settings-layout">
         <form onSubmit={handleSubmit}>
-          <div className="admin-panel mb-8">
+          <Reveal variant="fade" className="admin-panel mb-8">
             <div className="admin-panel-header">
               <h2>General Setup</h2>
             </div>
@@ -106,9 +107,9 @@ export default function AdminSettings() {
                 </select>
               </div>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="admin-panel mb-8">
+          <Reveal variant="fade" className="admin-panel mb-8">
             <div className="admin-panel-header">
               <h2>Order Notifications &amp; Owner Alerts</h2>
             </div>
@@ -126,9 +127,9 @@ export default function AdminSettings() {
                 </p>
               </div>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="admin-panel mb-8">
+          <Reveal variant="fade" className="admin-panel mb-8">
             <div className="admin-panel-header">
               <h2>Top Bar Announcement</h2>
             </div>
@@ -152,9 +153,9 @@ export default function AdminSettings() {
                 />
               </div>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="admin-panel mb-8">
+          <Reveal variant="fade" className="admin-panel mb-8">
             <div className="admin-panel-header">
               <h2>Checkout Settings</h2>
             </div>
@@ -190,7 +191,7 @@ export default function AdminSettings() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
 
           <div className="admin-form-actions justify-end">
             {saved && <span className="text-success mr-4">Settings saved successfully!</span>}

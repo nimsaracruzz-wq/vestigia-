@@ -1,12 +1,16 @@
+import { minor, toMajor, roundedRatio } from "../../shared/money";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { type Product } from "../data";
 import { useAdmin } from "../admin/AdminContext";
+import { useCurrency } from "./CurrencyContext";
+import { getProductPrice } from "../utils/productMedia";
 
 export type CartItem = {
   product: Product;
   quantity: number;
   selectedSize: string;
   selectedColor: string;
+  unitPriceMinor?: number; currency?: string; market?: string; priceListId?: string; priceVersion?: number; addedAt?: string;
 };
 
 interface CartContextType {
@@ -32,12 +36,14 @@ interface CartContextType {
   applyPromoCode: (code: string) => boolean;
   removePromoCode: () => void;
   clearCart: () => void;
+  acceptQuote: (quote: any) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { settings, products, isSynced, promoCodes } = useAdmin();
+  const { currency, market, priceListId } = useCurrency();
 
   // Load initial cart and wishlist from localStorage
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -113,39 +119,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Calculations
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const cartTotalBeforeDiscount = cart.reduce((acc, item) => acc + item.quantity * item.product.price, 0);
+  const subtotalMinor = cart.reduce((acc, item) => acc + item.quantity * (item.currency === currency ? item.unitPriceMinor ?? NaN : item.product.prices?.[currency]?.priceMinor ?? NaN), 0);
+  const cartTotalBeforeDiscount = Number.isFinite(subtotalMinor) ? toMajor(subtotalMinor, currency) : NaN;
 
-  // Dynamic promo code discount calculation (supports DB promo codes + VESTIGIA20 fallback)
-  const cleanPromoCode = promoCode ? promoCode.toUpperCase() : null;
-  const activePromo = (promoCodes || []).find(
-    (p) => p.code.toUpperCase() === cleanPromoCode
-  );
-
-  let discountAmount = 0;
-  if (cleanPromoCode) {
-    if (cleanPromoCode === "VESTIGIA20") {
-      discountAmount = cartTotalBeforeDiscount * 0.2;
-    } else if (activePromo && activePromo.active) {
-      if (activePromo.type === "fixed") {
-        discountAmount = Math.min(cartTotalBeforeDiscount, activePromo.discount);
-      } else {
-        discountAmount = cartTotalBeforeDiscount * (activePromo.discount / 100);
-      }
-    }
-  }
-
-  const cartTotal = Math.max(0, cartTotalBeforeDiscount - discountAmount);
-
-  const shippingCost =
-    cartTotal === 0
-      ? 0
-      : settings.complimentaryShippingEnabled && cartTotal >= settings.shippingThreshold
-        ? 0
-        : 15;
-  const taxCost = cartTotal * 0.08; // 8% sales tax
-  const grandTotal = cartTotal + shippingCost + taxCost;
+  // Discount, shipping and tax become authoritative only in the reviewed server quote.
+  const discountAmount = 0;
+  const cartTotal = cartTotalBeforeDiscount;
+  const shippingCost = 0, taxCost = 0, grandTotal = cartTotal;
+  const acceptQuote = (quote: any) => setCart(previous => previous.map(item => {
+    const price = quote.items.find((i: any) => i.productId === item.product.id && i.size === item.selectedSize && i.color === item.selectedColor);
+    return price ? { ...item, unitPriceMinor: price.unitPriceMinor, currency: quote.currency, market: quote.market, priceListId: quote.priceListId, priceVersion: price.priceVersion,
+      product: { ...item.product, prices: { ...item.product.prices, [quote.currency]: { ...price, priceMinor: price.unitPriceMinor } } } } : item;
+  }));
 
   const addToCart = (product: Product, size: string, color: string, qty = 1) => {
+    const row=product.prices?.[currency];
+    if(!row || !Number.isSafeInteger(row.priceMinor) || !row.priceListId) { window.alert('This product is not available in the selected market.'); return; }
     setCart((prev) => {
       const existingIndex = prev.findIndex(
         (item) =>
@@ -163,7 +152,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return newCart;
       }
 
-      return [...prev, { product, quantity: qty, selectedSize: size, selectedColor: color }];
+      return [...prev, { product, quantity: qty, selectedSize: size, selectedColor: color, unitPriceMinor: row.priceMinor, currency, market, priceListId, priceVersion: row.priceVersion, addedAt: new Date().toISOString() }];
     });
   };
 
@@ -285,7 +274,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         isInWishlist,
         applyPromoCode,
         removePromoCode,
-        clearCart,
+        clearCart, acceptQuote,
       }}
     >
       {children}

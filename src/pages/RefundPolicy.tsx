@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -27,12 +28,8 @@ export default function RefundPolicy() {
   }, []);
 
   return (
-    <motion.div
+    <div
       className="policy-page-container"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
       <SEOHead
         title="Refund & Return Policy | VESTIGIA® Client Care"
@@ -43,7 +40,7 @@ export default function RefundPolicy() {
         jsonLd={returnJsonLd}
       />
       <header className="policy-hero">
-        <div className="policy-hero__inner">
+        <Reveal className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -57,7 +54,7 @@ export default function RefundPolicy() {
             <span><Clock size={14} /> Last Updated: August 2026</span>
             <span><ShieldCheck size={14} /> 30-Day Satisfaction Guarantee</span>
           </div>
-        </div>
+        </Reveal>
       </header>
 
       <div className="policy-layout">
@@ -77,7 +74,7 @@ export default function RefundPolicy() {
         </aside>
 
         <main className="policy-body">
-          <section id="returns-overview" className="policy-section">
+          <Reveal as="section" id="returns-overview" className="policy-section">
             <h2>1. Returns Overview</h2>
             <p>
               We want you to be completely satisfied with your VESTIGIA purchase. We offer a 
@@ -101,9 +98,9 @@ export default function RefundPolicy() {
                 <p>100% refund credited back to your original payment method.</p>
               </div>
             </div>
-          </section>
+          </Reveal>
 
-          <section id="eligibility" className="policy-section">
+          <Reveal as="section" id="eligibility" className="policy-section">
             <h2>2. Return Eligibility</h2>
             <p>To qualify for a full refund or exchange, all returned items must meet the following criteria:</p>
             <ul className="policy-checklist">
@@ -112,9 +109,9 @@ export default function RefundPolicy() {
               <li>Free of fragrance, makeup marks, deodorant stains, or any signs of wear.</li>
               <li>Accompanied by the original order receipt or proof of purchase.</li>
             </ul>
-          </section>
+          </Reveal>
 
-          <section id="process" className="policy-section">
+          <Reveal as="section" id="process" className="policy-section">
             <h2>3. How to Initiate a Return</h2>
             <ol className="policy-steps">
               <li>
@@ -127,33 +124,33 @@ export default function RefundPolicy() {
                 <strong>Package Your Items:</strong> Securely package the items in their original box or garment pouch.
               </li>
             </ol>
-          </section>
+          </Reveal>
 
-          <section id="refunds" className="policy-section">
+          <Reveal as="section" id="refunds" className="policy-section">
             <h2>4. Refund Processing</h2>
             <p>
               Upon approval, your refund will be processed within <strong>2 to 3 business days</strong>. 
               Refunds automatically post to your original payment method (Stripe, Visa, Mastercard, Amex, Apple Pay).
             </p>
-          </section>
+          </Reveal>
 
-          <section id="exchanges" className="policy-section">
+          <Reveal as="section" id="exchanges" className="policy-section">
             <h2>5. Size & Color Exchanges</h2>
             <p>
               If you require a different size or color variant, we offer complimentary express exchanges. 
               Contact our Client Care concierge with your requested size.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="damaged" className="policy-section">
+          <Reveal as="section" id="damaged" className="policy-section">
             <h2>6. Damaged or Defective Goods</h2>
             <p>
               In the rare event that an item arrives damaged or with a manufacturing fault, please notify us within 
               <strong> 48 hours of receipt</strong> at <a href="mailto:quality@vestigia.com">quality@vestigia.com</a>.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="contact" className="policy-section policy-contact-card">
+          <Reveal as="section" id="contact" className="policy-section policy-contact-card">
             <Mail size={28} />
             <h3>Need Assistance with Your Return?</h3>
             <p>Our Client Care specialists are available Monday through Saturday to assist you.</p>
@@ -161,9 +158,9 @@ export default function RefundPolicy() {
               <a href="mailto:support@vestigia.com" className="primary-link dark">Email Client Care</a>
               <Link to="/contact" className="secondary-link">Contact Us Page</Link>
             </div>
-          </section>
+          </Reveal>
         </main>
       </div>
-    </motion.div>
+    </div>
   );
 }

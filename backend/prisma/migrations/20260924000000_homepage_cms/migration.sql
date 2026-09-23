@@ -1,0 +1,10 @@
+CREATE TABLE "Homepage" (
+  "id" INTEGER NOT NULL PRIMARY KEY DEFAULT 1,
+  "draft" TEXT NOT NULL,
+  "published" TEXT NOT NULL,
+  "revision" INTEGER NOT NULL DEFAULT 1,
+  "publishedRevision" INTEGER NOT NULL DEFAULT 1,
+  "publishedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL,
+  "updatedBy" TEXT NOT NULL DEFAULT 'Migration'
+);

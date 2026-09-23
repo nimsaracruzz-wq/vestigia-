@@ -5,7 +5,21 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SITE_URL = "https://thevestigia.com";
+const SITE_URL = (process.env.PUBLIC_SITE_URL || process.env.SITE_URL || "https://thevestigia.com").replace(/\/+$/, "");
+
+function readBackendDatabaseUrl() {
+  const envPath = path.resolve(__dirname, "../backend/.env");
+  if (!fs.existsSync(envPath)) return process.env.DATABASE_URL || "file:./vestigia-dev.db";
+  const env = fs.readFileSync(envPath, "utf8");
+  const match = env.match(/^DATABASE_URL=(.+)$/m);
+  return (process.env.DATABASE_URL || match?.[1] || "file:./vestigia-dev.db").trim().replace(/^["']|["']$/g, "");
+}
+
+function resolveBackendSqlitePath() {
+  const databaseUrl = readBackendDatabaseUrl();
+  if (!databaseUrl.startsWith("file:")) return null;
+  return path.resolve(__dirname, "../backend", databaseUrl.replace(/^file:/, ""));
+}
 
 // 1. Static React Router Routes
 const STATIC_ROUTES = [
@@ -26,7 +40,7 @@ const STATIC_ROUTES = [
 async function generateSitemap() {
   console.log("🚀 Generating SEO-optimized sitemap.xml and robots.txt...");
 
-  const dbPath = path.resolve(__dirname, "../backend/dev.db");
+  const dbPath = resolveBackendSqlitePath();
   let products = [];
   let journalArticles = [];
   let categories = [];
@@ -35,13 +49,37 @@ async function generateSitemap() {
   try {
     const { PrismaClient } = await import("../backend/node_modules/@prisma/client/index.js");
     const { PrismaBetterSqlite3 } = await import("../backend/node_modules/@prisma/adapter-better-sqlite3/dist/index.js");
+    if (!dbPath) throw new Error("Sitemap generation only reads local SQLite databases.");
     const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
     const prisma = new PrismaClient({ adapter });
 
-    products = await prisma.product.findMany();
-    journalArticles = await prisma.journalArticle.findMany();
+    products = await prisma.product.findMany({
+      where: {
+        name: { startsWith: "VESTIGIA" },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        category: true,
+        productType: true,
+        image: true,
+        images: true,
+        alt: true,
+      },
+    });
+    journalArticles = await prisma.journalArticle.findMany({
+      select: {
+        id: true,
+        title: true,
+        image: true,
+      },
+    });
 
-    const uniqueCategories = new Set(products.map((p) => p.category).filter(Boolean));
+    const uniqueCategories = new Set();
+    products.forEach((product) => {
+      [product.category, product.productType].filter(Boolean).forEach((value) => uniqueCategories.add(slugify(value)));
+    });
     categories = Array.from(uniqueCategories);
 
     await prisma.$disconnect();
@@ -69,7 +107,7 @@ async function generateSitemap() {
 
   // Add Categories
   categories.forEach((cat) => {
-    const catUrl = `${SITE_URL}/shop?category=${encodeURIComponent(cat)}`;
+    const catUrl = `${SITE_URL}/collections/${encodeURIComponent(cat)}`;
     xml += `  <url>\n`;
     xml += `    <loc>${catUrl}</loc>\n`;
     xml += `    <lastmod>${today}</lastmod>\n`;
@@ -80,27 +118,28 @@ async function generateSitemap() {
 
   // Add Products
   products.forEach((p) => {
-    const prodUrl = `${SITE_URL}/product/${p.id}`;
+    const prodUrl = `${SITE_URL}/product/${p.slug || p.id}`;
     xml += `  <url>\n`;
     xml += `    <loc>${prodUrl}</loc>\n`;
     xml += `    <lastmod>${today}</lastmod>\n`;
     xml += `    <changefreq>daily</changefreq>\n`;
     xml += `    <priority>0.9</priority>\n`;
-    if (p.image) {
-      const imgUrl = p.image.startsWith("http") ? p.image : `${SITE_URL}${p.image}`;
+    const imageList = [p.image, ...parseJson(p.images, [])].filter(Boolean);
+    Array.from(new Set(imageList)).forEach((image) => {
+      const imgUrl = image.startsWith("http") ? image : `${SITE_URL}${image}`;
       xml += `    <image:image>\n`;
-      xml += `      <image:loc>${imgUrl}</image:loc>\n`;
+      xml += `      <image:loc>${escapeXml(imgUrl)}</image:loc>\n`;
       if (p.name) {
-        xml += `      <image:title>${escapeXml(p.name)}</image:title>\n`;
+        xml += `      <image:title>${escapeXml(p.alt || p.name)}</image:title>\n`;
       }
       xml += `    </image:image>\n`;
-    }
+    });
     xml += `  </url>\n`;
   });
 
   // Add Journal Articles
   journalArticles.forEach((art) => {
-    const artUrl = `${SITE_URL}/journal`;
+    const artUrl = `${SITE_URL}/journal/${art.id}`;
     xml += `  <url>\n`;
     xml += `    <loc>${artUrl}</loc>\n`;
     xml += `    <lastmod>${today}</lastmod>\n`;
@@ -109,7 +148,7 @@ async function generateSitemap() {
     if (art.image) {
       const imgUrl = art.image.startsWith("http") ? art.image : `${SITE_URL}${art.image}`;
       xml += `    <image:image>\n`;
-      xml += `      <image:loc>${imgUrl}</image:loc>\n`;
+      xml += `      <image:loc>${escapeXml(imgUrl)}</image:loc>\n`;
       if (art.title) {
         xml += `      <image:title>${escapeXml(art.title)}</image:title>\n`;
       }
@@ -145,6 +184,7 @@ Disallow: /activate/
 Disallow: /api/
 Disallow: /*?*search=
 Disallow: /*?*sort=
+Disallow: /*?*category=
 
 # AI Search Engine Authorization (GEO / AEO)
 User-agent: GPTBot
@@ -179,6 +219,24 @@ function escapeXml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+function parseJson(value, fallback = []) {
+  if (!value) return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 generateSitemap().catch(console.error);

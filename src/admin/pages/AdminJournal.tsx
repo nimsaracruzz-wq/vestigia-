@@ -1,3 +1,4 @@
+import { Reveal } from "../../animation/Reveal";
 import { useState } from "react";
 import { useAdmin } from "../AdminContext";
 import { Modal } from "../components/Modal";
@@ -65,7 +66,7 @@ export default function AdminJournal() {
 
   return (
     <div className="admin-page">
-      <div className="admin-page-header">
+      <Reveal className="admin-page-header">
         <div>
           <h1>Journal</h1>
           <p>Manage blog posts and editorials.</p>
@@ -73,9 +74,9 @@ export default function AdminJournal() {
         <button onClick={handleAddClick} className="admin-btn admin-btn-primary">
           <Plus size={16} /> New Article
         </button>
-      </div>
+      </Reveal>
 
-      <div className="admin-panel">
+      <Reveal variant="fade" className="admin-panel">
         <div className="admin-panel-content p-0">
           <table className="admin-table">
             <thead>
@@ -109,7 +110,7 @@ export default function AdminJournal() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Reveal>
 
       <Modal 
         isOpen={isModalOpen} 

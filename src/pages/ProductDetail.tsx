@@ -1,5 +1,6 @@
+import { RevealModal, Reveal, RevealGroup } from "../animation/Reveal";
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { Minus, Plus, Heart, Star, ChevronDown, ArrowLeft, Check, Ruler, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { type Product, type SizeChart } from "../data";
@@ -8,6 +9,19 @@ import { useAdmin } from "../admin/AdminContext";
 import { useCurrency } from "../context/CurrencyContext";
 import ProductCard from "../components/common/ProductCard";
 import Gallery from "../components/ProductGallery/Gallery";
+import { getDetailImages, getProductCompareAt, getProductPrice } from "../utils/productMedia";
+import { SEOHead } from "../components/common/SEOHead";
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  imageUrl,
+  productCanonicalUrl,
+  productJsonLd,
+  productPath,
+  productSeoDescription,
+  productSeoTitle,
+  collectionPath,
+} from "../utils/seo";
 
 const normalizeChartKey = (label: string) =>
   label.trim().toLowerCase().replace(/\s+/g, "_");
@@ -40,12 +54,8 @@ function SizeChartModal({ chart, onClose }: { chart: SizeChart; onClose: () => v
         onClick={onClose}
         aria-hidden="true"
       />
-      <motion.div
+      <RevealModal
         className="size-chart-modal"
-        initial={{ opacity: 0, scale: 0.96, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 20 }}
-        transition={{ duration: 0.28 }}
         role="dialog"
         aria-modal="true"
         aria-label="Size Guide"
@@ -107,7 +117,7 @@ function SizeChartModal({ chart, onClose }: { chart: SizeChart; onClose: () => v
         <p className="size-chart-measure-tip">
           <strong>How to measure:</strong> Measure your chest at its fullest point, your waist at the narrowest point, and hips at the widest point. All measurements in natural standing position.
         </p>
-      </motion.div>
+      </RevealModal>
     </AnimatePresence>
   );
 }
@@ -119,9 +129,10 @@ type ProductDetailProps = {
 export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart, toggleWishlist, isInWishlist, openCart } = useCart();
   const { products } = useAdmin();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, currency } = useCurrency();
 
   // Find product by id or slug
   const product = products.find((p) => p.id === Number(id) || p.slug === id);
@@ -140,73 +151,9 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   const [activeAccordion, setActiveAccordion] = useState<string | null>("details");
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
 
-  // Sync state and SEO settings if product changes
+  // Sync PDP state when product changes.
   useEffect(() => {
     if (product) {
-      // 1. Update Title tag
-      document.title = product.seoTitle || `${product.name} | Vestigia`;
-
-      // 2. Update Description meta tag
-      let descMeta = document.querySelector('meta[name="description"]');
-      if (!descMeta) {
-        descMeta = document.createElement("meta");
-        descMeta.setAttribute("name", "description");
-        document.head.appendChild(descMeta);
-      }
-      descMeta.setAttribute("content", product.seoDescription || product.description || "");
-
-      // 3. Update Keywords meta tag
-      let kwMeta = document.querySelector('meta[name="keywords"]');
-      if (product.seoKeywords) {
-        if (!kwMeta) {
-          kwMeta = document.createElement("meta");
-          kwMeta.setAttribute("name", "keywords");
-          document.head.appendChild(kwMeta);
-        }
-        kwMeta.setAttribute("content", product.seoKeywords);
-      } else if (kwMeta) {
-        kwMeta.remove();
-      }
-
-      // 4. Inject Google Shopping Structured Data (JSON-LD)
-      let ldJsonScript = document.getElementById("product-jsonld") as HTMLScriptElement;
-      if (!ldJsonScript) {
-        ldJsonScript = document.createElement("script");
-        ldJsonScript.id = "product-jsonld";
-        ldJsonScript.type = "application/ld+json";
-        document.head.appendChild(ldJsonScript);
-      }
-      const absoluteUrl = window.location.href;
-      const productSchema = {
-        "@context": "https://schema.org",
-        "@type": "Product",
-        "name": product.name,
-        "image": product.images && product.images.length > 0 
-          ? product.images.map(img => img.startsWith("http") ? img : window.location.origin + img)
-          : [product.image.startsWith("http") ? product.image : window.location.origin + product.image],
-        "description": product.description,
-        "sku": `VST-${product.id.toString().padStart(4, "0")}`,
-        "mpn": `VST-${product.id.toString().padStart(4, "0")}`,
-        "brand": {
-          "@type": "Brand",
-          "name": "Vestigia"
-        },
-        "offers": {
-          "@type": "Offer",
-          "url": absoluteUrl,
-          "priceCurrency": "EUR",
-          "price": product.price.toFixed(2),
-          "priceValidUntil": new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split("T")[0],
-          "itemCondition": "https://schema.org/NewCondition",
-          "availability": "https://schema.org/InStock",
-          "seller": {
-            "@type": "Organization",
-            "name": "Vestigia"
-          }
-        }
-      };
-      ldJsonScript.textContent = JSON.stringify(productSchema, null, 2);
-
       setSelectedColor(product.colors[0] || "");
       setActiveImageIndex(0);
       setQuantity(1);
@@ -220,15 +167,13 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
     }
   }, [product]);
 
-  // Clean up JSON-LD script on unmount
   useEffect(() => {
-    return () => {
-      const ldJsonScript = document.getElementById("product-jsonld");
-      if (ldJsonScript) {
-        ldJsonScript.remove();
-      }
-    };
-  }, []);
+    if (!product?.slug) return;
+    const canonicalPath = productPath(product);
+    if (location.pathname !== canonicalPath) {
+      navigate(canonicalPath, { replace: true });
+    }
+  }, [location.pathname, navigate, product]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -256,7 +201,14 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   if (!product) {
     return (
       <div className="product-not-found-container">
-        <h2>Product not found</h2>
+        <SEOHead
+          title="Product Not Found | VESTIGIA"
+          description="The requested VESTIGIA product could not be found."
+          canonicalUrl="/404"
+          noIndex
+          noFollow
+        />
+        <h1>Product not found</h1>
         <p>The product you are looking for does not exist or has been removed.</p>
         <Link to="/shop" className="primary-link dark">
           Back to Shop
@@ -297,15 +249,33 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
     .slice(0, 2);
 
   const isSaved = isInWishlist(product.id);
+  const canonicalUrl = productCanonicalUrl(product);
+  const breadcrumbSchema = breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Shop", path: "/shop" },
+    { name: product.category, path: "/shop" },
+    { name: product.name, path: productPath(product) },
+  ]);
+  const productSchema = productJsonLd(product, "USD");
+  const currentPrice = getProductPrice(product, currency);
+  const compareAtPrice = getProductCompareAt(product, currency);
 
   return (
-    <motion.div
+    <div
       className="pdp-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
+      <SEOHead
+        title={productSeoTitle(product)}
+        description={productSeoDescription(product)}
+        canonicalUrl={canonicalUrl}
+        ogImage={imageUrl(getDetailImages(product)[0] || product.modelImage || product.image)}
+        ogImageAlt={product.imageTitle || product.alt || product.name}
+        ogType="product"
+        keywords={product.seoKeywords}
+        noIndex={product.robotsIndex === false}
+        noFollow={product.robotsFollow === false}
+        jsonLd={[productSchema, breadcrumbSchema]}
+      />
       {/* Back button and breadcrumbs */}
       <div className="pdp-breadcrumbs-row">
         <button className="back-btn" onClick={() => navigate(-1)} type="button">
@@ -317,7 +287,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
           <span>/</span>
           <Link to="/shop">Shop</Link>
           <span>/</span>
-          <Link to={`/shop?category=${product.category}`}>{product.category}</Link>
+          <Link to={collectionPath(product.category)}>{product.category}</Link>
           <span>/</span>
           <span className="breadcrumb-current">{product.name}</span>
         </div>
@@ -327,7 +297,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
         {/* Left Column: Ultra-Luxury Image Gallery */}
         <div className="pdp-gallery-column">
           <Gallery
-            images={product.images && product.images.length > 0 ? product.images : [product.image]}
+            images={getDetailImages(product)}
             alt={product.name}
             aspectRatio="3/4"
           />
@@ -335,7 +305,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
 
         {/* Right Column: Information Panel */}
         <div className="pdp-details-column">
-          <div className="pdp-details-header">
+          <Reveal className="pdp-details-header">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '8px' }}>
               <span className="pdp-category-kicker">{product.productType || product.category}</span>
               <span style={{ fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#888', fontWeight: 600 }}>
@@ -345,14 +315,14 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
             <h1 style={{ marginTop: '8px' }}>{product.name}</h1>
 
             <div className="pdp-price">
-              {product.compareAt && <span className="compare-at">{formatPrice(product.compareAt)}</span>}
-              <span className="current-price">{formatPrice(product.price)}</span>
+              {compareAtPrice && <span className="compare-at">{formatPrice(compareAtPrice)}</span>}
+              <span className="current-price">{formatPrice(currentPrice)}</span>
             </div>
-          </div>
+          </Reveal>
 
-          <p className="pdp-description-text">{product.description}</p>
+          <Reveal as="p" className="pdp-description-text">{product.description}</Reveal>
 
-          <div className="pdp-selections-box">
+          <Reveal className="pdp-selections-box">
             {/* Colors Selectors */}
             <div className="pdp-option-row color-option-row">
               <span className="option-label">Color</span>
@@ -480,7 +450,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                   : "IN STOCK — READY TO SHIP"}
               </span>
             </div>
-          </div>
+          </Reveal>
 
           {/* Size Chart Modal */}
           {sizeChartOpen && product.sizeChart && (
@@ -648,15 +618,15 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <section className="pdp-related-section">
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <Reveal style={{ textAlign: 'center', marginBottom: '40px' }}>
             <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', marginBottom: '8px' }}>
               The First Release
             </p>
             <h2 style={{ fontFamily: 'Georgia, serif', fontWeight: 400, fontSize: '1.8rem', margin: 0 }}>
               THE OTHER TWO PIECES.
             </h2>
-          </div>
-          <div className="product-grid">
+          </Reveal>
+          <RevealGroup className="product-grid">
             {relatedProducts.map((p) => (
               <ProductCard
                 key={p.id}
@@ -664,7 +634,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                 onQuickShop={() => onQuickShop(p)}
               />
             ))}
-          </div>
+          </RevealGroup>
         </section>
       )}
 
@@ -672,7 +642,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       <div className={`mobile-sticky-purchase-bar ${showStickyBar ? "show" : ""}`}>
         <div className="sticky-bar-content">
           <div className="sticky-bar-info">
-            <span className="sticky-price">{formatPrice(product.price)}</span>
+            <span className="sticky-price">{formatPrice(currentPrice)}</span>
             <span className="sticky-size">
               {selectedSize ? `SIZE ${selectedSize}` : "SELECT SIZE"}
             </span>
@@ -687,6 +657,6 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

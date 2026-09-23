@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { checkoutQuoteSignature, type CheckoutQuotePayload } from "../utils/checkoutQuote";
+import { animationConfig } from "../animation/config";
+import { Reveal } from "../animation/Reveal";
+import { formatMoney, toMinor, toMajor } from "../../shared/money";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, CreditCard, Shield, Truck, CheckCircle2, ArrowRight, Loader, User, Info, Lock, Gift, Building } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,13 +10,17 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useCart } from "../context/CartContext";
 import { useCurrency } from "../context/CurrencyContext";
-import { useUser } from "../context/UserContext";
+import { useUser, type Address } from "../context/UserContext";
 import { useAdmin } from "../admin/AdminContext";
 import { API_BASE_URL } from "../config/api";
 import { formatPhoneNumber } from "../utils/phoneUtils";
+import ProductImage from "../components/common/ProductImage";
+import EmptyBag from "../components/common/EmptyBag";
+import { getProductPrice } from "../utils/productMedia";
 
-// Initialize Stripe (using test key)
-const stripePromise = loadStripe("pk_test_51234567890123456789012345678901234567890123");
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
+const stripePublishableKeyLooksValid = /^pk_(test|live)_[A-Za-z0-9_]+$/.test(String(stripePublishableKey || "").trim());
+const stripePromise = stripePublishableKeyLooksValid ? loadStripe(stripePublishableKey!) : Promise.resolve(null);
 
 const getColorName = (hex: string) => {
   const mapping: Record<string, string> = {
@@ -85,8 +93,10 @@ export default function CheckoutPage() {
 }
 
 function CheckoutContent() {
+  const stripe = useStripe();
+  const elements = useElements();
   const {
-    cart,
+    cart, acceptQuote,
     cartCount,
     cartTotalBeforeDiscount,
     cartTotal,
@@ -101,15 +111,26 @@ function CheckoutContent() {
     clearCart,
   } = useCart();
 
-  const { formatPrice: money } = useCurrency();
+  const { currency, market, priceListId, lockCheckout, unlockCheckout } = useCurrency();
+  const [lockedCurrency] = useState(currency);
+  const money = (amount: number) => Number.isFinite(amount) ? formatMoney(toMinor(String(amount), lockedCurrency), lockedCurrency) : 'Awaiting quote';
+  useEffect(() => { lockCheckout(); return () => unlockCheckout(); }, []);
   const { products } = useAdmin();
   const { user, isAuthenticated, createAccount, updateUser, checkEmailStatus, activateAccount, login } = useUser();
 
   const [step, setStep] = useState<Step>("shipping");
+  const stepContentRef = useRef<HTMLDivElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    stepContentRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    stepContentRef.current?.focus({ preventScroll: true });
+  }, [step]);
   const [promoInput, setPromoInput] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [shippingMethodSelected, setShippingMethodSelected] = useState<"standard" | "express">("standard");
-  const [checkoutMode, setCheckoutMode] = useState<"guest" | "createAccount" | null>(null);
+  const [checkoutMode, setCheckoutMode] = useState<"guest" | "createAccount" | null>("createAccount");
   const [checkoutPromptError, setCheckoutPromptError] = useState("");
 
   // Checkout Auth & Customer Case state
@@ -193,6 +214,7 @@ function CheckoutContent() {
   ];
 
   const getCountryOption = (iso: string) => PHONE_COUNTRY_OPTIONS.find((option) => option.iso === iso);
+  const getCountryOptionByCountry = (country: string) => PHONE_COUNTRY_OPTIONS.find((option) => option.country === country);
   const getDialCodeByIso = (iso: string) => getCountryOption(iso)?.dialCode ?? "+1";
 
   // Shipping form fields
@@ -210,19 +232,69 @@ function CheckoutContent() {
     phoneDialCode: "+1",
     shippingMethod: "standard",
   });
+  const [selectedAddressId, setSelectedAddressId] = useState("");
 
   const [shippingErrors, setShippingErrors] = useState<Partial<ShippingDetails>>({});
 
+  const getAddressNameParts = (address: Address) => {
+    const [firstName = "", ...lastNameParts] = (address.name || "").trim().split(/\s+/);
+    return {
+      firstName: address.firstName || firstName,
+      lastName: address.lastName || lastNameParts.join(" "),
+    };
+  };
+
+  const applySavedAddress = (address: Address) => {
+    const nameParts = getAddressNameParts(address);
+    setShippingForm((prev) => ({
+      ...prev,
+      firstName: nameParts.firstName || prev.firstName,
+      lastName: nameParts.lastName || prev.lastName,
+      address: address.line1 || prev.address,
+      city: address.city || prev.city,
+      state: address.state || prev.state,
+      zip: address.zip || prev.zip,
+      country: address.country || prev.country,
+      phone: address.phone || prev.phone,
+      phoneCountry: address.phoneCountry || prev.phoneCountry,
+      phoneDialCode: address.phoneDialCode || prev.phoneDialCode,
+    }));
+  };
+
   useEffect(() => {
     if (user) {
+      const savedAddresses = user.addresses ?? [];
+      const defaultAddress = savedAddresses.find((address) => address.isDefault || address.isDefaultShipping) || savedAddresses[0];
       setShippingForm((prev) => ({
         ...prev,
-        ...user,
+        email: user.email || prev.email,
+        firstName: user.firstName || prev.firstName,
+        lastName: user.lastName || prev.lastName,
+        address: user.address || prev.address,
+        city: user.city || prev.city,
+        state: user.state || prev.state,
+        zip: user.zip || prev.zip,
+        country: user.country || defaultAddress?.country || prev.country || "United States",
+        phone: user.phone || prev.phone,
         phoneCountry: user.phoneCountry || prev.phoneCountry,
         phoneDialCode: user.phoneDialCode || prev.phoneDialCode,
       }));
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+        applySavedAddress(defaultAddress);
+      }
     }
   }, [user]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setCheckoutMode(null);
+      setCheckoutPromptError("");
+      return;
+    }
+
+    setCheckoutMode((current) => current ?? "createAccount");
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (user) return;
@@ -237,15 +309,20 @@ function CheckoutContent() {
 
         const iso = data.country_code;
         const option = getCountryOption(iso);
-        if (option) {
+        const detectedCountry = COUNTRIES.find((country) => country.toLowerCase() === String(data.country || "").toLowerCase());
+        if (option || detectedCountry) {
           setShippingForm((prev) => ({
             ...prev,
-            phoneCountry: option.iso,
-            phoneDialCode: option.dialCode,
+            country: detectedCountry && (!prev.country || prev.country === "United States") ? detectedCountry : prev.country || "United States",
+            phoneCountry: option?.iso ?? prev.phoneCountry,
+            phoneDialCode: option?.dialCode ?? prev.phoneDialCode,
           }));
+          if (detectedCountry) {
+            setBillingForm((prev) => ({ ...prev, country: detectedCountry }));
+          }
         }
       } catch (error) {
-        console.error("Phone country detection failed:", error);
+        console.error("Country detection failed:", error);
       }
     };
 
@@ -256,6 +333,18 @@ function CheckoutContent() {
   const [cardName, setCardName] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [quotedCheckout, setServerQuote] = useState<any>(null);
+  const [reviewedInputKey, setReviewedInputKey] = useState("");
+  const paymentInFlight = useRef(false);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState("");
+  const [quoteReload, setQuoteReload] = useState(0);
+  const [checkoutConfig, setCheckoutConfig] = useState({
+    stripeConfigured: false,
+    mockPaymentsEnabled: false,
+    publishableKeyRequired: true,
+    issue: "",
+  });
 
   // Dynamic Shipping Management state
   const [shippingValidationLoading, setShippingValidationLoading] = useState(false);
@@ -265,26 +354,87 @@ function CheckoutContent() {
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
   const [shippingRegionName, setShippingRegionName] = useState("");
   const [shippingCountryName, setShippingCountryName] = useState("");
+  const [shippingCountryCode, setShippingCountryCode] = useState("");
   const [estimatedDeliveryText, setEstimatedDeliveryText] = useState("");
   const [shippingAnnouncements, setShippingAnnouncements] = useState<any[]>([]);
+  const shippingLookupSeq = useRef(0);
+
+  const quotePayload: CheckoutQuotePayload = {
+    currency: lockedCurrency, market, priceListId, email: shippingForm.email,
+    shippingCountry: shippingForm.country,
+    shippingCountryCode: shippingCountryCode || undefined,
+    shippingMethodId: selectedMethodId,
+    promoCode: promoCode || undefined,
+    items: cart.map(item => ({
+      productId: item.product.id, quantity: item.quantity,
+      size: item.selectedSize || "OS", color: item.selectedColor || "",
+      unitPriceMinor: item.unitPriceMinor, currency: item.currency,
+      priceVersion: item.priceVersion, priceListId: item.priceListId,
+    })),
+  };
+  const quoteInputKey = checkoutQuoteSignature(quotePayload);
+  const latestQuoteInputKey = useRef(quoteInputKey);
+  latestQuoteInputKey.current = quoteInputKey;
+  const serverQuote = reviewedInputKey === quoteInputKey ? quotedCheckout : null;
+
+  // Prepare the final amount automatically. Accepting its price snapshots must
+  // not restart this request or invalidate the quote that the customer sees.
+  useEffect(() => {
+    if (step !== "payment" || !quotePayload.items.length || !quotePayload.shippingMethodId) return;
+    const controller = new AbortController();
+    const requestedKey = quoteInputKey;
+    setQuoteLoading(true);
+    setQuoteError("");
+    setServerQuote(null);
+    const prepareTotal = async () => {
+      try {
+        const response = await fetch(API_BASE_URL + "/checkout/quote", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(quotePayload), signal: controller.signal,
+        });
+        const quote = await response.json();
+        if (!response.ok) throw new Error(quote.error || "Unable to calculate your total.");
+        if (quote.currency !== lockedCurrency) throw new Error("Checkout currency mismatch.");
+        if (controller.signal.aborted || latestQuoteInputKey.current !== requestedKey) return;
+        setReviewedInputKey(requestedKey);
+        setServerQuote(quote);
+        acceptQuote(quote);
+      } catch (error: any) {
+        if (!controller.signal.aborted) setQuoteError(error.message || "Unable to calculate your total.");
+      } finally {
+        if (!controller.signal.aborted) setQuoteLoading(false);
+      }
+    };
+    void prepareTotal();
+    return () => controller.abort();
+  }, [step, quoteInputKey, quoteReload]);
 
   useEffect(() => {
+    const lookupId = shippingLookupSeq.current + 1;
+    shippingLookupSeq.current = lookupId;
+    setSelectedMethodId(null);
+    setEstimatedDeliveryText("");
+
     if (!shippingForm.country) {
       setShippingBlocked(false);
       setDynamicMethods([]);
+      setShippingCountryCode("");
       return;
     }
 
     const validateCountryShipping = async () => {
       setShippingValidationLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/shipping/methods/${encodeURIComponent(shippingForm.country)}`);
+        const res = await fetch(`${API_BASE_URL}/shipping/methods/${encodeURIComponent(shippingForm.country)}?currency=${lockedCurrency}`);
         const data = await res.json();
+        if (shippingLookupSeq.current !== lookupId) return;
 
         if (!data.isEnabled) {
           setShippingBlocked(true);
           setShippingBlockedMessage(data.message || "Sorry, we currently do not ship to your country.");
           setDynamicMethods([]);
+          setSelectedMethodId(null);
+          setShippingCountryCode("");
           setShippingAnnouncements(data.announcements || []);
         } else {
           setShippingBlocked(false);
@@ -292,6 +442,7 @@ function CheckoutContent() {
           setDynamicMethods(data.methods || []);
           setShippingRegionName(data.region?.name || "");
           setShippingCountryName(data.country?.countryName || shippingForm.country);
+          setShippingCountryCode(data.country?.countryCode || "");
           setShippingAnnouncements(data.announcements || []);
 
           if (data.methods && data.methods.length > 0) {
@@ -300,14 +451,36 @@ function CheckoutContent() {
           }
         }
       } catch (err) {
+        if (shippingLookupSeq.current !== lookupId) return;
         console.error("Shipping validation error:", err);
       } finally {
-        setShippingValidationLoading(false);
+        if (shippingLookupSeq.current === lookupId) setShippingValidationLoading(false);
       }
     };
 
     validateCountryShipping();
-  }, [shippingForm.country]);
+  }, [shippingForm.country, lockedCurrency]);
+
+  useEffect(() => {
+    const loadCheckoutConfig = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/checkout/config`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setCheckoutConfig({
+          stripeConfigured: Boolean(data.stripeConfigured),
+          mockPaymentsEnabled: Boolean(data.mockPaymentsEnabled),
+          publishableKeyRequired: Boolean(data.publishableKeyRequired),
+          issue: data.issue || "",
+        });
+      } catch (error) {
+        console.error("Checkout config check failed:", error);
+      }
+    };
+
+    void loadCheckoutConfig();
+  }, []);
+
 
   // Sync title
   useEffect(() => {
@@ -315,15 +488,7 @@ function CheckoutContent() {
   }, []);
 
   if (cart.length === 0 && step !== "success") {
-    return (
-      <div className="empty-checkout-state">
-        <h2>Your bag is empty</h2>
-        <p>You cannot checkout with an empty shopping bag. Add some tailored items first.</p>
-        <Link to="/shop" className="primary-link dark">
-          Shop the catalog
-        </Link>
-      </div>
-    );
+    return <EmptyBag />;
   }
 
   // Handle promo code application
@@ -367,8 +532,6 @@ function CheckoutContent() {
     if (validateShipping()) {
       if (isAuthenticated) {
         updateUser({ ...shippingForm });
-      } else if (checkoutMode === "createAccount") {
-        createAccount({ ...shippingForm });
       }
       setStep("payment");
     }
@@ -376,6 +539,12 @@ function CheckoutContent() {
 
   // Validate payment form
   const handlePaymentSubmit = async () => {
+    if (paymentInFlight.current || quoteLoading || !serverQuote) return;
+    if (checkoutConfig.publishableKeyRequired && !stripePublishableKeyLooksValid) {
+      setPaymentError("Stripe is not ready. Add VITE_STRIPE_PUBLISHABLE_KEY to the frontend environment and restart the dev server.");
+      return;
+    }
+
     if (!cardName.trim()) {
       setPaymentError("Cardholder name is required.");
       return;
@@ -395,41 +564,77 @@ function CheckoutContent() {
     }
 
     setPaymentError("");
+    paymentInFlight.current = true;
     setIsProcessing(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (shippingBlocked || !selectedMethodId) throw new Error("Please select an available shipping method.");
+      const activeMethodId = selectedMethodId;
+      const resolvedShippingCountryCode = shippingCountryCode;
+      const checkoutShippingCountry = shippingForm.country;
+      const checkoutItems = quotePayload.items;
+      const quote = serverQuote;
+      if (new Date(quote.expiresAt).getTime() <= Date.now()) {
+        setServerQuote(null);
+        setQuoteReload(value => value + 1);
+        throw new Error("Your total is being refreshed. Check the updated amount, then confirm payment.");
+      }
+      const paymentPayload={...quotePayload,checkoutId:quote.checkoutId};
+
+      const intentResponse = await fetch(`${API_BASE_URL}/checkout/payment-intent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentPayload),
+      });
+      const paymentIntent = await intentResponse.json();
+      if (!intentResponse.ok) throw new Error(paymentIntent.error || "Unable to initialize payment");
+
+      let stripePaymentIntentId = paymentIntent.mockPaymentIntentId as string | undefined;
+
+      if (paymentIntent.clientSecret) {
+        if (!stripe || !elements) throw new Error("Payment form is still loading. Please try again.");
+        const card = elements.getElement(CardElement);
+        if (!card) throw new Error("Card details are required.");
+
+        const result = await stripe.confirmCardPayment(paymentIntent.clientSecret, {
+          payment_method: {
+            card,
+            billing_details: {
+              name: cardName.trim(),
+              email: shippingForm.email,
+              phone: shippingForm.phone,
+            },
+          },
+        });
+
+        if (result.error) throw new Error(result.error.message || "Card payment was declined.");
+        if (result.paymentIntent?.status !== "succeeded") {
+          throw new Error("Payment was not completed.");
+        }
+        stripePaymentIntentId = result.paymentIntent.id;
+      }
+
+      if (!stripePaymentIntentId) throw new Error("Payment confirmation is required.");
 
       // Save items and calculations for success screen before clearing
       setSuccessCart([...cart]);
       setReceiptSummary({
-        subtotal: cartTotalBeforeDiscount,
-        discount: discountAmount,
-        shipping: activeShippingCost,
-        tax: taxCost,
-        total: activeGrandTotal,
-        promoCode: promoCode || ""
+        subtotal: quote.subtotalMinor / (quote.currency === "JPY" ? 1 : 100),
+        discount: (quote.discountMinor || 0) / (quote.currency === "JPY" ? 1 : 100),
+        shipping: quote.shippingMinor / (quote.currency === "JPY" ? 1 : 100),
+        tax: quote.taxMinor / (quote.currency === "JPY" ? 1 : 100),
+        total: quote.totalMinor / (quote.currency === "JPY" ? 1 : 100),
+        promoCode: quote.promoCode || promoCode || ""
       });
 
-      // Generate random order number
-      const randomOrder = "VEST-" + Math.floor(100000 + Math.random() * 900000);
-      setOrderNumber(randomOrder);
-
-      // Call backend to create the order in database
       const orderPayload = {
-        id: randomOrder,
+        currency: lockedCurrency, market, priceListId, checkoutId: quote.checkoutId,
         customer: `${shippingForm.firstName} ${shippingForm.lastName}`,
         email: shippingForm.email,
         phone: shippingForm.phone,
-        date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-        status: "pending",
-        subtotal: cartTotalBeforeDiscount,
-        shipping: activeShippingCost,
-        tax: taxCost,
-        total: activeGrandTotal,
-        address: `${shippingForm.address}, ${shippingForm.city}, ${shippingForm.state} ${shippingForm.zip}, ${shippingForm.country}`,
-        shippingForm,
+        address: `${shippingForm.address}, ${shippingForm.city}, ${shippingForm.state} ${shippingForm.zip}, ${checkoutShippingCountry}`,
+        shippingForm: { ...shippingForm, country: checkoutShippingCountry },
+        shippingCountryCode: resolvedShippingCountryCode || undefined,
         autoCreateAccount,
         sameAsShipping,
         billingAddress: sameAsShipping ? null : billingForm,
@@ -437,35 +642,32 @@ function CheckoutContent() {
         giftMessage: isGiftOrder ? giftMessage : null,
         companyName,
         vatId,
-        shippingRegion: shippingRegionName,
-        shippingCountry: shippingCountryName || shippingForm.country,
-        shippingMethod: selectedMethod ? selectedMethod.name : "Standard Shipping",
-        shippingCost: activeShippingCost,
-        estimatedDelivery: estimatedDeliveryText || "3-5 Days",
-        items: cart.map((item) => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          image: item.product.image,
-          size: item.selectedSize || "OS",
-          color: item.selectedColor || "",
-          quantity: item.quantity,
-          price: item.product.price,
-        })),
+        shippingMethodId: activeMethodId,
+        promoCode: quote.promoCode || promoCode || undefined,
+        stripePaymentIntentId,
+        items: checkoutItems,
       };
 
-      await fetch(`${API_BASE_URL}/orders`, {
+      const orderResponse = await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(orderPayload),
       });
+      const createdOrder = await orderResponse.json();
+      if (!orderResponse.ok) throw new Error(createdOrder.error || "Unable to create order");
+      setOrderNumber(createdOrder.id);
 
       // Transition and clear
       setStep("success");
+      unlockCheckout();
       clearCart();
-    } catch (error) {
-      setPaymentError("Payment processing failed. Please try again.");
+    } catch (error: any) {
+      setPaymentError(error.message || "Payment processing failed. Please try again.");
+      if (/quote|prices changed/i.test(String(error.message))) { setServerQuote(null); setQuoteReload(value => value + 1); }
+    } finally {
+      paymentInFlight.current = false;
       setIsProcessing(false);
     }
   };
@@ -486,7 +688,15 @@ function CheckoutContent() {
     activeShippingCost = shippingCost;
   }
 
-  const activeGrandTotal = Math.max(0, cartTotal + activeShippingCost + taxCost);
+  const activeGrandTotal = serverQuote ? toMajor(serverQuote.totalMinor, serverQuote.currency) : Math.max(0, cartTotal + activeShippingCost + taxCost);
+  const summarySubtotal = serverQuote ? toMajor(serverQuote.subtotalMinor, lockedCurrency) : cartTotalBeforeDiscount;
+  const summaryDiscount = serverQuote ? toMajor(serverQuote.discountMinor, lockedCurrency) : discountAmount;
+  const summaryShipping = serverQuote ? toMajor(serverQuote.shippingMinor, lockedCurrency) : activeShippingCost;
+  const summaryTax = serverQuote ? toMajor(serverQuote.taxMinor, lockedCurrency) : taxCost;
+  const stripeFrontendMissing = checkoutConfig.publishableKeyRequired && !stripePublishableKeyLooksValid;
+  const stripeSetupMessage = stripeFrontendMissing
+    ? "Stripe is not ready. Add VITE_STRIPE_PUBLISHABLE_KEY to the frontend environment and restart the dev server."
+    : checkoutConfig.issue;
 
   return (
     <div className="checkout-page-shell">
@@ -508,12 +718,12 @@ function CheckoutContent() {
       <div className={`checkout-container ${step === "success" ? "success-mode" : ""}`}>
 
         {/* Left Column: Form steps */}
-        <div className="checkout-main-content">
+        <div className="checkout-main-content" ref={stepContentRef} tabIndex={-1}>
 
           {/* Form step navigation display */}
           {step !== "success" && (
             <div className="checkout-steps-breadcrumbs">
-              <span className={step === "shipping" ? "active-step" : "completed-step"} onClick={() => step === "payment" && setStep("shipping")}>
+              <span className={step === "shipping" ? "active-step" : "completed-step"} onClick={() => !isProcessing && step === "payment" && setStep("shipping")}>
                 <span className="step-num">01</span> Shipping
               </span>
               <span className="step-divider">—</span>
@@ -525,12 +735,8 @@ function CheckoutContent() {
 
           <AnimatePresence mode="wait">
             {step === "shipping" && (
-              <motion.section
+              <Reveal trigger="mount" duration={animationConfig.duration.fast} variant="fade" as="section"
                 key="shipping"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.25 }}
               >
                 <h2 className="checkout-section-title">Shipping address</h2>
                 {!isAuthenticated && (
@@ -540,14 +746,22 @@ function CheckoutContent() {
                       <button
                         type="button"
                         className={checkoutMode === "createAccount" ? "account-choice-btn active" : "account-choice-btn"}
-                        onClick={() => setCheckoutMode("createAccount")}
+                        onClick={() => {
+                          setCheckoutMode("createAccount");
+                          setAutoCreateAccount(true);
+                          setCheckoutPromptError("");
+                        }}
                       >
                         Create account
                       </button>
                       <button
                         type="button"
                         className={checkoutMode === "guest" ? "account-choice-btn active" : "account-choice-btn"}
-                        onClick={() => setCheckoutMode("guest")}
+                        onClick={() => {
+                          setCheckoutMode("guest");
+                          setAutoCreateAccount(false);
+                          setCheckoutPromptError("");
+                        }}
                       >
                         Guest checkout
                       </button>
@@ -573,7 +787,7 @@ function CheckoutContent() {
                   <div className="form-input-box full-width">
                     <label htmlFor="chk-email">Email Address *</label>
                     <input
-                      id="chk-email"
+                      id="chk-email" autoComplete="email"
                       type="email"
                       className={shippingErrors.email ? "input-error" : ""}
                       value={shippingForm.email}
@@ -657,10 +871,31 @@ function CheckoutContent() {
                     </div>
                   )}
 
+                  {isAuthenticated && (user?.addresses?.length ?? 0) > 0 && (
+                    <div className="form-input-box full-width">
+                      <label htmlFor="saved-address-select">Saved Address</label>
+                      <select
+                        id="saved-address-select"
+                        value={selectedAddressId}
+                        onChange={(e) => {
+                          setSelectedAddressId(e.target.value);
+                          const selected = user?.addresses?.find((address) => address.id === e.target.value);
+                          if (selected) applySavedAddress(selected);
+                        }}
+                      >
+                        {(user?.addresses ?? []).map((address) => (
+                          <option key={address.id} value={address.id}>
+                            {address.label || "Saved address"} - {address.line1}, {address.city}, {address.country}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="form-input-box">
                     <label htmlFor="chk-firstname">First Name *</label>
                     <input
-                      id="chk-firstname"
+                      id="chk-firstname" autoComplete="shipping given-name"
                       type="text"
                       className={shippingErrors.firstName ? "input-error" : ""}
                       value={shippingForm.firstName}
@@ -674,7 +909,7 @@ function CheckoutContent() {
                   <div className="form-input-box">
                     <label htmlFor="chk-lastname">Last Name *</label>
                     <input
-                      id="chk-lastname"
+                      id="chk-lastname" autoComplete="shipping family-name"
                       type="text"
                       className={shippingErrors.lastName ? "input-error" : ""}
                       value={shippingForm.lastName}
@@ -688,7 +923,7 @@ function CheckoutContent() {
                   <div className="form-input-box full-width">
                     <label htmlFor="chk-address">Street Address *</label>
                     <input
-                      id="chk-address"
+                      id="chk-address" autoComplete="shipping street-address"
                       type="text"
                       className={shippingErrors.address ? "input-error" : ""}
                       value={shippingForm.address}
@@ -702,7 +937,7 @@ function CheckoutContent() {
                   <div className="form-input-box">
                     <label htmlFor="chk-city">City *</label>
                     <input
-                      id="chk-city"
+                      id="chk-city" autoComplete="shipping address-level2"
                       type="text"
                       className={shippingErrors.city ? "input-error" : ""}
                       value={shippingForm.city}
@@ -717,7 +952,7 @@ function CheckoutContent() {
                     <div className="form-input-box half">
                       <label htmlFor="chk-state">State / Province *</label>
                       <input
-                        id="chk-state"
+                        id="chk-state" autoComplete="shipping address-level1"
                         type="text"
                         placeholder="NY"
                         className={shippingErrors.state ? "input-error" : ""}
@@ -730,7 +965,7 @@ function CheckoutContent() {
                     <div className="form-input-box half">
                       <label htmlFor="chk-zip">Zip / Postal Code *</label>
                       <input
-                        id="chk-zip"
+                        id="chk-zip" autoComplete="shipping postal-code"
                         type="text"
                         className={shippingErrors.zip ? "input-error" : ""}
                         value={shippingForm.zip}
@@ -745,10 +980,18 @@ function CheckoutContent() {
                   <div className="form-input-box full-width">
                     <label htmlFor="chk-country">Country *</label>
                     <select
-                      id="chk-country"
+                      id="chk-country" autoComplete="shipping country-name"
                       className={shippingErrors.country ? "input-error" : ""}
                       value={shippingForm.country}
-                      onChange={(e) => setShippingForm({ ...shippingForm, country: e.target.value })}
+                      onChange={(e) => {
+                        const selectedPhoneCountry = getCountryOptionByCountry(e.target.value);
+                        setShippingForm({
+                          ...shippingForm,
+                          country: e.target.value,
+                          phoneCountry: selectedPhoneCountry?.iso ?? shippingForm.phoneCountry,
+                          phoneDialCode: selectedPhoneCountry?.dialCode ?? shippingForm.phoneDialCode,
+                        });
+                      }}
                       required
                     >
                       <option value="">Select a country</option>
@@ -785,7 +1028,7 @@ function CheckoutContent() {
                         </select>
                       </div>
                       <input
-                        id="chk-phone"
+                        id="chk-phone" autoComplete="shipping tel-national"
                         type="tel"
                         className={shippingErrors.phone ? "input-error" : ""}
                         value={shippingForm.phone}
@@ -804,7 +1047,7 @@ function CheckoutContent() {
                   <div className="form-input-box">
                     <label htmlFor="chk-company">Company Name (Optional)</label>
                     <input
-                      id="chk-company"
+                      id="chk-company" autoComplete="organization"
                       type="text"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
@@ -838,7 +1081,7 @@ function CheckoutContent() {
                     {!sameAsShipping && (
                       <div className="billing-address-form-box" style={{ background: "#fdfbf7", border: "1px solid #f0e9df", padding: "1.25rem", borderRadius: "10px", marginBottom: "1rem" }}>
                         <h4 style={{ margin: "0 0 1rem", fontSize: "1rem", color: "#171412" }}>Billing Address Details</h4>
-                        <div className="checkout-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                        <div className="checkout-form-grid checkout-billing-grid">
                           <input
                             type="text"
                             placeholder="First Name"
@@ -858,7 +1101,7 @@ function CheckoutContent() {
                             placeholder="Address"
                             value={billingForm.address}
                             onChange={(e) => setBillingForm({ ...billingForm, address: e.target.value })}
-                            style={{ gridColumn: "span 2", padding: "0.65rem", border: "1px solid #e5e7eb", borderRadius: "6px" }}
+                            style={{ gridColumn: "1 / -1", padding: "0.65rem", border: "1px solid #e5e7eb", borderRadius: "6px" }}
                           />
                           <input
                             type="text"
@@ -897,7 +1140,11 @@ function CheckoutContent() {
                         <input
                           type="checkbox"
                           checked={autoCreateAccount}
-                          onChange={(e) => setAutoCreateAccount(e.target.checked)}
+                          onChange={(e) => {
+                            setAutoCreateAccount(e.target.checked);
+                            setCheckoutMode(e.target.checked ? "createAccount" : "guest");
+                            setCheckoutPromptError("");
+                          }}
                           style={{ accentColor: "#171412", width: "16px", height: "16px" }}
                         />
                         <span>Create my Vestigia account automatically after purchase (Recommended)</span>
@@ -1023,38 +1270,44 @@ function CheckoutContent() {
                   <button
                     className="checkout-continue-btn full-width"
                     type="submit"
-                    disabled={shippingBlocked || (!isAuthenticated && checkoutMode === null)}
+                    disabled={shippingValidationLoading || shippingBlocked || !selectedMethodId || (!isAuthenticated && checkoutMode === null)}
                   >
-                    {shippingBlocked ? "Shipping Unavailable for Selected Country" : "Continue to payment"}
+                    {shippingBlocked ? "Shipping Unavailable for Selected Country" : shippingValidationLoading ? "Checking shipping..." : "Continue to payment"}
                   </button>
                 </form>
-              </motion.section>
+              </Reveal>
             )}
 
             {step === "payment" && (
-              <motion.section
+              <Reveal trigger="mount" duration={animationConfig.duration.fast} variant="fade" as="section"
                 key="payment"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.25 }}
               >
                 <div className="checkout-step-header">
                   <h2 className="checkout-section-title">Payment method</h2>
-                  <button className="back-to-shipping-btn" type="button" onClick={() => setStep("shipping")}>
+                  <button className="back-to-shipping-btn" disabled={isProcessing} type="button" onClick={() => setStep("shipping")}>
                     Edit shipping
                   </button>
                 </div>
-                <form className="checkout-form-grid">
+                <form className="checkout-form-grid" onSubmit={(event) => event.preventDefault()}>
                   <div className="payment-security-notice full-width">
                     <Shield size={14} />
-                    <span>Powered by Stripe. Transactions are secure and encrypted.</span>
+                    <span>
+                      {checkoutConfig.mockPaymentsEnabled
+                        ? "Local mock payments are enabled. No card will be charged."
+                        : "Powered by Stripe. Transactions are secure and encrypted."}
+                    </span>
                   </div>
+
+                  {stripeSetupMessage && (
+                    <p className="payment-error-message full-width" role="alert">
+                      {stripeSetupMessage}
+                    </p>
+                  )}
 
                   <div className="form-input-box full-width">
                     <label htmlFor="pay-name">Name on Card</label>
                     <input
-                      id="pay-name"
+                      id="pay-name" autoComplete="cc-name"
                       type="text"
                       value={cardName}
                       onChange={(e) => setCardName(e.target.value)}
@@ -1066,57 +1319,101 @@ function CheckoutContent() {
                   <div className="form-input-box full-width">
                     <label htmlFor="card-element">Card Details</label>
                     <div className="stripe-card-element-wrapper">
-                      <CardElement
-                        id="card-element"
-                        options={{
-                          style: {
-                            base: {
-                              fontSize: "16px",
-                              color: "#171412",
-                              "::placeholder": {
-                                color: "#aaa",
+                      {stripePublishableKeyLooksValid ? (
+                        <CardElement
+                          id="card-element"
+                          options={{
+                            style: {
+                              base: {
+                                fontSize: "16px",
+                                color: "#171412",
+                                "::placeholder": {
+                                  color: "#aaa",
+                                },
+                              },
+                              invalid: {
+                                color: "#fa755a",
                               },
                             },
-                            invalid: {
-                              color: "#fa755a",
-                            },
-                          },
-                          disabled: isProcessing,
-                        }}
-                      />
+                            disabled: isProcessing,
+                          }}
+                        />
+                      ) : (
+                        <span style={{ color: "#991b1b", fontSize: "0.9rem" }}>
+                          Stripe card input is unavailable until the frontend publishable key is configured.
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {paymentError && <p className="payment-error-message" role="alert">{paymentError}</p>}
+                  {paymentError && <p className="payment-error-message full-width" role="alert">{paymentError}</p>}
+                  {serverQuote ? (
+                    <section className="checkout-quote-review full-width" aria-labelledby="quote-review-title">
+                      <h3 id="quote-review-title">Your order total</h3>
+                      <p role="status">
+                        {serverQuote.priceChanged
+                          ? "An item price has changed. Check the updated amount before confirming."
+                          : "Shipping, discounts and tax are included in the total below."}
+                      </p>
+                      <ul className="checkout-quote-items">
+                        {serverQuote.items.map((item: any) => (
+                          <li key={JSON.stringify([item.productId, item.size, item.color])}>
+                            <span>{item.productName} &times; {item.quantity}</span>
+                            <strong>{formatMoney(item.subtotalMinor, lockedCurrency)}</strong>
+                          </li>
+                        ))}
+                      </ul>
+                      <dl className="checkout-quote-totals">
+                        {([
+                          ["Subtotal", serverQuote.subtotalMinor],
+                          ["Discount", serverQuote.discountMinor],
+                          ["Shipping", serverQuote.shippingMinor],
+                          [`Tax (${serverQuote.taxRateBps / 100}%)`, serverQuote.taxMinor],
+                        ] as [string, number][]).map(([label, amount]) => (
+                          <div key={label}>
+                            <dt>{label}</dt>
+                            <dd>{label === "Discount" && amount > 0 ? "-" : ""}{formatMoney(amount, lockedCurrency)}</dd>
+                          </div>
+                        ))}
+                        <div className="checkout-quote-total">
+                          <dt>Total to pay</dt>
+                          <dd>{formatMoney(serverQuote.totalMinor, lockedCurrency)} {lockedCurrency}</dd>
+                        </div>
+                      </dl>
+                      <p>You will be charged in {lockedCurrency} when you select Confirm payment.</p>
+                    </section>
+                  ) : (
+                    <div className="checkout-review-note full-width" role={quoteError ? "alert" : "status"}>
+                      <p>{quoteError || "Calculating your total..."}</p>
+                      {quoteError && <button type="button" className="checkout-total-retry" onClick={() => setQuoteReload(value => value + 1)}>Retry</button>}
+                    </div>
+                  )}
 
                   <button
                     className="checkout-continue-btn full-width"
                     type="button"
                     onClick={handlePaymentSubmit}
-                    disabled={isProcessing}
+                    disabled={isProcessing || stripeFrontendMissing || quoteLoading || !serverQuote}
                   >
                     {isProcessing ? (
                       <>
                         <Loader size={16} className="spinner" />
-                        Processing...
+                        Processing payment...
                       </>
                     ) : (
-                      `Pay ${money(activeGrandTotal)}`
+                      serverQuote ? `Confirm payment - ${money(activeGrandTotal)} ${lockedCurrency}` : "Confirm payment"
                     )}
                   </button>
                 </form>
-              </motion.section>
+              </Reveal>
             )}
 
             {step === "success" && (
-              <motion.section
+              <Reveal trigger="mount" duration={animationConfig.duration.fast} variant="fade" as="section"
                 key="success"
                 className="checkout-success-view"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
               >
-                <div className="success-hero-section">
+                <Reveal className="success-hero-section">
                   {/* VESTIGIA emblem \u2014 premium confirmation moment */}
                   <div className="success-emblem-wrap">
                     <img
@@ -1128,14 +1425,14 @@ function CheckoutContent() {
                   <h1>Thank you, {shippingForm.firstName}.</h1>
                   <p className="success-subheading">Your order is confirmed and is now being processed.</p>
                   <p className="order-number-receipt">Receipt ID: <strong>{orderNumber}</strong></p>
-                </div>
+                </Reveal>
 
 
                 <div className="success-details-layout">
                   {/* Left Column: Tracking and Info */}
                   <div className="success-info-col">
                     {/* Status Timeline */}
-                    <div className="success-card timeline-card">
+                    <Reveal className="success-card timeline-card">
                       <h3>Order Status</h3>
                       <div className="status-timeline">
                         <div className="timeline-step completed">
@@ -1175,10 +1472,10 @@ function CheckoutContent() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </Reveal>
 
                     {/* Delivery & Billing Details Grid */}
-                    <div className="success-card details-grid-card">
+                    <Reveal className="success-card details-grid-card">
                       <h3>Delivery Details</h3>
                       <div className="details-grid">
                         <div className="grid-item">
@@ -1212,17 +1509,17 @@ function CheckoutContent() {
                           </p>
                         </div>
                       </div>
-                    </div>
+                    </Reveal>
                   </div>
 
                   {/* Right Column: Order Items Summary & Totals */}
                   <div className="success-summary-col">
-                    <div className="success-card items-summary-card">
+                    <Reveal className="success-card items-summary-card">
                       <h3>Purchased Items ({successCart.reduce((sum, item) => sum + item.quantity, 0)})</h3>
                       <div className="purchased-items-list">
                         {successCart.map((item, idx) => (
                           <div key={idx} className="purchased-item-card">
-                            <img src={item.product.image} alt={item.product.alt} className="item-thumbnail" />
+                            <ProductImage product={item.product} variant="product" className="item-thumbnail" />
                             <div className="item-meta">
                               <h4>{item.product.name}</h4>
                               <p className="item-variant">
@@ -1232,7 +1529,7 @@ function CheckoutContent() {
                               </p>
                               <span className="item-qty">Qty: {item.quantity}</span>
                             </div>
-                            <span className="item-price">{money(item.product.price * item.quantity)}</span>
+                            <span className="item-price">{money(getProductPrice(item.product, currency) * item.quantity)}</span>
                           </div>
                         ))}
                       </div>
@@ -1253,7 +1550,7 @@ function CheckoutContent() {
                           <span>{receiptSummary.shipping === 0 ? "Complimentary" : money(receiptSummary.shipping)}</span>
                         </div>
                         <div className="calc-row">
-                          <span>Taxes (8%)</span>
+                          <span>Tax</span>
                           <span>{money(receiptSummary.tax)}</span>
                         </div>
                         <div className="calc-row grand-total-row">
@@ -1261,7 +1558,7 @@ function CheckoutContent() {
                           <strong>{money(receiptSummary.total)}</strong>
                         </div>
                       </div>
-                    </div>
+                    </Reveal>
                   </div>
                 </div>
 
@@ -1273,14 +1570,14 @@ function CheckoutContent() {
                     Print Receipt
                   </button>
                 </div>
-              </motion.section>
+              </Reveal>
             )}
           </AnimatePresence>
         </div>
 
         {/* Right Column: Checkout Summary Review */}
         {step !== "success" && (
-          <aside className="checkout-summary-pane">
+          <Reveal as="aside" className="checkout-summary-pane">
             <h3>Order summary ({cartCount})</h3>
             <div className="checkout-summary-items-list">
               {cart.map((item, idx) => {
@@ -1293,7 +1590,7 @@ function CheckoutContent() {
                 return (
                   <div key={idx} className="checkout-summary-item-card" style={isUnavailable ? { opacity: 0.6 } : {}}>
                     <div className="img-holder">
-                      <img src={item.product.image} alt={item.product.alt} />
+                      <ProductImage product={item.product} variant="product" />
                       <span className="qty-tag">{item.quantity}</span>
                     </div>
                     <div className="details-col">
@@ -1309,7 +1606,7 @@ function CheckoutContent() {
                         </p>
                       )}
                     </div>
-                    <span className="price-tag" style={isUnavailable ? { color: "#888" } : {}}>{money(item.product.price * item.quantity)}</span>
+                    <span className="price-tag" style={isUnavailable ? { color: "#888" } : {}}>{money(getProductPrice(item.product, currency) * item.quantity)}</span>
                   </div>
                 );
               })}
@@ -1320,17 +1617,19 @@ function CheckoutContent() {
               {promoCode ? (
                 <div className="promo-tag-applied">
                   <span>Code <strong>{promoCode}</strong> applied</span>
-                  <button type="button" onClick={removePromoCode}>Remove</button>
+                  <button type="button" disabled={isProcessing} onClick={removePromoCode}>Remove</button>
                 </div>
               ) : (
                 <form onSubmit={handleApplyPromo} className="summary-promo-form">
                   <input
                     type="text"
-                    placeholder="Discount code (e.g. VESTIGIA20)"
+                    aria-label="Discount code"
+                    disabled={isProcessing}
+                    placeholder="Discount code"
                     value={promoInput}
                     onChange={(e) => setPromoInput(e.target.value)}
                   />
-                  <button type="submit">Apply</button>
+                  <button type="submit" disabled={isProcessing}>Apply</button>
                 </form>
               )}
               {promoError && <p className="promo-error-text">{promoError}</p>}
@@ -1340,28 +1639,28 @@ function CheckoutContent() {
             <div className="checkout-calculations">
               <div>
                 <span>Subtotal</span>
-                <span>{money(cartTotalBeforeDiscount)}</span>
+                <span>{money(summarySubtotal)}</span>
               </div>
-              {discountAmount > 0 && (
+              {summaryDiscount > 0 && (
                 <div className="discount-row">
                   <span>Discount ({promoCode})</span>
-                  <span>-{money(discountAmount)}</span>
+                  <span>-{money(summaryDiscount)}</span>
                 </div>
               )}
               <div>
                 <span>Shipping</span>
-                <span>{activeShippingCost === 0 ? "Complimentary" : money(activeShippingCost)}</span>
+                <span>{summaryShipping === 0 ? "Complimentary" : money(summaryShipping)}</span>
               </div>
               <div>
-                <span>Taxes (8%)</span>
-                <span>{money(taxCost)}</span>
+                <span>Tax</span>
+                <span>{serverQuote ? money(summaryTax) : "Calculated at payment"}</span>
               </div>
               <div className="grand-total-row">
                 <span>Total</span>
                 <strong>{money(activeGrandTotal)}</strong>
               </div>
             </div>
-          </aside>
+          </Reveal>
         )}
 
       </div>

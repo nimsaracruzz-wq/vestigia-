@@ -22,6 +22,8 @@ export type OrderItem = {
   color: string;
   quantity: number;
   price: number;
+  currency: import("../../shared/money").Currency;
+  unitPriceMinor: number; subtotalMinor: number; discountMinor: number; taxMinor: number; totalMinor: number;
 };
 
 export type Order = {
@@ -33,11 +35,17 @@ export type Order = {
   date: string;
   status: OrderStatus;
   items: OrderItem[];
+  currency: import("../../shared/money").Currency;
+  paymentStatus: string; pricingVersion: number;
+  subtotalMinor: number; shippingMinor: number; taxMinor: number; discountMinor: number; totalMinor: number;
+  payments?: { amountMinor: number; currency: import("../../shared/money").Currency; status: string }[];
   subtotal: number;
   shipping: number;
   tax: number;
   total: number;
   address: string;
+  giftOrder: boolean;
+  giftMessage?: string | null;
   notes?: string;
   trackingNumber?: string;
   courier?: string;
@@ -60,6 +68,7 @@ export type PromoCode = {
   id: number;
   code: string;
   discount: number;
+  currency?: import("../../shared/money").Currency; amountMinor?: number; percentageBps?: number;
   type: "percentage" | "fixed";
   uses: number;
   maxUses: number | null;
@@ -77,7 +86,6 @@ export type StoreSettings = {
   complimentaryShippingEnabled: boolean;
   taxRate: number;
   orderNotificationEmail?: string;
-  adminPassword?: string;
 };
 
 const DEFAULT_SETTINGS: StoreSettings = {
@@ -90,7 +98,6 @@ const DEFAULT_SETTINGS: StoreSettings = {
   complimentaryShippingEnabled: true,
   taxRate: 8,
   orderNotificationEmail: "owner@thevestigia.com",
-  adminPassword: "admin123",
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -121,6 +128,8 @@ interface AdminContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   isSynced: boolean;
+  adminDataError: string | null;
+  refreshAdminData: () => Promise<void>;
   logout: () => void;
 }
 
@@ -141,6 +150,11 @@ function getAdminToken(): string | null {
   }
 }
 
+function clearAdminSession() {
+  localStorage.removeItem("vstigia_adm_token");
+  localStorage.removeItem("vstigia_adm_auth");
+}
+
 async function apiRequest(path: string, options: RequestInit = {}) {
   const token = getAdminToken();
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
@@ -159,7 +173,9 @@ async function apiRequest(path: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    const error = new Error(`API request failed: ${response.status}`) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) {
@@ -174,10 +190,14 @@ function buildProductFormData(product: any) {
 
   formData.append("name", String(product.name ?? ""));
   formData.append("category", String(product.category ?? "Clothing"));
+  formData.append("productType", String(product.productType ?? ""));
   formData.append("price", String(product.price ?? 0));
+  formData.append("prices", JSON.stringify(product.prices ?? {}));
   formData.append("compareAt", product.compareAt !== undefined && product.compareAt !== null ? String(product.compareAt) : "");
   formData.append("badge", String(product.badge ?? ""));
   formData.append("image", String(product.image ?? ""));
+  formData.append("modelImage", String(product.modelImage ?? ""));
+  formData.append("productImage", String(product.productImage ?? ""));
   formData.append("alt", String(product.alt ?? product.name ?? ""));
   formData.append("description", String(product.description ?? ""));
   formData.append("sizes", JSON.stringify(product.sizes ?? []));
@@ -190,6 +210,20 @@ function buildProductFormData(product: any) {
   formData.append("seoTitle", String(product.seoTitle ?? ""));
   formData.append("seoDescription", String(product.seoDescription ?? ""));
   formData.append("seoKeywords", String(product.seoKeywords ?? ""));
+  formData.append("canonicalUrl", String(product.canonicalUrl ?? ""));
+  formData.append("robotsIndex", String(product.robotsIndex ?? true));
+  formData.append("robotsFollow", String(product.robotsFollow ?? true));
+  formData.append("brand", String(product.brand ?? "Vestigia"));
+  formData.append("sku", String(product.sku ?? ""));
+  formData.append("gtin", String(product.gtin ?? ""));
+  formData.append("mpn", String(product.mpn ?? ""));
+  formData.append("condition", String(product.condition ?? "new"));
+  formData.append("googleProductCategory", String(product.googleProductCategory ?? ""));
+  formData.append("material", String(product.material ?? ""));
+  formData.append("gender", String(product.gender ?? ""));
+  formData.append("ageGroup", String(product.ageGroup ?? ""));
+  formData.append("imageTitle", String(product.imageTitle ?? ""));
+  formData.append("redirectFrom", JSON.stringify(product.redirectFrom ?? []));
 
   if (product.imageFile instanceof File) {
     formData.append("imageFile", product.imageFile);
@@ -203,7 +237,7 @@ function buildProductFormData(product: any) {
 }
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(() => initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
@@ -211,12 +245,13 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     ...DEFAULT_SETTINGS,
   }));
   const [journal, setJournal] = useState<JournalArticle[]>(() => initialJournal);
+  const [adminDataError, setAdminDataError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const token = getAdminToken();
     const savedAuth = load("vstigia_adm_auth", false);
     // If no token exists, clear stale auth state
     if (!token && savedAuth) {
-      localStorage.removeItem("vstigia_adm_auth");
+      clearAdminSession();
       return false;
     }
     return savedAuth;
@@ -226,11 +261,22 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const refreshOrdersAndCustomers = async () => {
     const token = getAdminToken();
     if (!token) return;
+    setAdminDataError(null);
     try {
       const remoteOrders = await apiRequest("/orders");
       if (Array.isArray(remoteOrders)) setOrders(remoteOrders as Order[]);
     } catch (e) {
       console.error("Failed to fetch orders:", e);
+      const status = (e as { status?: number }).status;
+      if (status === 401 || status === 403) {
+        clearAdminSession();
+        setIsAuthenticated(false);
+        setOrders([]);
+        setCustomers([]);
+        setAdminDataError("Your admin session expired after the backend restarted. Please sign in again.");
+        return;
+      }
+      setAdminDataError("Orders could not be loaded. Check that the backend is running and refresh.");
     }
     try {
       const remoteCustomers = await apiRequest("/customers");
@@ -250,7 +296,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         apiRequest("/journal"),
       ]);
 
-      if (productsRes.status === "fulfilled" && Array.isArray(productsRes.value) && productsRes.value.length > 0) {
+      if (productsRes.status === "fulfilled" && Array.isArray(productsRes.value)) {
         setProducts(productsRes.value as Product[]);
       }
 
@@ -448,18 +494,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (username: string, password: string) => {
-    // Local offline fallback — works when backend is unavailable (e.g. Netlify static deploy)
-    const localCheck = () => {
-      if (username === "admin" && (password === settings.adminPassword || password === DEFAULT_SETTINGS.adminPassword || password === "admin123" || password === "vestigia2026")) {
-        localStorage.setItem("vstigia_adm_token", "mock-admin-token");
-        setIsAuthenticated(true);
-        // Immediately fetch orders + customers after local fallback login
-        setTimeout(() => { void refreshOrdersAndCustomers(); }, 100);
-        return true;
-      }
-      return false;
-    };
-
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
@@ -468,7 +502,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       });
 
       if (!response.ok) {
-        return localCheck();
+        return false;
       }
 
       const data = await response.json();
@@ -480,16 +514,17 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         return true;
       }
 
-      return localCheck();
+      return false;
     } catch {
-      return localCheck();
+      return false;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("vstigia_adm_token");
-    localStorage.removeItem("vstigia_adm_auth");
+    clearAdminSession();
     setIsAuthenticated(false);
+    setOrders([]);
+    setCustomers([]);
   };
 
   return (
@@ -501,7 +536,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       updateSettings,
       addJournalArticle, updateJournalArticle, deleteJournalArticle,
       isAuthenticated, login, logout,
-      isSynced
+      isSynced,
+      adminDataError,
+      refreshAdminData: refreshOrdersAndCustomers
     }}>
       {children}
     </AdminContext.Provider>

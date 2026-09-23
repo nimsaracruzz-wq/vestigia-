@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -44,12 +45,8 @@ export default function ContactUs() {
   };
 
   return (
-    <motion.div
+    <div
       className="policy-page-container"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
       <SEOHead
         title="Contact Client Concierge | VESTIGIA®"
@@ -61,7 +58,7 @@ export default function ContactUs() {
       />
       {/* Hero Header */}
       <header className="policy-hero">
-        <div className="policy-hero__inner">
+        <Reveal className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -71,7 +68,7 @@ export default function ContactUs() {
             Have a question regarding fit, order status, tailored garment care, or bespoke requests? 
             Our Client Concierge team is here to assist you with dedicated attention.
           </p>
-        </div>
+        </Reveal>
       </header>
 
       {/* Content Layout */}
@@ -123,7 +120,7 @@ export default function ContactUs() {
 
         {/* Contact Form */}
         <main className="policy-body">
-          <section className="policy-section">
+          <Reveal as="section" className="policy-section">
             <h2>Send Us a Message</h2>
             <p>Fill in the form below and one of our dedicated client care advisors will respond within 24 hours.</p>
 
@@ -143,7 +140,7 @@ export default function ContactUs() {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "24px" }}>
+              <form onSubmit={handleSubmit} className="contact-form-grid">
                 <div className="form-input-box" style={{ margin: 0 }}>
                   <label htmlFor="contact-name">Full Name *</label>
                   <input
@@ -195,7 +192,7 @@ export default function ContactUs() {
                   />
                 </div>
 
-                <div className="form-input-box full-width" style={{ gridColumn: "span 2", margin: 0 }}>
+                <div className="form-input-box full-width" style={{ gridColumn: "1 / -1", margin: 0 }}>
                   <label htmlFor="contact-message">Your Message *</label>
                   <textarea
                     id="contact-message"
@@ -208,7 +205,7 @@ export default function ContactUs() {
                   />
                 </div>
 
-                <div style={{ gridColumn: "span 2" }}>
+                <div style={{ gridColumn: "1 / -1" }}>
                   <button
                     type="submit"
                     disabled={loading}
@@ -221,9 +218,9 @@ export default function ContactUs() {
                 </div>
               </form>
             )}
-          </section>
+          </Reveal>
         </main>
       </div>
-    </motion.div>
+    </div>
   );
 }

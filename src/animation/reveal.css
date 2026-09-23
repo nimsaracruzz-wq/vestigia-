@@ -1,0 +1,13 @@
+/* No persistent will-change layers or layout-property animations. */
+[data-reveal="imageReveal"] { overflow: clip; }
+.product-image-reveal { display: block; overflow: clip; }
+.hero-reveal-image { position: absolute; inset: 0; }
+.reveal-word { display: inline-block; }
+.size-chart-modal[data-reveal] { translate: -50% -50%; transform: none; }
+[data-reveal]:focus-within { opacity: 1 !important; filter: none !important; clip-path: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; clip-path: none !important; }
+}
+@media print {
+  [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; clip-path: none !important; }
+}

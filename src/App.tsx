@@ -1,6 +1,11 @@
-import { useState, useEffect } from "react";
+import { HomepageProvider, useHomepage } from './homepage/HomepageContext';
+import CmsFooter from './homepage/CmsFooter';
+const HomepageAdmin = lazy(() => import('./admin/homepage/HomepageAdmin'));
+const HomepagePreview = lazy(() => import('./homepage/HomepagePreview'));
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { MotionConfig } from "framer-motion";
+import { RevealProvider } from "./animation/Reveal";
 
 // Core components & context
 import { CartProvider } from "./context/CartContext";
@@ -15,50 +20,61 @@ import Footer from "./components/layout/Footer";
 import MobileMenu from "./components/layout/MobileMenu";
 
 // Common UI components
-import Preloader from "./components/common/Preloader";
 import CartDrawer from "./components/common/CartDrawer";
 import SearchOverlay from "./components/common/SearchOverlay";
 import QuickShopModal from "./components/common/QuickShopModal";
+import CookieConsent from "./components/common/CookieConsent";
+import Preloader from "./components/common/Preloader";
+import { CookieConsentProvider } from "./context/CookieConsentContext";
 
 // Pages
 import Home from "./pages/Home";
-import Shop from "./pages/Shop";
-import ProductDetail from "./pages/ProductDetail";
-import Checkout from "./pages/Checkout";
-import Account from "./pages/Account";
-import ActivateAccount from "./pages/ActivateAccount";
-import Lookbook from "./pages/Lookbook";
-import Journal from "./pages/Journal";
-import About from "./pages/About";
-import Story from "./pages/Story";
-import RefundPolicy from "./pages/RefundPolicy";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import ShippingPolicy from "./pages/ShippingPolicy";
-import ContactUs from "./pages/ContactUs";
-import FAQ from "./pages/FAQ";
+const Shop = lazy(() => import("./pages/Shop"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const Account = lazy(() => import("./pages/Account"));
+const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
+const Lookbook = lazy(() => import("./pages/Lookbook"));
+const Journal = lazy(() => import("./pages/Journal"));
+const About = lazy(() => import("./pages/About"));
+const Story = lazy(() => import("./pages/Story"));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const ShippingPolicy = lazy(() => import("./pages/ShippingPolicy"));
+const ContactUs = lazy(() => import("./pages/ContactUs"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const NewsletterConfirm = lazy(() => import("./pages/NewsletterConfirm"));
+const NewsletterUnsubscribe = lazy(() => import("./pages/NewsletterUnsubscribe"));
 
 // Admin pages & context
+const PricingControl = lazy(() => import("./admin/pages/PricingControl"));
 import { AdminProvider } from "./admin/AdminContext";
-import AdminShell from "./admin/AdminShell";
-import Dashboard from "./admin/pages/Dashboard";
-import Products from "./admin/pages/Products";
-import Orders from "./admin/pages/Orders";
-import Customers from "./admin/pages/Customers";
-import Analytics from "./admin/pages/Analytics";
-import Promotions from "./admin/pages/Promotions";
-import AdminJournal from "./admin/pages/AdminJournal";
-import AdminSettings from "./admin/pages/AdminSettings";
-import AdminNotifications from "./admin/pages/AdminNotifications";
-import AdminNewsletter from "./admin/pages/AdminNewsletter";
-import AdminShipping from "./admin/AdminShipping";
+const AdminShell = lazy(() => import("./admin/AdminShell"));
+const Dashboard = lazy(() => import("./admin/pages/Dashboard"));
+const Products = lazy(() => import("./admin/pages/Products"));
+const Orders = lazy(() => import("./admin/pages/Orders"));
+const Customers = lazy(() => import("./admin/pages/Customers"));
+const Analytics = lazy(() => import("./admin/pages/Analytics"));
+const Promotions = lazy(() => import("./admin/pages/Promotions"));
+const AdminJournal = lazy(() => import("./admin/pages/AdminJournal"));
+const AdminSettings = lazy(() => import("./admin/pages/AdminSettings"));
+const AdminNotifications = lazy(() => import("./admin/pages/AdminNotifications"));
+const AdminNewsletter = lazy(() => import("./admin/pages/AdminNewsletter"));
+const AdminBackupRestore = lazy(() => import("./admin/pages/AdminBackupRestore"));
+const AdminShipping = lazy(() => import("./admin/AdminShipping"));
 
 // ScrollToTop helper component to reset window scroll position on route change
 function ScrollToTop() {
   const { pathname, search } = useLocation();
+  const previousPath = useRef('');
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    const sameCatalog = previousPath.current === pathname && (pathname === '/shop' || pathname.startsWith('/collections/'));
+    previousPath.current = pathname;
+    if (sameCatalog) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname, search]);
 
   return null;
@@ -72,32 +88,38 @@ function MainAppShell() {
   const { cartOpen, openCart, closeCart } = useCart();
 
   const isCheckout = location.pathname === "/checkout";
+  const { config: homepage } = useHomepage();
 
   return (
     <>
       <Preloader />
       <div className="site-shell">
-        {!isCheckout && <Announcement />}
         {!isCheckout && (
-          <Header
-            onCartToggle={openCart}
-            onMenuToggle={() => setMenuOpen(true)}
-            onSearchToggle={() => setSearchOpen(true)}
-          />
+          <div className={`storefront-header-region${location.pathname === '/shop' || location.pathname.startsWith('/collections/') ? ' shop-header-region' : ''}`}>
+            <Announcement />
+            <Header
+              onCartToggle={openCart}
+              onMenuToggle={() => setMenuOpen(true)}
+              onSearchToggle={() => setSearchOpen(true)}
+            />
+          </div>
         )}
 
         <main className={isCheckout ? "main-content-area checkout-mode" : "main-content-area"}>
-          <ScrollToTop />
-          <AnimatePresence mode="wait">
+          <Suspense fallback={<div className="route-loading" role="status">Loading page...</div>}>
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Home onQuickShop={(p) => setQuickProduct(p)} />} />
               <Route path="/shop" element={<Shop onQuickShop={(p) => setQuickProduct(p)} />} />
+              <Route path="/collections/:category" element={<Shop onQuickShop={(p) => setQuickProduct(p)} />} />
               <Route path="/product/:id" element={<ProductDetail onQuickShop={(p) => setQuickProduct(p)} />} />
+              <Route path="/shop/product/:id" element={<ProductDetail onQuickShop={(p) => setQuickProduct(p)} />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/account" element={<Account />} />
               <Route path="/activate" element={<ActivateAccount />} />
+              <Route path="/activate-account" element={<ActivateAccount />} />
               <Route path="/lookbook" element={<Lookbook onQuickShop={(p) => setQuickProduct(p)} />} />
               <Route path="/journal" element={<Journal />} />
+              <Route path="/journal/:articleId" element={<Journal />} />
               <Route path="/about" element={<About />} />
               <Route path="/story" element={<Story />} />
               <Route path="/refund-policy" element={<RefundPolicy />} />
@@ -106,11 +128,14 @@ function MainAppShell() {
               <Route path="/shipping-policy" element={<ShippingPolicy />} />
               <Route path="/contact" element={<ContactUs />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/newsletter/confirm" element={<NewsletterConfirm />} />
+              <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribe />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
-          </AnimatePresence>
+          </Suspense>
         </main>
 
-        {!isCheckout && <Footer />}
+        {!isCheckout && (homepage ? <CmsFooter config={homepage} showNewsletter={location.pathname !== "/"} /> : <Footer />)}
 
         {/* Global drawers & modals */}
         <CartDrawer open={cartOpen} onClose={closeCart} />
@@ -124,10 +149,13 @@ function MainAppShell() {
 
 function AdminAppShell() {
   return (
+    <RevealProvider tone="admin">
     <Routes>
       <Route element={<AdminShell />}>
         <Route index element={<Dashboard />} />
+        <Route path="homepage" element={<HomepageAdmin />} />
         <Route path="products" element={<Products />} />
+        <Route path="pricing" element={<PricingControl />} />
         <Route path="orders" element={<Orders />} />
         <Route path="customers" element={<Customers />} />
         <Route path="analytics" element={<Analytics />} />
@@ -135,10 +163,12 @@ function AdminAppShell() {
         <Route path="shipping" element={<AdminShipping />} />
         <Route path="journal" element={<AdminJournal />} />
         <Route path="newsletter" element={<AdminNewsletter />} />
+        <Route path="backup" element={<AdminBackupRestore />} />
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>
     </Routes>
+    </RevealProvider>
   );
 }
 
@@ -146,20 +176,28 @@ import { CurrencyProvider } from "./context/CurrencyContext";
 
 export default function App() {
   return (
-    <AdminProvider>
-      <CurrencyProvider>
-        <UserProvider>
-          <CartProvider>
-            <BrowserRouter>
-              <ScrollToTop />
-              <Routes>
-                <Route path="/admin/*" element={<AdminAppShell />} />
-                <Route path="/*" element={<MainAppShell />} />
-              </Routes>
-            </BrowserRouter>
-          </CartProvider>
-        </UserProvider>
-      </CurrencyProvider>
-    </AdminProvider>
+    <MotionConfig reducedMotion="user">
+      <AdminProvider>
+        <CurrencyProvider>
+          <UserProvider>
+            <CartProvider>
+              <CookieConsentProvider>
+                <HomepageProvider><BrowserRouter>
+                  <ScrollToTop />
+                  <Suspense fallback={<div className="route-loading" role="status">Loading page...</div>}>
+                    <Routes>
+                      <Route path="/admin/*" element={<AdminAppShell />} />
+                      <Route path="/homepage-preview" element={<HomepagePreview />} />
+                      <Route path="/*" element={<MainAppShell />} />
+                    </Routes>
+                  </Suspense>
+                  <CookieConsent />
+                </BrowserRouter></HomepageProvider>
+              </CookieConsentProvider>
+            </CartProvider>
+          </UserProvider>
+        </CurrencyProvider>
+      </AdminProvider>
+    </MotionConfig>
   );
 }

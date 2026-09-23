@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -7,12 +8,6 @@ export default function Story() {
     document.title = "Our Story — VESTIGIA";
   }, []);
 
-  const slideUp = {
-    initial: { opacity: 0, y: 30 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, margin: "-100px" },
-    transition: { duration: 0.6 },
-  };
 
   const paragraphStyle = {
     fontSize: "1rem",
@@ -24,16 +19,12 @@ export default function Story() {
   };
 
   return (
-    <motion.div
+    <div
       className="story-page-shell"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
       style={{ background: "#fff", color: "#171412", minHeight: "100vh" }}
     >
       {/* PAGE HERO */}
-      <header
+      <Reveal as="header"
         className="story-hero"
         style={{
           padding: "140px 24px 100px",
@@ -60,11 +51,11 @@ export default function Story() {
             </p>
           </div>
         </div>
-      </header>
+      </Reveal>
 
       {/* STORY MOVEMENT PANEL */}
       <section style={{ padding: "100px 24px", maxWidth: "800px", margin: "0 auto" }}>
-        <motion.div {...slideUp} style={{ marginBottom: "80px" }}>
+        <Reveal style={{ marginBottom: "80px" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "16px" }}>
             01 / MOVEMENT
           </h2>
@@ -86,9 +77,9 @@ export default function Story() {
           <p style={{ ...paragraphStyle, marginBottom: 0 }}>
             <strong>Made to move through many.</strong>
           </p>
-        </motion.div>
+        </Reveal>
 
-        <motion.div {...slideUp} style={{ marginBottom: "80px" }}>
+        <Reveal style={{ marginBottom: "80px" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "16px" }}>
             02 / ORIGIN
           </h2>
@@ -119,9 +110,9 @@ export default function Story() {
           <p style={{ ...paragraphStyle, marginBottom: 0 }}>
             This is the space where VESTIGIA exists.
           </p>
-        </motion.div>
+        </Reveal>
 
-        <motion.div {...slideUp} style={{ marginBottom: "80px" }}>
+        <Reveal style={{ marginBottom: "80px" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "16px" }}>
             03 / EXPERIENCE
           </h2>
@@ -147,9 +138,9 @@ export default function Story() {
           <p style={{ ...paragraphStyle, marginBottom: 0 }}>
             Sometimes, <strong>it is about becoming yours.</strong>
           </p>
-        </motion.div>
+        </Reveal>
 
-        <motion.div {...slideUp} style={{ marginBottom: "40px" }}>
+        <Reveal style={{ marginBottom: "40px" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "16px" }}>
             04 / TRACE
           </h2>
@@ -177,12 +168,12 @@ export default function Story() {
           <p style={{ ...paragraphStyle, marginBottom: "32px" }}>
             <strong>Wear it. Live in it. Leave your trace.</strong>
           </p>
-        </motion.div>
+        </Reveal>
       </section>
 
       {/* MIDDLE IMAGE SPREAD */}
       <section style={{ overflow: "hidden", padding: "0 24px", marginBottom: "80px" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "24px" }}>
           <img
             src="/images/products/signature_model.png"
             alt="Model in VESTIGIA Signature T-Shirt"
@@ -197,7 +188,7 @@ export default function Story() {
       </section>
 
       {/* FINAL BRAND OUTRO */}
-      <footer
+      <Reveal as="footer"
         className="story-footer"
         style={{
           background: "#f6f3ed",
@@ -230,7 +221,7 @@ export default function Story() {
             SHOP THE FIRST RELEASE →
           </Link>
         </div>
-      </footer>
-    </motion.div>
+      </Reveal>
+    </div>
   );
 }

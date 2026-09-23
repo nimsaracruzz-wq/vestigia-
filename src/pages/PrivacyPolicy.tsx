@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -10,15 +11,11 @@ export default function PrivacyPolicy() {
   }, []);
 
   return (
-    <motion.div
+    <div
       className="policy-page-container"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
       <header className="policy-hero">
-        <div className="policy-hero__inner">
+        <Reveal className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -32,7 +29,7 @@ export default function PrivacyPolicy() {
             <span><Clock size={14} /> Last Updated: August 2026</span>
             <span><Shield size={14} /> Encrypted & GDPR Compliant</span>
           </div>
-        </div>
+        </Reveal>
       </header>
 
       <div className="policy-layout">
@@ -52,15 +49,15 @@ export default function PrivacyPolicy() {
         </aside>
 
         <main className="policy-body">
-          <section id="overview" className="policy-section">
+          <Reveal as="section" id="overview" className="policy-section">
             <h2>1. Commitment to Privacy</h2>
             <p>
               VESTIGIA operates the website <code>vestigia.com</code> and related e-commerce services. 
               We respect your right to privacy and are committed to protecting all personal data in compliance with GDPR and CCPA.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="data-collection" className="policy-section">
+          <Reveal as="section" id="data-collection" className="policy-section">
             <h2>2. Information We Collect</h2>
             <p>We collect information you provide directly to us when interacting with our boutique:</p>
             <div className="policy-card-grid">
@@ -80,9 +77,9 @@ export default function PrivacyPolicy() {
                 <p>IP address, browser type, operating system, localized currency preferences, and IP-based country detection.</p>
               </div>
             </div>
-          </section>
+          </Reveal>
 
-          <section id="data-use" className="policy-section">
+          <Reveal as="section" id="data-use" className="policy-section">
             <h2>3. How We Use Your Data</h2>
             <p>Your data is used strictly to deliver an exceptional luxury shopping experience:</p>
             <ul className="policy-checklist">
@@ -91,26 +88,26 @@ export default function PrivacyPolicy() {
               <li>To deliver tailored editorial newsletters (when opted in).</li>
               <li>To detect and prevent fraudulent transactions or security incidents.</li>
             </ul>
-          </section>
+          </Reveal>
 
-          <section id="payments" className="policy-section">
+          <Reveal as="section" id="payments" className="policy-section">
             <h2>4. Payment Security</h2>
             <p>
               All payment transactions are processed securely through <strong>Stripe Payment Gateway</strong> 
               using 256-bit SSL encryption and PCI-DSS Level 1 compliance. 
               VESTIGIA servers do not store raw credit card numbers or CVV codes.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="sharing" className="policy-section">
+          <Reveal as="section" id="sharing" className="policy-section">
             <h2>5. Third-Party Data Sharing</h2>
             <p>
               We do not sell or rent your personal information. We share data only with 
               trusted service providers essential to fulfilling your orders (DHL, FedEx, Stripe).
             </p>
-          </section>
+          </Reveal>
 
-          <section id="rights" className="policy-section">
+          <Reveal as="section" id="rights" className="policy-section">
             <h2>6. Your Rights & Choices</h2>
             <p>As a VESTIGIA client, you maintain full control over your personal information:</p>
             <ul className="policy-checklist">
@@ -118,18 +115,18 @@ export default function PrivacyPolicy() {
               <li><strong>Right to Rectification:</strong> Update or correct your profile details via your account portal.</li>
               <li><strong>Right to Erasure:</strong> Request the deletion of your account and associated personal data.</li>
             </ul>
-          </section>
+          </Reveal>
 
-          <section id="contact" className="policy-section policy-contact-card">
+          <Reveal as="section" id="contact" className="policy-section policy-contact-card">
             <Mail size={28} />
             <h3>Privacy Questions or Data Requests</h3>
             <p>If you have questions regarding our Privacy Policy, please contact our Data Protection Officer.</p>
             <div className="policy-contact-links">
               <a href="mailto:privacy@vestigia.com" className="primary-link dark">Contact Data Officer</a>
             </div>
-          </section>
+          </Reveal>
         </main>
       </div>
-    </motion.div>
+    </div>
   );
 }

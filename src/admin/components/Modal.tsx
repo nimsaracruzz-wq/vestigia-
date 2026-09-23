@@ -1,3 +1,4 @@
+import { RevealOverlay, RevealModal } from "../../animation/Reveal";
 import React from "react";
 import { X } from "lucide-react";
 
@@ -12,8 +13,8 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="admin-modal-overlay">
-      <div className="admin-modal">
+    <RevealOverlay className="admin-modal-overlay">
+      <RevealModal className="admin-modal">
         <div className="admin-modal-header">
           <h2>{title}</h2>
           <button onClick={onClose} className="admin-modal-close">
@@ -23,7 +24,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         <div className="admin-modal-content">
           {children}
         </div>
-      </div>
-    </div>
+      </RevealModal>
+    </RevealOverlay>
   );
 }

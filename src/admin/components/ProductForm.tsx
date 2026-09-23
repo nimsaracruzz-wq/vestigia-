@@ -33,26 +33,19 @@ function buildEmptySizeChart(): SizeChart {
 
 export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
   const [photos, setPhotos] = useState<string[]>(() => {
-    const list: string[] = [];
-    if (initialData?.image) list.push(initialData.image);
-    if (initialData?.images) {
-      initialData.images.forEach(img => {
-        if (img && !list.includes(img)) {
-          list.push(img);
-        }
-      });
-    }
-    return list.slice(0, 6);
+    const list = initialData?.images?.filter(Boolean) || [];
+    return list.length > 0 ? list.slice(0, 6) : initialData?.image ? [initialData.image] : [];
   });
-  const [mainPhoto, setMainPhoto] = useState<string>(initialData?.image || "");
+  const [modelImage, setModelImage] = useState(initialData?.modelImage || initialData?.image || "");
+  const [productImage, setProductImage] = useState(initialData?.productImage || initialData?.image || "");
   const [isUploading, setIsUploading] = useState(false);
   const [imageError, setImageError] = useState("");
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, role: "model" | "product" | "gallery") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (photos.length >= 6) {
+    if (role === "gallery" && photos.length >= 6) {
       setImageError("Maximum 6 photos allowed.");
       return;
     }
@@ -87,13 +80,9 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         throw new Error("No URL returned from server");
       }
 
-      setPhotos(prev => {
-        const next = [...prev, uploadedUrl];
-        if (!mainPhoto) {
-          setMainPhoto(uploadedUrl);
-        }
-        return next;
-      });
+      if (role === "model") setModelImage(uploadedUrl);
+      if (role === "product") setProductImage(uploadedUrl);
+      if (role === "gallery") setPhotos(prev => [...prev, uploadedUrl]);
     } catch (err: any) {
       console.error("Image upload error:", err);
       setImageError(`Error uploading image: ${err.message || "Please try again."}`);
@@ -120,33 +109,51 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     setPhotos(prev => {
       const removedUrl = prev[index];
       const next = prev.filter((_, i) => i !== index);
-      if (mainPhoto === removedUrl) {
-        setMainPhoto(next[0] || "");
-      }
       return next;
     });
   };
 
-  const setAsMain = (url: string) => {
-    setMainPhoto(url);
-  };
+  const mainPhoto = modelImage;
+  const setAsMain = (url: string) => setModelImage(url);
 
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     slug: initialData?.slug || "",
     category: initialData?.category || "Clothing",
+    productType: initialData?.productType || "",
     price: initialData?.price || 0,
     compareAt: initialData?.compareAt || "",
     badge: initialData?.badge || "",
     image: initialData?.image || "",
+    modelImage: initialData?.modelImage || initialData?.image || "",
+    productImage: initialData?.productImage || initialData?.image || "",
     description: initialData?.description || "",
     sizes: initialData?.sizes.join(", ") || "",
     colors: initialData?.colors.join(", ") || "",
     seoTitle: initialData?.seoTitle || "",
     seoDescription: initialData?.seoDescription || "",
     seoKeywords: initialData?.seoKeywords || "",
+    canonicalUrl: initialData?.canonicalUrl || "",
+    robotsIndex: initialData?.robotsIndex ?? true,
+    robotsFollow: initialData?.robotsFollow ?? true,
+    brand: initialData?.brand || "Vestigia",
+    sku: initialData?.sku || "",
+    gtin: initialData?.gtin || "",
+    mpn: initialData?.mpn || "",
+    condition: initialData?.condition || "new",
+    googleProductCategory: initialData?.googleProductCategory || "Apparel & Accessories > Clothing",
+    material: initialData?.material || "",
+    gender: initialData?.gender || "unisex",
+    ageGroup: initialData?.ageGroup || "adult",
+    imageTitle: initialData?.imageTitle || "",
     alt: initialData?.alt || "",
   });
+
+  const [prices, setPrices] = useState(() => ({
+    USD: initialData?.prices?.USD ?? { priceMinor: 0, compareAtMinor: null },
+    EUR: initialData?.prices?.EUR ?? { priceMinor: 0, compareAtMinor: null },
+    JPY: initialData?.prices?.JPY ?? { priceMinor: 0, compareAtMinor: null },
+  }));
 
   const [isSlugEdited, setIsSlugEdited] = useState(!!initialData?.slug);
   const [isSeoTitleEdited, setIsSeoTitleEdited] = useState(!!initialData?.seoTitle);
@@ -203,6 +210,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   // ── form field changes ──────────────────────────────────────────────────
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    const fieldValue = e.target instanceof HTMLInputElement && e.target.type === "checkbox" ? e.target.checked : value;
     
     // Mark manual edits
     if (name === "slug") setIsSlugEdited(true);
@@ -212,7 +220,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     if (name === "alt") setIsAltEdited(true);
 
     setFormData(prev => {
-      const next = { ...prev, [name]: value };
+      const next = { ...prev, [name]: fieldValue };
 
       // Auto-generate fields on name/title change
       if (name === "name") {
@@ -232,6 +240,9 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         }
         if (!isAltEdited) {
           next.alt = value;
+        }
+        if (!next.sku) {
+          next.sku = slugify(value).toUpperCase().replace(/-/g, "-").slice(0, 40);
         }
       }
 
@@ -330,22 +341,27 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   // ── submit ──────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (photos.length === 0) {
+    if (photos.length === 0 && !modelImage && !productImage) {
       setImageError("Please upload at least one product photo.");
       return;
     }
 
-    const primaryImage = mainPhoto || photos[0];
+    const primaryImage = modelImage || productImage || photos[0];
+    const galleryImages = photos.length > 0 ? photos : [primaryImage];
 
     setImageError("");
     onSubmit({
       ...formData,
       price: Number(formData.price),
+      prices: initialData?.prices || {},
+      priceChangeReason: "Product details updated; use Pricing Control for prices",
       compareAt: formData.compareAt ? Number(formData.compareAt) : undefined,
       sizes: formData.sizes.split(",").map(s => s.trim()).filter(Boolean),
       colors: formData.colors.split(",").map(c => c.trim()).filter(Boolean),
       image: primaryImage,
-      images: photos,
+      modelImage,
+      productImage,
+      images: galleryImages,
       alt: formData.alt || formData.name,
       details: initialData?.details || [],
       care: initialData?.care || [],
@@ -383,26 +399,48 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
             <option value="Sale">Sale</option>
           </select>
         </div>
-        <div className="admin-form-group">
-          <label>Badge (Optional)</label>
-          <input type="text" name="badge" value={formData.badge} onChange={handleChange} />
+        <div className="admin-form-group product-type-field">
+          <label htmlFor="product-type-input">Product Type / Subtitle</label>
+          <input id="product-type-input" type="text" name="productType" value={formData.productType} onChange={handleChange} placeholder="e.g. Premium Heavyweight Oversized T-Shirt" />
+          <span className="product-type-hint">Shown beneath the product name across the storefront.</span>
         </div>
       </div>
 
-      <div className="admin-form-row">
-        <div className="admin-form-group">
-          <label>Price</label>
-          <input type="number" name="price" value={formData.price} onChange={handleChange} required min="0" step="0.01" />
-        </div>
-        <div className="admin-form-group">
-          <label>Compare At Price (Optional)</label>
-          <input type="number" name="compareAt" value={formData.compareAt} onChange={handleChange} min="0" step="0.01" />
+      <p>Base and market prices are managed in <a href="/admin/pricing">Pricing Control</a>, with a confirmation and change history.</p>
+      <div className="admin-form-group">
+        <label>Badge (Optional)</label>
+        <input type="text" name="badge" value={formData.badge} onChange={handleChange} />
+      </div>
+
+      <div className="admin-form-group" style={{ marginBottom: "24px" }}>
+        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>PRODUCT MEDIA</label>
+        <p style={{ color: "#666", fontSize: "12px", margin: "0 0 14px" }}>
+          Assign exactly which image is used for editorial discovery, transactional references, and product detail.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "12px" }}>
+          {([
+            ["MODEL / LIFESTYLE IMAGE", modelImage, setModelImage, "Shop / Collection / Featured Products"],
+            ["PRODUCT-ONLY IMAGE", productImage, setProductImage, "Search / Cart / Checkout / Orders"],
+          ] as const).map(([label, value, setter, usage]) => (
+            <div key={label} style={{ border: "1px solid #e2e2e2", borderRadius: "8px", padding: "12px", background: "#fff" }}>
+              <strong style={{ display: "block", fontSize: "11px", letterSpacing: "0.04em" }}>{label}</strong>
+              <span style={{ display: "block", color: "#777", fontSize: "11px", margin: "5px 0 10px" }}>Used for: {usage}</span>
+              {value ? <img src={value} alt={label} style={{ width: "100%", height: "145px", objectFit: "cover", borderRadius: "5px", marginBottom: "8px" }} /> : <div style={{ height: "145px", background: "#f5f5f5", borderRadius: "5px", marginBottom: "8px" }} />}
+              <div style={{ display: "flex", gap: "6px" }}>
+                <label style={{ flex: 1, cursor: isUploading ? "wait" : "pointer", background: "#111", color: "#fff", borderRadius: "4px", padding: "8px", textAlign: "center", fontSize: "11px" }}>
+                  {value ? "Replace Image" : "Upload Image"}
+                  <input type="file" accept="image/*" disabled={isUploading} onChange={(event) => handleFileChange(event, label.startsWith("MODEL") ? "model" : "product")} style={{ display: "none" }} />
+                </label>
+                {value && <button type="button" onClick={() => setter("")} style={{ border: "1px solid #ddd", borderRadius: "4px", background: "#fff", padding: "0 9px" }}>Remove</button>}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="admin-form-group" style={{ marginBottom: "24px" }}>
         <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
-          Product Photos (Max 6, Reorder & Select Main)
+          PRODUCT GALLERY (Optional, Max 6)
         </label>
         
         {/* Photos Grid */}
@@ -451,7 +489,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                     borderRadius: "4px",
                     textTransform: "uppercase"
                   }}>
-                    Main
+                    Model
                   </span>
                 )}
 
@@ -557,7 +595,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleFileChange}
+                onChange={(event) => handleFileChange(event, "gallery")}
                 disabled={isUploading}
                 style={{ display: "none" }}
               />
@@ -791,7 +829,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         <div className="admin-form-group">
           <label>URL Slug (e.g. vestigia-signature-tee)</label>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <span style={{ paddingRight: "6px", color: "#888", fontSize: "14px" }}>/product/</span>
+            <span style={{ paddingRight: "6px", color: "#888", fontSize: "14px" }}>https://thevestigia.com/product/</span>
             <input
               type="text"
               name="slug"
@@ -802,6 +840,42 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
             />
           </div>
         </div>
+        <div className="admin-form-row">
+          <div className="admin-form-group">
+            <label>
+              <input
+                type="checkbox"
+                name="robotsIndex"
+                checked={Boolean(formData.robotsIndex)}
+                onChange={handleChange}
+                style={{ marginRight: "8px" }}
+              />
+              Allow search indexing
+            </label>
+          </div>
+          <div className="admin-form-group">
+            <label>
+              <input
+                type="checkbox"
+                name="robotsFollow"
+                checked={Boolean(formData.robotsFollow)}
+                onChange={handleChange}
+                style={{ marginRight: "8px" }}
+              />
+              Allow link following
+            </label>
+          </div>
+        </div>
+        <div className="admin-form-group">
+          <label>Canonical URL Override</label>
+          <input
+            type="url"
+            name="canonicalUrl"
+            value={String(formData.canonicalUrl)}
+            onChange={handleChange}
+            placeholder="Leave blank to use the product slug URL"
+          />
+        </div>
         <div className="admin-form-group">
           <label>Meta Title</label>
           <input
@@ -811,6 +885,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
             onChange={handleChange}
             placeholder="Search engine title tag"
           />
+          <span className="product-type-hint">{String(formData.seoTitle).length}/60 characters</span>
         </div>
         <div className="admin-form-group">
           <label>Meta Description</label>
@@ -822,6 +897,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
             rows={2}
             style={{ width: "100%", padding: "8px 12px", border: "1px solid #ddd", borderRadius: "4px", fontSize: "14px", fontFamily: "inherit" }}
           />
+          <span className="product-type-hint">{String(formData.seoDescription).length}/155 characters</span>
         </div>
         <div className="admin-form-group">
           <label>Meta Keywords</label>
@@ -832,6 +908,82 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
             onChange={handleChange}
             placeholder="e.g. luxury apparel, minimalist, Italian cotton"
           />
+        </div>
+        <div className="admin-form-group">
+          <label>Image Title</label>
+          <input
+            type="text"
+            name="imageTitle"
+            value={String(formData.imageTitle)}
+            onChange={handleChange}
+            placeholder="Optional image title for image sitemap"
+          />
+        </div>
+      </div>
+
+      <div style={{ marginTop: "24px", borderTop: "1px solid #eee", paddingTop: "20px" }}>
+        <h3 style={{ fontSize: "14px", fontWeight: "600", marginBottom: "14px", color: "#111" }}>Merchant Catalog</h3>
+        <div className="admin-form-row">
+          <div className="admin-form-group">
+            <label>Brand</label>
+            <input type="text" name="brand" value={String(formData.brand)} onChange={handleChange} />
+          </div>
+          <div className="admin-form-group">
+            <label>SKU</label>
+            <input type="text" name="sku" value={String(formData.sku)} onChange={handleChange} placeholder="VST-AURELIUS-BLK" />
+          </div>
+        </div>
+        <div className="admin-form-row">
+          <div className="admin-form-group">
+            <label>GTIN</label>
+            <input type="text" name="gtin" value={String(formData.gtin)} onChange={handleChange} placeholder="Optional barcode/GTIN" />
+          </div>
+          <div className="admin-form-group">
+            <label>MPN</label>
+            <input type="text" name="mpn" value={String(formData.mpn)} onChange={handleChange} placeholder="Manufacturer part number" />
+          </div>
+        </div>
+        <div className="admin-form-row">
+          <div className="admin-form-group">
+            <label>Condition</label>
+            <select name="condition" value={String(formData.condition)} onChange={handleChange}>
+              <option value="new">New</option>
+              <option value="used">Used</option>
+              <option value="refurbished">Refurbished</option>
+            </select>
+          </div>
+          <div className="admin-form-group">
+            <label>Google Product Category</label>
+            <input
+              type="text"
+              name="googleProductCategory"
+              value={String(formData.googleProductCategory)}
+              onChange={handleChange}
+              placeholder="Apparel & Accessories > Clothing"
+            />
+          </div>
+        </div>
+        <div className="admin-form-row">
+          <div className="admin-form-group">
+            <label>Material</label>
+            <input type="text" name="material" value={String(formData.material)} onChange={handleChange} placeholder="280 GSM cotton jersey" />
+          </div>
+          <div className="admin-form-group">
+            <label>Gender</label>
+            <select name="gender" value={String(formData.gender)} onChange={handleChange}>
+              <option value="unisex">Unisex</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+        </div>
+        <div className="admin-form-group">
+          <label>Age Group</label>
+          <select name="ageGroup" value={String(formData.ageGroup)} onChange={handleChange}>
+            <option value="adult">Adult</option>
+            <option value="teen">Teen</option>
+            <option value="kids">Kids</option>
+          </select>
         </div>
       </div>
 

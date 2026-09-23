@@ -1,3 +1,6 @@
+import { useDialogFocus } from '../../hooks/useDialogFocus';
+import { useEntrance, useDrawerEntrance } from "../../animation/Reveal";
+import { useScrollLock } from "../../hooks/useScrollLock";
 import { Link } from "react-router-dom";
 import { X, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +14,10 @@ type MobileMenuProps = {
 };
 
 export default function MobileMenu({ open, onClose, onCartToggle }: MobileMenuProps) {
+  useScrollLock(open);
+  useDialogFocus(open, onClose, '.menu-drawer');
+  const backdropEntrance = useEntrance("fade");
+  const drawerEntrance = useDrawerEntrance("left");
   const { settings } = useAdmin();
   const { formatPrice: money } = useCurrency();
 
@@ -29,19 +36,14 @@ export default function MobileMenu({ open, onClose, onCartToggle }: MobileMenuPr
           {/* Backdrop overlay */}
           <motion.div
             className="drawer-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            {...backdropEntrance}
             onClick={onClose}
           />
 
           {/* Menu Drawer */}
           <motion.aside
             className="menu-drawer"
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
+            {...drawerEntrance}
             aria-modal="true"
             role="dialog"
             aria-label="Mobile Navigation Menu"

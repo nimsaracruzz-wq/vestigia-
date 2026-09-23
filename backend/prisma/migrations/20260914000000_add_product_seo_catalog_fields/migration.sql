@@ -1,0 +1,15 @@
+ALTER TABLE "Product" ADD COLUMN "canonicalUrl" TEXT;
+ALTER TABLE "Product" ADD COLUMN "robotsIndex" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Product" ADD COLUMN "robotsFollow" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Product" ADD COLUMN "brand" TEXT NOT NULL DEFAULT 'Vestigia';
+ALTER TABLE "Product" ADD COLUMN "sku" TEXT;
+ALTER TABLE "Product" ADD COLUMN "gtin" TEXT;
+ALTER TABLE "Product" ADD COLUMN "mpn" TEXT;
+ALTER TABLE "Product" ADD COLUMN "condition" TEXT NOT NULL DEFAULT 'new';
+ALTER TABLE "Product" ADD COLUMN "googleProductCategory" TEXT;
+ALTER TABLE "Product" ADD COLUMN "material" TEXT;
+ALTER TABLE "Product" ADD COLUMN "gender" TEXT;
+ALTER TABLE "Product" ADD COLUMN "ageGroup" TEXT;
+ALTER TABLE "Product" ADD COLUMN "imageTitle" TEXT;
+ALTER TABLE "Product" ADD COLUMN "redirectFrom" TEXT;
+CREATE UNIQUE INDEX "Product_sku_key" ON "Product"("sku");

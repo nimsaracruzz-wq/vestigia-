@@ -1,5 +1,6 @@
+import { Reveal, RevealGroup } from "../animation/Reveal";
 import { useEffect } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { Clock, ArrowLeft, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { journalArticles } from "../data";
@@ -7,13 +8,19 @@ import { journalArticles } from "../data";
 import { SEOHead } from "../components/common/SEOHead";
 
 export default function Journal() {
+  const { articleId } = useParams<{ articleId?: string }>();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const readId = searchParams.get("read");
+  const readId = articleId || searchParams.get("read");
 
   // Find active article if query parameter `read` is provided
   const activeArticle = journalArticles.find((art) => art.id === Number(readId));
 
   const handleBackToList = () => {
+    if (articleId) {
+      navigate("/journal");
+      return;
+    }
     searchParams.delete("read");
     setSearchParams(searchParams);
   };
@@ -37,12 +44,8 @@ export default function Journal() {
   };
 
   return (
-    <motion.div
+    <div
       className="journal-page-shell"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
       <SEOHead
         title={activeArticle ? `${activeArticle.title} | VESTIGIA® Journal` : "VESTIGIA® Journal — Editorial & Craftsmanship Stories"}
@@ -55,13 +58,9 @@ export default function Journal() {
       <AnimatePresence mode="wait">
         {activeArticle ? (
           /* Single Article Read View */
-          <motion.article
+          <Reveal as="article"
             key="article-view"
             className="single-article-container"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.35 }}
           >
             <button className="back-btn" onClick={handleBackToList} type="button">
               <ArrowLeft size={16} />
@@ -96,32 +95,24 @@ export default function Journal() {
                 Subscribe to Vestigia
               </Link>
             </footer>
-          </motion.article>
+          </Reveal>
         ) : (
           /* Articles Listing View */
-          <motion.div
+          <div
             key="list-view"
             className="journal-listing-container"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
           >
-            <header className="journal-header-section">
+            <Reveal as="header" className="journal-header-section">
               <p>The Vestigia Journal</p>
               <h1>Stories and fabric essays</h1>
               <span>Explorations in design philosophy, textile guides, and minimal lifestyle packing keys.</span>
-            </header>
+            </Reveal>
 
-            <div className="journal-articles-list-grid">
+            <RevealGroup className="journal-articles-list-grid">
               {journalArticles.map((article, index) => (
-                <motion.article
+                <Reveal as="article"
                   className="journal-list-card"
                   key={article.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
                   <div className="card-image-wrapper">
                     <img src={article.image} alt={article.title} />
@@ -133,19 +124,19 @@ export default function Journal() {
                       <span>{article.readTime}</span>
                     </div>
                     <h2>
-                      <Link to={`?read=${article.id}`}>{article.title}</Link>
+                    <Link to={`/journal/${article.id}`}>{article.title}</Link>
                     </h2>
                     <p>{article.excerpt}</p>
-                    <Link className="read-more-link" to={`?read=${article.id}`}>
+                    <Link className="read-more-link" to={`/journal/${article.id}`}>
                       Read story <ArrowRight size={14} />
                     </Link>
                   </div>
-                </motion.article>
+                </Reveal>
               ))}
-            </div>
-          </motion.div>
+            </RevealGroup>
+          </div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

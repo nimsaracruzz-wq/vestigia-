@@ -1,8 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import { products, journalArticles } from './data.ts';
+import { products, journalArticles } from './data.js';
+import bcrypt from 'bcryptjs';
 
-const adapter = new PrismaBetterSqlite3({ url: './dev.db' });
+const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL || 'file:./vestigia-dev.db' });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
@@ -20,7 +21,7 @@ async function main() {
       announcementEnabled: true,
       shippingThreshold: 150,
       taxRate: 0.12,
-      adminPassword: 'admin',
+      adminPassword: 'deprecated-not-used',
     },
   });
 
@@ -30,7 +31,7 @@ async function main() {
     update: {},
     create: {
       username: 'admin',
-      password: 'admin123', // In a real app, hash this
+      password: await bcrypt.hash(process.env.ADMIN_INITIAL_PASSWORD || 'admin123Secure', 12),
     },
   });
 

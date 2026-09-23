@@ -5,233 +5,137 @@
 
   <url>
     <loc>https://thevestigia.com/</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/shop</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/lookbook</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/about</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/story</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/contact</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/faq</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/refund-policy</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/privacy-policy</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/terms-of-service</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://thevestigia.com/shipping-policy</loc>
-    <lastmod>2026-09-13</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://thevestigia.com/shop?category=Clothing</loc>
-    <lastmod>2026-09-13</lastmod>
+    <loc>https://thevestigia.com/collections/clothing</loc>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://thevestigia.com/shop?category=Accessories</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/shop?category=New</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/shop?category=Sale</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/2</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>Tapered City Trouser</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/3</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>Fine Hoop Set</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/4</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>Washed Rib Tank</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/5</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>Soft Utility Shirt</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/6</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>Arc Leather Tote</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/7</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>Relaxed Poplin Dress</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/8</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>Sculpted Sandal</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/16</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://thevestigia.com/uploads/1784372394463-vestigia-black-oversized-tshirt-model-main.png</image:loc>
-      <image:title>test product</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/product/17</loc>
-    <lastmod>2026-09-13</lastmod>
+    <loc>https://thevestigia.com/product/vestigia-aurelius-oversized-tee-black</loc>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
       <image:loc>https://thevestigia.com/uploads/1784373355678-vestigia-black-oversized-tshirt-model-main.png</image:loc>
-      <image:title>VESTIGIA Aurelius Oversized Tee – Black</image:title>
+      <image:title>VESTIGIA Aurelius Oversized Tee - Black</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://thevestigia.com/uploads/1784373364148-vestigia-black-oversized-tshirt-model-front.png</image:loc>
+      <image:title>VESTIGIA Aurelius Oversized Tee - Black</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://thevestigia.com/uploads/1784373366893-vestigia-black-oversized-tshirt-model-back.png</image:loc>
+      <image:title>VESTIGIA Aurelius Oversized Tee - Black</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://thevestigia.com/uploads/1784373369879-vestigia-black-oversized-tshirt-front.png</image:loc>
+      <image:title>VESTIGIA Aurelius Oversized Tee - Black</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://thevestigia.com/uploads/1784373372882-vestigia-black-oversized-tshirt-back.png</image:loc>
+      <image:title>VESTIGIA Aurelius Oversized Tee - Black</image:title>
     </image:image>
   </url>
   <url>
-    <loc>https://thevestigia.com/product/18</loc>
-    <lastmod>2026-09-13</lastmod>
+    <loc>https://thevestigia.com/product/vestigia-aurelius-oversized-tee-white</loc>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
       <image:loc>https://thevestigia.com/uploads/1784380538861-vestigia-white-oversized-tshirt-model-main.png</image:loc>
-      <image:title>VESTIGIA Aurelius Oversized Tee – White</image:title>
+      <image:title>VESTIGIA Aurelius Oversized Tee - White</image:title>
     </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
     <image:image>
-      <image:loc>https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>How to pack a five-piece capsule</image:title>
+      <image:loc>https://thevestigia.com/uploads/1784380541857-vestigia-white-oversized-tshirt-model-front.png</image:loc>
+      <image:title>VESTIGIA Aurelius Oversized Tee - White</image:title>
     </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
     <image:image>
-      <image:loc>https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>The quiet return of warm metal jewelry</image:title>
+      <image:loc>https://thevestigia.com/uploads/1784380546321-vestigia-white-oversized-tshirt-model-back.png</image:loc>
+      <image:title>VESTIGIA Aurelius Oversized Tee - White</image:title>
     </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
     <image:image>
-      <image:loc>https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=85</image:loc>
-      <image:title>Fabric notes: linen, poplin, rib knit</image:title>
+      <image:loc>https://thevestigia.com/uploads/1784380554561-vestigia-white-oversized-tshirt-front.png</image:loc>
+      <image:title>VESTIGIA Aurelius Oversized Tee - White</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://thevestigia.com/uploads/1784380549246-vestigia-white-oversized-tshirt-back.png</image:loc>
+      <image:title>VESTIGIA Aurelius Oversized Tee - White</image:title>
     </image:image>
   </url>
   <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
+    <loc>https://thevestigia.com/journal/1</loc>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>
@@ -240,78 +144,18 @@
     </image:image>
   </url>
   <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
+    <loc>https://thevestigia.com/journal/2</loc>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>
-      <image:loc>https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1200&q=85</image:loc>
+      <image:loc>https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&amp;fit=crop&amp;w=1200&amp;q=85</image:loc>
       <image:title>Rome to Colombo: A Design and Craft Exchange</image:title>
     </image:image>
   </url>
   <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://thevestigia.com/images/products/signature_model.png</image:loc>
-      <image:title>Restraint as a Concept: The Three-Piece Release</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://thevestigia.com/images/products/signature_detail.png</image:loc>
-      <image:title>The Architecture of Weight: Our 280 GSM Heavyweight Jersey</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1200&q=85</image:loc>
-      <image:title>Rome to Colombo: A Design and Craft Exchange</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://thevestigia.com/images/products/signature_model.png</image:loc>
-      <image:title>Restraint as a Concept: The Three-Piece Release</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://thevestigia.com/images/products/signature_detail.png</image:loc>
-      <image:title>The Architecture of Weight: Our 280 GSM Heavyweight Jersey</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <image:image>
-      <image:loc>https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1200&q=85</image:loc>
-      <image:title>Rome to Colombo: A Design and Craft Exchange</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://thevestigia.com/journal</loc>
-    <lastmod>2026-09-13</lastmod>
+    <loc>https://thevestigia.com/journal/3</loc>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>

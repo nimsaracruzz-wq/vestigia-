@@ -1,3 +1,5 @@
+import { useDialogFocus } from '../../hooks/useDialogFocus';
+import { useScrollLock } from "../../hooks/useScrollLock";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, X, Tag, ShoppingBag, ArrowRight } from "lucide-react";
@@ -5,33 +7,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../../context/CartContext";
 import { useCurrency } from "../../context/CurrencyContext";
 import { useAdmin } from "../../admin/AdminContext";
+import ProductImage from "./ProductImage";
+import EmptyBag from "./EmptyBag";
+import { Reveal, useEntrance, useDrawerEntrance } from "../../animation/Reveal";
+import { animationConfig, staggerDelay } from "../../animation/config";
+import { getProductPrice } from "../../utils/productMedia";
 
 type CartDrawerProps = {
   open: boolean;
   onClose: () => void;
 };
 
-// Spring config — fast entry, slight resistance on exit
-const DRAWER_SPRING = {
-  type: "spring" as const,
-  stiffness: 380,
-  damping: 36,
-  mass: 0.8,
-};
-
-const BACKDROP_VARIANTS = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-  exit: { opacity: 0, transition: { duration: 0.22 } },
-};
-
-const DRAWER_VARIANTS = {
-  hidden: { x: "100%" },
-  visible: { x: 0, transition: DRAWER_SPRING },
-  exit: { x: "100%", transition: { ...DRAWER_SPRING, stiffness: 260, damping: 30 } },
-};
-
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
+  useScrollLock(open);
+  useDialogFocus(open, onClose, '.cart-drawer');
+  const backdropEntrance = useEntrance("fade");
+  const drawerEntrance = useDrawerEntrance();
   const {
     cart,
     cartCount,
@@ -46,7 +37,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     removeFromCart,
   } = useCart();
   const { settings, products } = useAdmin();
-  const { formatPrice: money } = useCurrency();
+  const { formatPrice: money, currency } = useCurrency();
 
   const [promoInput, setPromoInput] = useState("");
 
@@ -57,15 +48,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     return liveProduct.inventory && liveProduct.inventory[stockKey] === 0;
   });
 
-  // Lock body scroll while drawer is open
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
 
   // Close on Escape
   useEffect(() => {
@@ -95,10 +77,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
           <motion.div
             key="cart-backdrop"
             className="cart-drawer-backdrop"
-            variants={BACKDROP_VARIANTS}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
+            {...backdropEntrance}
             onClick={onClose}
             aria-hidden="true"
           />
@@ -107,10 +86,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
           <motion.aside
             key="cart-drawer"
             className="cart-drawer"
-            variants={DRAWER_VARIANTS}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
+            {...drawerEntrance}
             aria-modal="true"
             role="dialog"
             aria-label="Shopping Cart"
@@ -136,9 +112,9 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
               {cart.length > 0 && settings.complimentaryShippingEnabled && (
                 <motion.div
                   className="cart-drawer__shipping-bar"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
                   <p className="cart-drawer__shipping-text">
@@ -151,8 +127,9 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                   <div className="cart-drawer__progress-track">
                     <motion.div
                       className="cart-drawer__progress-fill"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPercent}%` }}
+                      style={{ width: "100%", transformOrigin: "left" }}
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: progressPercent / 100 }}
                       transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                   </div>
@@ -163,15 +140,9 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
             {/* Items */}
             <div className="cart-drawer__items">
               {cart.length === 0 ? (
-                <div className="cart-drawer__empty">
-                  <ShoppingBag size={40} strokeWidth={1.2} />
-                  <p>Your bag is empty.</p>
-                  <Link to="/shop" onClick={onClose} className="cart-drawer__shop-link">
-                    Shop the First Release <ArrowRight size={14} />
-                  </Link>
-                </div>
+                <EmptyBag variant="drawer" onNavigate={onClose} />
               ) : (
-                <AnimatePresence initial={false}>
+                <AnimatePresence>
                   {cart.map((item, index) => {
                     const liveProduct = products.find(p => p.id === item.product.id);
                     const isDeleted = !liveProduct;
@@ -180,18 +151,15 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                     const isUnavailable = isDeleted || isOutOfStock;
 
                     return (
-                      <motion.article
+                      <Reveal as="article" duration={animationConfig.duration.fast} delay={staggerDelay(index, 0.05)}
                         key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}-${index}`}
                         className="cart-drawer__item"
                         style={isUnavailable ? { borderLeft: "3px solid #dc2626", paddingLeft: "10px" } : {}}
-                        initial={{ opacity: 0, x: 30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 30, height: 0, marginBottom: 0, overflow: "hidden" }}
-                        transition={{ duration: 0.22 }}
+                        exit={{ opacity: 0 }}
                         layout
                       >
                         <div className="cart-drawer__item-img-wrap" style={isUnavailable ? { opacity: 0.5 } : {}}>
-                          <img src={item.product.image} alt={item.product.alt} />
+                          <ProductImage product={item.product} variant="product" />
                         </div>
                         <div className="cart-drawer__item-info">
                           <div className="cart-drawer__item-top">
@@ -243,10 +211,10 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                                 <Plus size={12} />
                               </button>
                             </div>
-                            <span className="cart-drawer__item-price" style={isUnavailable ? { color: "#888" } : {}}>{money(item.product.price * item.quantity)}</span>
+                            <span className="cart-drawer__item-price" style={isUnavailable ? { color: "#888" } : {}}>{money(getProductPrice(item.product, currency) * item.quantity)}</span>
                           </div>
                         </div>
-                      </motion.article>
+                      </Reveal>
                     );
                   })}
                 </AnimatePresence>

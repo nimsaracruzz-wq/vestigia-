@@ -1,3 +1,5 @@
+import { RevealOverlay, RevealModal, Reveal, RevealGroup } from "../animation/Reveal";
+import { moneyLabel, formatMajor } from "../utils/money";
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
@@ -11,6 +13,8 @@ import { useAdmin } from "../admin/AdminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
 import { products, type Product } from "../data";
+import ProductImage from "../components/common/ProductImage";
+import { getProductImage, resolveProductImageUrl, PRODUCT_IMAGE_PLACEHOLDER } from "../utils/productMedia";
 import {
   COUNTRY_PHONE_OPTIONS,
   detectVisitorCountry,
@@ -121,7 +125,7 @@ function resolveOrderItemImage(item: any, adminProducts: Product[] = []): string
 
   if (item.productId) {
     const byId = allProducts.find((p) => String(p.id) === String(item.productId));
-    if (byId?.image) return byId.image;
+    if (byId) return getProductImage(byId);
   }
 
   if (item.productName) {
@@ -129,7 +133,7 @@ function resolveOrderItemImage(item: any, adminProducts: Product[] = []): string
     const byName = allProducts.find(
       (p) => p.name.trim().toLowerCase() === cleanName || cleanName.includes(p.name.trim().toLowerCase())
     );
-    if (byName?.image) return byName.image;
+    if (byName) return getProductImage(byName);
   }
 
   return "";
@@ -154,20 +158,16 @@ function OrderDetailsModal({
   if (!order) return null;
 
   const items = order.items ?? [];
-  const subtotal = order.subtotal ?? items.reduce((acc: number, it: any) => acc + (it.price * (it.quantity || 1)), 0);
-  const shipping = order.shipping ?? 15;
-  const tax = order.tax ?? (subtotal * 0.08);
-  const total = order.total ?? (subtotal + shipping + tax);
+  const subtotal = order.subtotal;
+  const shipping = order.shipping;
+  const tax = order.tax;
+  const total = order.total;
 
   return (
-    <div className="modal-backdrop-overlay" onClick={onClose}>
-      <motion.div
+    <RevealOverlay className="modal-backdrop-overlay" onClick={onClose}>
+      <RevealModal
         className="order-modal-card"
         onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        transition={{ duration: 0.2 }}
       >
         <div className="order-modal-header">
           <div>
@@ -198,7 +198,7 @@ function OrderDetailsModal({
 
             <div className="meta-box">
               <h4><ShieldCheck size={15} /> Order Information</h4>
-              <p><span>Payment Status:</span> <strong>Paid / Confirmed</strong></p>
+              <p><span>Payment Status:</span> <strong>{order.paymentStatus}</strong></p>
               <p><span>Payment Method:</span> <strong>{order.paymentMethod || "Credit Card (Stripe)"}</strong></p>
               <p><span>Fulfillment:</span> <strong>{formatStatus(order.status || "Processing")}</strong></p>
               {["shipped", "delivered"].includes((order.status || "").toLowerCase()) && (
@@ -226,7 +226,14 @@ function OrderDetailsModal({
                   <div key={idx} className="modal-item-row">
                     <div className="modal-item-thumb">
                       {imgUrl ? (
-                        <img src={imgUrl} alt={item.productName || "Item"} />
+                        <img
+                          src={resolveProductImageUrl(imgUrl)}
+                          alt={item.productName || "Item"}
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = PRODUCT_IMAGE_PLACEHOLDER;
+                          }}
+                        />
                       ) : (
                         <Package size={20} />
                       )}
@@ -244,7 +251,7 @@ function OrderDetailsModal({
                       </p>
                     </div>
                     <div className="modal-item-pricing">
-                      <span className="unit-p">{money(item.price)} each</span>
+                      <span className="unit-p">{moneyLabel(item.unitPriceMinor, order.currency)} each</span>
                       <strong className="total-p">{money((item.price || 0) * (item.quantity || 1))}</strong>
                     </div>
                   </div>
@@ -257,7 +264,7 @@ function OrderDetailsModal({
           <div className="order-modal-summary-box">
             <div className="summary-row"><span>Subtotal</span><span>{money(subtotal)}</span></div>
             <div className="summary-row"><span>Shipping</span><span>{shipping === 0 ? "Complimentary" : money(shipping)}</span></div>
-            <div className="summary-row"><span>Tax (8%)</span><span>{money(tax)}</span></div>
+            <div className="summary-row"><span>Tax</span><span>{money(tax)}</span></div>
             <div className="summary-row grand-total"><span>Grand Total</span><strong>{money(total)}</strong></div>
           </div>
         </div>
@@ -270,8 +277,8 @@ function OrderDetailsModal({
             <RotateCcw size={15} /> Reorder Items
           </button>
         </div>
-      </motion.div>
-    </div>
+      </RevealModal>
+    </RevealOverlay>
   );
 }
 
@@ -288,23 +295,20 @@ function OrderInvoiceModal({
   if (!order) return null;
 
   const items = order.items ?? [];
-  const subtotal = order.subtotal ?? items.reduce((acc: number, it: any) => acc + (it.price * (it.quantity || 1)), 0);
-  const shipping = order.shipping ?? 15;
-  const tax = order.tax ?? (subtotal * 0.08);
-  const total = order.total ?? (subtotal + shipping + tax);
+  const subtotal = order.subtotal;
+  const shipping = order.shipping;
+  const tax = order.tax;
+  const total = order.total;
 
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="modal-backdrop-overlay invoice-overlay" onClick={onClose}>
-      <motion.div
+    <RevealOverlay className="modal-backdrop-overlay invoice-overlay" onClick={onClose}>
+      <RevealModal
         className="invoice-modal-card"
         onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
       >
         <div className="no-print invoice-modal-header">
           <h3>Official Order Invoice</h3>
@@ -382,7 +386,7 @@ function OrderInvoiceModal({
                         .join(" / ") || "Standard"}
                     </td>
                     <td style={{ textAlign: "center" }}>{item.quantity || 1}</td>
-                    <td style={{ textAlign: "right" }}>{money(item.price)}</td>
+                    <td style={{ textAlign: "right" }}>{moneyLabel(item.unitPriceMinor, order.currency)}</td>
                     <td style={{ textAlign: "right" }}>{money((item.price || 0) * (item.quantity || 1))}</td>
                   </tr>
                 ))}
@@ -398,20 +402,20 @@ function OrderInvoiceModal({
               <div className="inv-totals-box">
                 <div className="tot-row"><span>Subtotal:</span><span>{money(subtotal)}</span></div>
                 <div className="tot-row"><span>Shipping:</span><span>{shipping === 0 ? "Complimentary" : money(shipping)}</span></div>
-                <div className="tot-row"><span>Sales Tax (8%):</span><span>{money(tax)}</span></div>
+                <div className="tot-row"><span>Sales Tax:</span><span>{money(tax)}</span></div>
                 <hr />
                 <div className="tot-row final-grand"><span>Total Paid:</span><strong>{money(total)}</strong></div>
               </div>
             </div>
           </div>
         </div>
-      </motion.div>
-    </div>
+      </RevealModal>
+    </RevealOverlay>
   );
 }
 
 export default function Account() {
-  const { formatPrice: money } = useCurrency();
+  const { formatPrice: money, currency } = useCurrency();
   const { products: adminProducts } = useAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab") as Tab;
@@ -508,7 +512,7 @@ export default function Account() {
 
   const getProductImageByName = (name: string) => {
     const matched = products.find((p) => p.name.toLowerCase() === name.toLowerCase());
-    return matched?.image || "";
+    return matched ? getProductImage(matched) : "";
   };
 
   const handleMoveToCart = (product: Product) => {
@@ -531,8 +535,9 @@ export default function Account() {
         name: item.productName || "Apparel Item",
         price: item.price || 0,
         category: "Clothing",
-        image: item.image || getProductImageByName(item.productName) || "/placeholder.jpg",
-        images: [item.image || getProductImageByName(item.productName) || "/placeholder.jpg"],
+        image: item.image || getProductImageByName(item.productName) || PRODUCT_IMAGE_PLACEHOLDER,
+        productImage: item.image || getProductImageByName(item.productName) || PRODUCT_IMAGE_PLACEHOLDER,
+        images: [item.image || getProductImageByName(item.productName) || PRODUCT_IMAGE_PLACEHOLDER],
         alt: item.productName || "Item",
         sizes: [item.size || "M"],
         colors: [item.color || "#000000"],
@@ -649,8 +654,8 @@ export default function Account() {
   // ── Reset Password view ────────────────────────────────────────────────────
   if (tokenParam && !isAuthenticated) {
     return (
-      <motion.div className="account-page-container auth-page" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <div className="auth-card-container">
+      <div className="account-page-container auth-page">
+        <Reveal className="auth-card-container">
           <div className="auth-card-header">
             <h2>Reset Password</h2>
             <p>Enter your new password below.</p>
@@ -681,19 +686,19 @@ export default function Account() {
               Back to Login
             </button>
           </div>
-        </div>
-      </motion.div>
+        </Reveal>
+      </div>
     );
   }
 
   // ── Auth view ──────────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
-      <motion.div className="account-page-container auth-page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
-        <div className="auth-card-container">
+      <div className="account-page-container auth-page">
+        <Reveal className="auth-card-container">
           <AnimatePresence mode="wait">
             {authScreen === "login" && (
-              <motion.div key="login" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.22 }}>
+              <Reveal trigger="mount" variant="fade" key="login">
                 <div className="auth-card-header">
                   <h2>Welcome to VESTIGIA</h2>
                   <p>Access your orders and account settings.</p>
@@ -728,11 +733,11 @@ export default function Account() {
                   <span>Don't have an account?</span>
                   <button onClick={() => setAuthScreen("register")} className="auth-toggle-link">Create one</button>
                 </div>
-              </motion.div>
+              </Reveal>
             )}
 
             {authScreen === "register" && (
-              <motion.div key="register" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.22 }}>
+              <Reveal trigger="mount" variant="fade" key="register">
                 <div className="auth-card-header">
                   <h2>Create Account</h2>
                   <p>Register to unlock premium member benefits.</p>
@@ -812,11 +817,11 @@ export default function Account() {
                   <span>Already have an account?</span>
                   <button onClick={() => setAuthScreen("login")} className="auth-toggle-link">Log In</button>
                 </div>
-              </motion.div>
+              </Reveal>
             )}
 
             {authScreen === "forgot" && (
-              <motion.div key="forgot" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.22 }}>
+              <Reveal trigger="mount" variant="fade" key="forgot">
                 <div className="auth-card-header">
                   <h2>Forgot Password</h2>
                   <p>Provide your email to receive recovery instructions.</p>
@@ -843,11 +848,11 @@ export default function Account() {
                 <div className="auth-card-footer">
                   <button onClick={() => setAuthScreen("login")} className="auth-toggle-link">← Back to Log In</button>
                 </div>
-              </motion.div>
+              </Reveal>
             )}
           </AnimatePresence>
-        </div>
-      </motion.div>
+        </Reveal>
+      </div>
     );
   }
 
@@ -867,10 +872,10 @@ export default function Account() {
 
   // ── Authenticated Dashboard ────────────────────────────────────────────────
   return (
-    <motion.div className="account-page-container" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
+    <div className="account-page-container">
 
       {/* ── Account Header ── */}
-      <div className="account-header-v2">
+      <Reveal className="account-header-v2">
         <div className="account-header-identity">
           <MonogramAvatar name={fullName} />
           <div className="account-header-text">
@@ -895,7 +900,7 @@ export default function Account() {
             <span className="account-stat-label">{savedAddresses === 1 ? "Address" : "Addresses"}</span>
           </div>
         </div>
-      </div>
+      </Reveal>
 
       {/* ── Mobile Tab Bar ── */}
       <nav className="account-mobile-tabs" aria-label="Account navigation">
@@ -947,37 +952,30 @@ export default function Account() {
 
             {/* ── Orders Tab ── */}
             {activeTab === "orders" && (
-              <motion.section
+              <section
                 key="orders"
                 className="account-pane-section"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.18 }}
               >
-                <div className="pane-section-header">
+                <Reveal className="pane-section-header">
                   <h2 className="pane-section-title">Order History</h2>
                   {orders.length > 0 && <span className="pane-section-count">{orders.length} {orders.length === 1 ? "order" : "orders"}</span>}
-                </div>
+                </Reveal>
 
                 {ordersLoading ? (
                   <OrderSkeleton />
                 ) : orders.length === 0 ? (
-                  <div className="account-empty-state">
+                  <Reveal className="account-empty-state">
                     <ShoppingBag size={36} strokeWidth={1} className="empty-state-icon" />
                     <p>You haven't placed any orders yet.</p>
                     <Link to="/shop" className="empty-state-cta">Shop the Collection</Link>
-                  </div>
+                  </Reveal>
                 ) : (
-                  <div className="orders-history-list">
+                  <RevealGroup className="orders-history-list">
                     {orders.map((order) => (
-                      <motion.article
+                      <Reveal as="article"
                         className="order-history-card"
                         key={order.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
                         whileHover={{ y: -2, boxShadow: "0 8px 32px rgba(23,20,18,0.07)" }}
-                        transition={{ duration: 0.2 }}
                       >
                         {/* Card Header */}
                         <div className="order-card-header">
@@ -998,10 +996,14 @@ export default function Account() {
                                 <div className="order-item-thumb-wrap">
                                   {resolveOrderItemImage(item, adminProducts) ? (
                                     <img
-                                      src={resolveOrderItemImage(item, adminProducts)}
+                                      src={resolveProductImageUrl(resolveOrderItemImage(item, adminProducts))}
                                       alt={item.productName || "Product"}
                                       className="order-item-thumbnail"
                                       loading="lazy"
+                                      onError={(event) => {
+                                        event.currentTarget.onerror = null;
+                                        event.currentTarget.src = PRODUCT_IMAGE_PLACEHOLDER;
+                                      }}
                                     />
                                   ) : (
                                     <div className="order-item-thumb-placeholder">
@@ -1024,7 +1026,7 @@ export default function Account() {
                                   </p>
                                 </div>
                               </div>
-                              <span className="order-item-price">{money(item.price)}</span>
+                              <span className="order-item-price">{money(item.prices?.[currency] ? item.prices[currency]!.priceMinor / (currency === "JPY" ? 1 : 100) : NaN)}</span>
                             </div>
                           ))}
                         </div>
@@ -1033,7 +1035,7 @@ export default function Account() {
                         <div className="order-card-footer">
                           <div className="order-card-total">
                             <span>Total</span>
-                            <strong>{money(order.total)}</strong>
+                            <strong>{moneyLabel(order.totalMinor, order.currency)}</strong>
                           </div>
                           <div className="order-card-actions">
                             <button
@@ -1080,45 +1082,39 @@ export default function Account() {
                             </button>
                           </div>
                         </div>
-                      </motion.article>
+                      </Reveal>
                     ))}
-                  </div>
+                  </RevealGroup>
                 )}
-              </motion.section>
+              </section>
             )}
 
             {/* ── Wishlist Tab ── */}
             {activeTab === "wishlist" && (
-              <motion.section
+              <section
                 key="wishlist"
                 className="account-pane-section"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.18 }}
               >
-                <div className="pane-section-header">
+                <Reveal className="pane-section-header">
                   <h2 className="pane-section-title">My Wishlist</h2>
                   {wishlist.length > 0 && <span className="pane-section-count">{wishlist.length} {wishlist.length === 1 ? "item" : "items"}</span>}
-                </div>
+                </Reveal>
                 {wishlist.length === 0 ? (
-                  <div className="account-empty-state">
+                  <Reveal className="account-empty-state">
                     <Heart size={36} strokeWidth={1} className="empty-state-icon" />
                     <p>Your wishlist is empty. Save items you love while browsing.</p>
                     <Link to="/shop" className="empty-state-cta">Shop the Collection</Link>
-                  </div>
+                  </Reveal>
                 ) : (
-                  <div className="wishlist-items-grid">
+                  <RevealGroup className="wishlist-items-grid">
                     {wishlist.map((item) => (
-                      <motion.article
+                      <Reveal as="article"
                         className="wishlist-item-card"
                         key={item.id}
                         layout
-                        exit={{ opacity: 0, scale: 0.92 }}
-                        transition={{ duration: 0.22 }}
                       >
                         <div className="item-media">
-                          <img src={item.image} alt={item.alt} loading="lazy" />
+                          <ProductImage product={item} variant="shop" loading="lazy" />
                           <button
                             className="wishlist-remove-icon-btn"
                             type="button"
@@ -1130,7 +1126,7 @@ export default function Account() {
                         </div>
                         <div className="item-info">
                           <h3>{item.name}</h3>
-                          <strong>{money(item.price)}</strong>
+                          <strong>{money(item.prices?.[currency] ? item.prices[currency]!.priceMinor / (currency === "JPY" ? 1 : 100) : NaN)}</strong>
                           <div className="wishlist-actions-row">
                             <button className="wishlist-move-btn" type="button" onClick={() => handleMoveToCart(item)}>
                               Add to Bag
@@ -1138,35 +1134,31 @@ export default function Account() {
                             <Link className="wishlist-view-btn" to={`/product/${item.id}`}>View</Link>
                           </div>
                         </div>
-                      </motion.article>
+                      </Reveal>
                     ))}
-                  </div>
+                  </RevealGroup>
                 )}
-              </motion.section>
+              </section>
             )}
 
             {/* ── Addresses Tab ── */}
             {activeTab === "addresses" && (
-              <motion.section
+              <section
                 key="addresses"
                 className="account-pane-section"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.18 }}
               >
-                <div className="pane-section-header">
+                <Reveal className="pane-section-header">
                   <h2 className="pane-section-title">Saved Addresses</h2>
-                </div>
-                <div className="addresses-cards-grid">
+                </Reveal>
+                <RevealGroup className="addresses-cards-grid">
                   {(user?.addresses ?? []).length === 0 ? (
-                    <div className="account-empty-state" style={{ gridColumn: "span 2" }}>
+                    <Reveal className="account-empty-state" style={{ gridColumn: "span 2" }}>
                       <MapPin size={36} strokeWidth={1} className="empty-state-icon" />
                       <p>No saved addresses yet.</p>
-                    </div>
+                    </Reveal>
                   ) : (
                     (user?.addresses ?? []).map((addr: Address) => (
-                      <article className={`address-card${addr.isDefault ? " default" : ""}`} key={addr.id}>
+                      <Reveal as="article" className={`address-card${addr.isDefault ? " default" : ""}`} key={addr.id}>
                         {addr.isDefault && <span className="address-badge">Default</span>}
                         <h3>{addr.name}</h3>
                         <p>{addr.line1}</p>
@@ -1182,28 +1174,24 @@ export default function Account() {
                             Remove
                           </button>
                         </div>
-                      </article>
+                      </Reveal>
                     ))
                   )}
-                </div>
+                </RevealGroup>
                 <AddAddressButton addAddress={addAddress} />
-              </motion.section>
+              </section>
             )}
 
             {/* ── Profile Tab ── */}
             {activeTab === "profile" && (
-              <motion.section
+              <section
                 key="profile"
                 className="account-pane-section"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.18 }}
               >
-                <div className="pane-section-header">
+                <Reveal className="pane-section-header">
                   <h2 className="pane-section-title">Personal Information</h2>
-                </div>
-                <form className="profile-form-grid" onSubmit={(e) => e.preventDefault()}>
+                </Reveal>
+                <Reveal as="form" variant="fade" className="profile-form-grid" onSubmit={(e) => e.preventDefault()}>
                   <div className="form-input-box">
                     <label htmlFor="prof-fname">First Name</label>
                     <input id="prof-fname" type="text" defaultValue={user?.firstName || ""} />
@@ -1234,14 +1222,14 @@ export default function Account() {
                   >
                     Save Changes
                   </button>
-                </form>
+                </Reveal>
 
                 <div className="profile-section-divider" />
 
-                <div className="pane-section-header">
+                <Reveal className="pane-section-header">
                   <h2 className="pane-section-title">Security</h2>
-                </div>
-                <form onSubmit={handleChangePasswordSubmit} className="profile-form-grid" style={{ maxWidth: "560px" }}>
+                </Reveal>
+                <Reveal as="form" variant="fade" onSubmit={handleChangePasswordSubmit} className="profile-form-grid" style={{ maxWidth: "560px" }}>
                   {changePwdError && <div className="auth-error-alert" style={{ gridColumn: "span 2" }} role="alert">{changePwdError}</div>}
                   {changePwdMessage && <div className="auth-success-alert" style={{ gridColumn: "span 2" }} role="status">{changePwdMessage}</div>}
                   <div className="form-input-box full-width">
@@ -1259,8 +1247,8 @@ export default function Account() {
                   <button type="submit" className="save-profile-btn" disabled={formLoading}>
                     {formLoading ? "Updating…" : "Update Password"}
                   </button>
-                </form>
-              </motion.section>
+                </Reveal>
+              </section>
             )}
 
           </AnimatePresence>
@@ -1278,7 +1266,7 @@ export default function Account() {
               setSelectedOrderDetail(null);
               setSelectedInvoice(ord);
             }}
-            money={money}
+            money={(value) => formatMajor(value, (selectedInvoice || selectedOrderDetail)?.currency)}
             adminProducts={adminProducts}
           />
         )}
@@ -1290,11 +1278,11 @@ export default function Account() {
           <OrderInvoiceModal
             order={selectedInvoice}
             onClose={() => setSelectedInvoice(null)}
-            money={money}
+            money={(value) => formatMajor(value, (selectedInvoice || selectedOrderDetail)?.currency)}
           />
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1334,20 +1322,12 @@ function AddAddressButton({ addAddress }: AddAddressButtonProps) {
 
       <AnimatePresence>
         {showForm && (
-          <motion.div
+          <RevealOverlay
             className="address-form-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
             onClick={() => setShowForm(false)}
           >
-            <motion.div
+            <RevealModal
               className="address-form-modal"
-              initial={{ scale: 0.94, opacity: 0, y: 16 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 16 }}
-              transition={{ duration: 0.22 }}
               onClick={(e) => e.stopPropagation()}
             >
               <h3>Add New Address</h3>
@@ -1375,8 +1355,8 @@ function AddAddressButton({ addAddress }: AddAddressButtonProps) {
                   <button type="button" className="form-cancel-btn" onClick={() => setShowForm(false)}>Cancel</button>
                 </div>
               </form>
-            </motion.div>
-          </motion.div>
+            </RevealModal>
+          </RevealOverlay>
         )}
       </AnimatePresence>
     </>

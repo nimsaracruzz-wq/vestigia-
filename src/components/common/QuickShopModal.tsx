@@ -1,9 +1,15 @@
-import { useState, useEffect } from "react";
+import { useDialogFocus } from '../../hooks/useDialogFocus';
+import { RevealOverlay, RevealModal } from "../../animation/Reveal";
+import { useScrollLock } from "../../hooks/useScrollLock";
+import { useState, useEffect, useRef } from "react";
 import { X, Check, ShoppingBag } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
+import { isProductInStock, variantStock } from '../../../shared/shop';
 import { useCart } from "../../context/CartContext";
 import { type Product } from "../../data";
 import { useCurrency } from "../../context/CurrencyContext";
+import ProductImage from "./ProductImage";
+import { getProductPrice } from "../../utils/productMedia";
 
 type QuickShopProps = {
   product: Product | null;
@@ -11,8 +17,11 @@ type QuickShopProps = {
 };
 
 export default function QuickShopModal({ product, onClose }: QuickShopProps) {
-  const { addToCart, openCart } = useCart();
-  const { formatPrice: money } = useCurrency();
+  useScrollLock(!!product);
+  useDialogFocus(!!product, onClose, '.qs-modal');
+  const { addToCart, openCart, cart } = useCart();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const { formatPrice: money, currency } = useCurrency();
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [error, setError] = useState("");
@@ -21,7 +30,7 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
   // Reset local states when product changes
   useEffect(() => {
     if (product) {
-      setSelectedColor(product.colors[0] || "");
+      setSelectedColor(product.colors.find(c => product.sizes.some(s => variantStock(product,c,s)>0)) || product.colors[0] || "");
       if (product.sizes.length === 1 && product.sizes[0] === "OS") {
         setSelectedSize("OS");
       } else {
@@ -30,6 +39,7 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
       setError("");
       setAdded(false);
     }
+    return () => clearTimeout(timer.current);
   }, [product]);
 
   // Close on Escape
@@ -41,16 +51,22 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
   }, [product, onClose]);
 
   if (!product) return null;
+  const inStock = isProductInStock(product);
+  const price = product.prices?.[currency];
+  const availablePrice = !!price && price.isActive !== false && !!price.priceListId;
 
   const handleAddToCart = () => {
+    if (added || !availablePrice || !inStock) return;
     if (!selectedSize) {
       setError("Please select a size.");
       return;
     }
+    const quantity = cart.find(item => item.product.id===product.id && item.selectedSize===selectedSize && item.selectedColor===selectedColor)?.quantity || 0;
+    if (variantStock(product,selectedColor,selectedSize) <= quantity) { setError('This size is unavailable or all remaining pieces are already in your bag.'); return; }
     addToCart(product, selectedSize, selectedColor);
     setAdded(true);
     // Close modal and open cart after a brief confirmation flash
-    setTimeout(() => {
+    timer.current = setTimeout(() => {
       onClose();
       openCart();
     }, 650);
@@ -58,21 +74,13 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
 
   return (
     <AnimatePresence>
-      <motion.div
+      <RevealOverlay
         className="qs-backdrop"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.22 }}
         onClick={onClose}
         role="presentation"
       >
-        <motion.section
+        <RevealModal
           className="qs-modal"
-          initial={{ scale: 0.96, opacity: 0, y: 24 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.96, opacity: 0, y: 24 }}
-          transition={{ type: "spring", stiffness: 340, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
@@ -90,14 +98,14 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
 
           {/* Product image */}
           <div className="qs-image">
-            <img src={product.image} alt={product.alt} />
+            <ProductImage product={product} variant="shop" />
           </div>
 
           {/* Details */}
           <div className="qs-details">
             <p className="qs-category">{product.category}</p>
             <h2 id="qs-title" className="qs-name">{product.name}</h2>
-            <p className="qs-price">{money(product.price)}</p>
+            <p className="qs-price">{availablePrice ? money(getProductPrice(product, currency)) : 'Unavailable in this currency'}</p>
 
             {/* Color swatches */}
             <div className="qs-option-group">
@@ -109,7 +117,9 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
                     type="button"
                     className={`qs-swatch ${selectedColor === color ? "active" : ""}`}
                     style={{ backgroundColor: color }}
-                    onClick={() => setSelectedColor(color)}
+                    disabled={!product.sizes.some(s => variantStock(product,color,s)>0)}
+                    aria-pressed={selectedColor===color}
+                    onClick={() => { setSelectedColor(color); if (variantStock(product,color,selectedSize)<=0) setSelectedSize(product.sizes.length===1&&product.sizes[0]==='OS'?'OS':''); setError(''); }}
                     aria-label={`Select color ${color}`}
                   />
                 ))}
@@ -126,6 +136,8 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
                       key={size}
                       type="button"
                       className={`qs-size-btn ${selectedSize === size ? "active" : ""}`}
+                      disabled={variantStock(product,selectedColor,size)<=0}
+                      aria-pressed={selectedSize===size}
                       onClick={() => {
                         setSelectedSize(size);
                         setError("");
@@ -145,7 +157,7 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
               className={`qs-add-btn ${added ? "added" : ""}`}
               type="button"
               onClick={handleAddToCart}
-              disabled={added}
+              disabled={added || !inStock || !availablePrice}
             >
               {added ? (
                 <span className="qs-btn-inner">
@@ -153,13 +165,13 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
                 </span>
               ) : (
                 <span className="qs-btn-inner">
-                  <ShoppingBag size={16} /> Add to Bag
+                  <ShoppingBag size={16} /> {!inStock ? 'Sold out' : !availablePrice ? 'Unavailable' : 'Add to Bag'}
                 </span>
               )}
             </button>
           </div>
-        </motion.section>
-      </motion.div>
+        </RevealModal>
+      </RevealOverlay>
     </AnimatePresence>
   );
 }

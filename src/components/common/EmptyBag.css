@@ -1,0 +1,42 @@
+.empty-bag { color: #24211d; background: #f7f5f0; }
+.empty-bag--page { min-height: 100svh; padding: 0 clamp(20px, 5vw, 80px) 48px; }
+.empty-bag__header { max-width: 1240px; margin: 0 auto; min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid #e1ddd4; }
+.empty-bag__brand { font-family: Georgia, serif; font-size: 1.3rem; letter-spacing: .16em; }
+.empty-bag__back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: .8rem; color: #625c53; }
+.empty-bag__layout { max-width: 1160px; margin: clamp(24px, 5vw, 64px) auto 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+.empty-bag__content { padding: clamp(32px, 5vw, 72px) clamp(20px, 4vw, 56px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.empty-bag__icon { width: 76px; height: 76px; border: 1px solid #d7cebf; border-radius: 50%; display: grid; place-items: center; margin-bottom: 30px; color: #8d7654; }
+.empty-bag__eyebrow { margin: 0 0 16px; font-size: .62rem; font-weight: 600; letter-spacing: .16em; line-height: 1.7; text-transform: uppercase; color: #80725e; }
+.empty-bag__content :is(h1, h2) { margin: 0; font-family: Georgia, serif; font-size: clamp(2rem, 3.5vw, 3.2rem); line-height: 1.15; font-weight: 400; letter-spacing: -.04em; }
+.empty-bag__description { max-width: 290px; margin: 20px 0 28px; font-size: .92rem; line-height: 1.8; color: #726c62; }
+.empty-bag__shop { display: flex; align-items: center; justify-content: center; gap: 20px; width: 100%; max-width: 320px; min-height: 52px; padding: 14px 20px; background: #24211d; color: #fff; font-size: .8rem; line-height: 1.5; transition: background .2s ease; }
+.empty-bag__shop svg { flex-shrink: 0; }
+.empty-bag__shop:hover { background: #4b4236; }
+.empty-bag__story { min-height: 44px; display: inline-flex; align-items: center; margin-top: 8px; font-size: .78rem; color: #726c62; text-decoration: underline; text-underline-offset: 4px; }
+.empty-bag__signature { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; width: 100%; padding-top: 24px; margin-top: 30px; border-top: 1px solid #e1ddd4; font-size: .58rem; text-transform: uppercase; letter-spacing: .12em; line-height: 1.6; color: #847a6c; }
+.empty-bag__editorial { display: block; position: relative; min-width: 0; min-height: 540px; overflow: hidden; background: #4f5047; }
+.empty-bag__editorial img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.empty-bag__editorial::after { content: ""; position: absolute; inset: 45% 0 0; background: linear-gradient(transparent, rgb(0 0 0 / .65)); }
+.empty-bag__caption { position: absolute; inset: auto 32px 32px; z-index: 1; color: #fff; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+.empty-bag__caption span { grid-column: 1 / -1; font-size: .65rem; text-transform: uppercase; letter-spacing: .18em; }
+.empty-bag__caption strong { font-family: Georgia, serif; font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 400; }
+.empty-bag__caption svg { align-self: center; }
+.empty-bag--drawer { margin-block: auto; }
+.empty-bag--drawer .empty-bag__layout { display: block; margin: 0; }
+.empty-bag--drawer .empty-bag__content { padding: 40px 20px 28px; }
+.empty-bag--drawer .empty-bag__content h2 { font-size: 2rem; }
+.empty-bag--drawer .empty-bag__signature { margin-top: 24px; }
+
+@media (max-width: 720px) {
+  .empty-bag--page { padding: 0 16px max(24px, env(safe-area-inset-bottom)); }
+  .empty-bag__header { min-height: 72px; gap: 12px; }
+  .empty-bag__brand { font-size: 1.1rem; }
+  .empty-bag__layout { grid-template-columns: minmax(0, 1fr); margin-top: 8px; }
+  .empty-bag__content { padding: 32px 16px; }
+  .empty-bag__icon { width: 64px; height: 64px; margin-bottom: 24px; }
+  .empty-bag__description { margin-top: 16px; }
+  .empty-bag__signature { margin-top: 20px; padding-top: 20px; }
+  .empty-bag__editorial { min-height: 0; aspect-ratio: 4 / 3; }
+  .empty-bag__editorial img { object-position: center 36%; }
+  .empty-bag__caption { inset: auto 20px 20px; }
+}

@@ -1,5 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useReveal } from "../../animation/Reveal";
+import { animationConfig, staggerDelay } from "../../animation/config";
 
 interface GalleryThumbnailProps {
   images: string[];
@@ -10,6 +12,7 @@ interface GalleryThumbnailProps {
 
 export const GalleryThumbnail: React.FC<GalleryThumbnailProps> = React.memo(
   ({ images, activeIndex, onSelect, altPrefix }) => {
+    const entrance = useReveal({ variant: "fade" });
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -18,7 +21,7 @@ export const GalleryThumbnail: React.FC<GalleryThumbnailProps> = React.memo(
       const activeThumb = thumbRefs.current[activeIndex];
       if (activeThumb && scrollContainerRef.current) {
         activeThumb.scrollIntoView({
-          behavior: "smooth",
+          behavior: entrance.transition.duration === 0 ? "instant" : "smooth",
           block: "nearest",
           inline: "center",
         });
@@ -33,7 +36,9 @@ export const GalleryThumbnail: React.FC<GalleryThumbnailProps> = React.memo(
           {images.map((img, idx) => {
             const isActive = activeIndex === idx;
             return (
-              <button
+              <motion.button
+                {...entrance}
+                transition={{ ...entrance.transition, delay: entrance.transition.duration === 0 ? 0 : staggerDelay(idx) }}
                 key={idx}
                 ref={(el) => {
                   thumbRefs.current[idx] = el;
@@ -57,10 +62,10 @@ export const GalleryThumbnail: React.FC<GalleryThumbnailProps> = React.memo(
                   <motion.div
                     className="vst-thumbnail-active-border"
                     layoutId="vst-active-thumb-indicator"
-                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    transition={{ duration: animationConfig.duration.fast, ease: animationConfig.ease }}
                   />
                 )}
-              </button>
+              </motion.button>
             );
           })}
         </div>

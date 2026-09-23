@@ -15,6 +15,26 @@ model AdminUser {
   password String // hashed
 }
 
+model Homepage {
+  id                Int      @id @default(1)
+  draft             String
+  published         String
+  revision          Int      @default(1)
+  publishedRevision Int      @default(1)
+  publishedAt       DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String   @default("Migration")
+}
+
+model HomepageMedia {
+  url       String   @id
+  width     Int
+  height    Int
+  bytes     Int
+  mime      String
+  updatedAt DateTime @updatedAt
+}
+
 model OrderCounter {
   id    Int @id @default(1)
   year  Int
@@ -26,11 +46,16 @@ model Product {
   name        String
   slug        String?  @unique
   category    String
-  price       Float
+  productType String?
+  price       Float // Deprecated compatibility field; never a pricing source
+  basePriceMinor Int?
+  baseCurrency String?
   compareAt   Float?
   badge       String?
   colors      String   // stored as JSON array string
   image       String
+  modelImage  String?
+  productImage String?
   images      String   // stored as JSON array string
   alt         String
   sizes       String   // stored as JSON array string
@@ -42,10 +67,44 @@ model Product {
   seoTitle       String?
   seoDescription String?
   seoKeywords    String?
+  canonicalUrl   String?
+  robotsIndex    Boolean @default(true)
+  robotsFollow   Boolean @default(true)
+  brand          String  @default("Vestigia")
+  sku            String? @unique
+  gtin           String?
+  mpn            String?
+  condition      String  @default("new")
+  googleProductCategory String?
+  material       String?
+  gender         String?
+  ageGroup       String?
+  imageTitle     String?
+  redirectFrom   String? // stored as JSON array string
   
   reviews     Review[]
   orderItems  OrderItem[]
   inventory   Inventory[]
+  prices      ProductPrice[]
+}
+
+model ProductPrice {
+  id             Int      @id @default(autoincrement())
+  productId      Int
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  currency       String
+  priceListId    String?
+  priceVersion   Int @default(1)
+  mode           String @default("FIXED")
+  conversion     String?
+  priceMinor     Int
+  compareAtMinor Int?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([productId, currency])
+  @@index([currency])
 }
 
 model Inventory {
@@ -73,6 +132,8 @@ model Review {
 model Order {
   id                    String      @id // e.g. VST-2026-0001
   invoiceNumber         String?     // e.g. INV-2026-0001
+  customerId            Int?
+  customerRecord        Customer?   @relation(fields: [customerId], references: [id])
   customer              String
   email                 String
   phone                 String?
@@ -87,6 +148,19 @@ model Order {
   trackingNumber        String?
   courier               String?
   stripePaymentIntentId String?
+  currency              String
+  market                String?
+  priceListId           String?
+  priceListVersion      Int?
+  paymentStatus         String @default("REQUIRES_REVIEW")
+  pricingVersion        Int @default(0)
+  discountMinor         Int @default(0)
+  taxRateBps            Int?
+  checkoutId            String? @unique
+  subtotalMinor         Int      @default(0)
+  shippingMinor         Int      @default(0)
+  taxMinor              Int      @default(0)
+  totalMinor            Int      @default(0)
 
   shippingRegion        String?
   shippingCountry       String?
@@ -103,6 +177,12 @@ model Order {
   vatId                 String?
 
   items     OrderItem[]
+  payments  Payment[]
+  fraudReviews FraudReview[]
+
+  @@index([customerId])
+  @@index([email])
+  @@unique([stripePaymentIntentId])
 }
 
 model OrderItem {
@@ -117,16 +197,33 @@ model OrderItem {
   color       String
   quantity    Int
   price       Float
+  unitPriceMinor Int @default(0)
+  subtotalMinor  Int @default(0)
+  currency       String
+  skuSnapshot    String?
+  variantId      String?
+  priceListId    String?
+  priceVersion   Int?
+  discountMinor  Int @default(0)
+  taxMinor       Int @default(0)
+  totalMinor     Int @default(0)
 }
 
 model Customer {
   id               Int       @id @default(autoincrement())
   name             String
+  firstName        String?
+  lastName         String?
   email            String    @unique
   password         String?   // hashed, nullable for guest checkout & auto-created customers
+  passwordHash     String?   // canonical password hash for new auth flows
   phone            String?
+  country          String?
+  preferredMarket String?
+  preferredCurrency String?
   addresses        String?   // stored as JSON array string for backward compatibility
   savedAddresses   Address[]
+  orderRecords     Order[]
   orders           Int       @default(0)
   totalSpend       Float     @default(0)
   joined           String
@@ -135,13 +232,24 @@ model Customer {
   resetToken       String?
   resetTokenExpiry String?
   emailVerified    Boolean   @default(false)
+  emailVerifiedAt  DateTime?
   verificationCode String?
 
   customerType     String    @default("GUEST") // "REGISTERED" | "GUEST" | "AUTO_CREATED" | "MANUAL"
   activationStatus String    @default("GUEST") // "ACTIVATED" | "PENDING" | "GUEST"
+  accountStatus    String    @default("GUEST") // "GUEST" | "REGISTERED_UNVERIFIED" | "REGISTERED_VERIFIED" | "SUSPENDED" | "BANNED"
+  statusReason     String?
+  suspendedAt      DateTime?
+  bannedAt         DateTime?
   marketingConsent Boolean   @default(false)
   companyName      String?
   vatId            String?
+  verificationTokens VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  sessions         CustomerSession[]
+  securityEvents   SecurityEvent[]
+  emailChangeTokens EmailChangeToken[]
+  adminNotes       CustomerAdminNote[]
 }
 
 model Address {
@@ -171,21 +279,144 @@ model ActivationToken {
   customerId Int
   token      String   @unique
   expiresAt  DateTime
+  usedAt     DateTime?
   createdAt  DateTime @default(now())
 }
 
+model VerificationToken {
+  id         Int       @id @default(autoincrement())
+  customerId Int
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([customerId])
+}
+
 model PasswordResetToken {
+  id         Int       @id @default(autoincrement())
+  customerId Int
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  token      String?   @unique
+  tokenHash  String?   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([customerId])
+}
+
+model CustomerSession {
+  id               Int       @id @default(autoincrement())
+  customerId       Int
+  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sessionTokenHash String    @unique
+  csrfTokenHash    String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  revokeReason     String?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime  @default(now())
+  lastUsedAt       DateTime?
+
+  @@index([customerId])
+  @@index([expiresAt])
+}
+
+model EmailChangeToken {
+  id          Int       @id @default(autoincrement())
+  customerId  Int
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  newEmail    String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([customerId])
+}
+
+model SecurityEvent {
+  id          Int       @id @default(autoincrement())
+  customerId  Int?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  eventType   String
+  actorType   String?
+  actorId     String?
+  orderId     String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    String?
+  createdAt   DateTime  @default(now())
+
+  @@index([customerId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model Payment {
+  id                 Int      @id @default(autoincrement())
+  orderId            String
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider           String   @default("stripe")
+  providerPaymentId  String   @unique
+  providerCustomerId String?
+  paymentMethodId    String?
+  status             String
+  amountMinor        Int
+  currency           String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([orderId])
+}
+
+model WebhookEvent {
+  id              Int       @id @default(autoincrement())
+  provider        String
+  providerEventId String    @unique
+  eventType       String
+  processedAt     DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+model FraudReview {
+  id         Int       @id @default(autoincrement())
+  orderId    String
+  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  riskLevel  String
+  riskScore  Int
+  reasons    String
+  status     String    @default("OPEN")
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([orderId])
+  @@index([riskLevel])
+}
+
+model CustomerAdminNote {
   id         Int      @id @default(autoincrement())
   customerId Int
-  token      String   @unique
-  expiresAt  DateTime
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  note       String
+  createdBy  String?
   createdAt  DateTime @default(now())
+
+  @@index([customerId])
 }
 
 model PromoCode {
   id       Int     @id @default(autoincrement())
   code     String  @unique
-  discount Float
+  discount Float // Deprecated UI compatibility
+  currency String?
+  amountMinor Int?
+  percentageBps Int?
   type     String  // "percentage" | "fixed"
   uses     Int     @default(0)
   maxUses  Int?
@@ -218,9 +449,53 @@ model JournalArticle {
 }
 
 model NewsletterSubscriber {
-  id        Int    @id @default(autoincrement())
-  email     String @unique
-  createdAt String // ISO date string
+  id                         Int       @id @default(autoincrement())
+  email                      String    @unique
+  firstName                  String?
+  status                     String    @default("PENDING")
+  confirmationTokenHash      String?   @unique
+  confirmationTokenExpiresAt DateTime?
+  unsubscribeTokenHash       String?   @unique
+  confirmedAt                DateTime?
+  unsubscribedAt             DateTime?
+  createdAt                  String
+  updatedAt                  DateTime  @default(now()) @updatedAt
+  source                     String?
+  consentTimestamp           DateTime?
+  consentVersion             String?
+  consentEvents              NewsletterConsentEvent[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model NewsletterConsentEvent {
+  id           Int                  @id @default(autoincrement())
+  subscriberId Int
+  subscriber   NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  eventType    String
+  source       String?
+  consentVersion String?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime             @default(now())
+
+  @@index([subscriberId])
+  @@index([eventType])
+}
+
+model NewsletterCampaign {
+  id          Int       @id @default(autoincrement())
+  subject     String
+  previewText String?
+  content     String
+  status      String    @default("DRAFT")
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
 }
 
 model ShippingRegion {
@@ -241,6 +516,7 @@ model ShippingCountry {
   countryName  String
   isEnabled    Boolean        @default(true)
   currency     String         @default("USD")
+  taxRateBps   Int? @default(100) // 100 basis points = 1%; null uses market tax.
   displayOrder Int            @default(0)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -273,5 +549,154 @@ model ShippingLog {
   id        Int      @id @default(autoincrement())
   action    String
   details   String
+  createdAt DateTime @default(now())
+}
+
+model BackupJob {
+  id             Int       @id @default(autoincrement())
+  backupId       String    @unique
+  type           String
+  status         String    @default("QUEUED")
+  stage          String    @default("Queued")
+  progress       Int       @default(0)
+  createdBy      String?
+  storage        String    @default("LOCAL")
+  archivePath    String?
+  sizeBytes      BigInt    @default(0)
+  fileCount      Int       @default(0)
+  encrypted      Boolean   @default(true)
+  integrity      String    @default("PENDING")
+  checksum       String?
+  manifest       String?
+  errorCode      String?
+  errorMessage   String?
+  restoreScope   String?
+  restoreStatus  String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  verifiedAt     DateTime?
+  deletedAt      DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model BackupSettings {
+  id                         Int      @id @default(1)
+  automaticEnabled           Boolean  @default(false)
+  frequency                  String   @default("DAILY")
+  dailyRetention             Int      @default(14)
+  weeklyRetention            Int      @default(8)
+  monthlyRetention           Int      @default(12)
+  storageProvider            String   @default("LOCAL")
+  storagePath                String?
+  offsiteEnabled             Boolean  @default(false)
+  offsitePath                String?
+  encryptionEnabled          Boolean  @default(true)
+  verifyAfterBackup          Boolean  @default(true)
+  targetRpoHours             Int      @default(24)
+  maintenanceModeOnRestore   Boolean  @default(true)
+  preRestoreSafetyBackup     Boolean  @default(true)
+  requireRestoreConfirmation Boolean  @default(true)
+  notifyOnSuccess            Boolean  @default(false)
+  notifyOnFailure            Boolean  @default(true)
+  updatedAt                  DateTime @updatedAt
+}
+
+model PriceList {
+  id String @id
+  name String
+  market String @unique
+  currency String
+  status String @default("ACTIVE")
+  priority Int @default(0)
+  version Int @default(1)
+  taxRateBps Int @default(0)
+  taxJurisdiction String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductPriceHistory {
+  id Int @id @default(autoincrement())
+  productId Int
+  variantId String?
+  market String
+  currency String
+  oldAmountMinor Int?
+  newAmountMinor Int
+  priceVersion Int
+  changedBy String
+  reason String
+  createdAt DateTime @default(now())
+}
+
+model ShippingPrice {
+  id Int @id @default(autoincrement())
+  shippingMethodId Int
+  currency String
+  amountMinor Int
+  freeThresholdMinor Int?
+  @@unique([shippingMethodId, currency])
+}
+
+model CheckoutSnapshot {
+  id String @id
+  currency String
+  market String
+  priceListId String
+  priceListVersion Int
+  totalMinor Int
+  payloadHash String
+  snapshot String
+  state String @default("QUOTED")
+  providerPaymentId String? @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Refund {
+  id String @id
+  orderId String
+  amountMinor Int
+  currency String
+  status String
+  providerRefundId String? @unique
+  reason String
+  createdBy String
+  createdAt DateTime @default(now())
+  @@index([orderId])
+}
+
+model PricingAlert {
+  id Int @id @default(autoincrement())
+  key String @unique
+  type String
+  severity String @default("CRITICAL")
+  details String
+  status String @default("REQUIRES_REVIEW")
+  createdAt DateTime @default(now())
+}
+
+model ExchangeRate {
+  id Int @id @default(autoincrement())
+  sourceCurrency String
+  targetCurrency String
+  rate String
+  provider String
+  fetchedAt DateTime
+  createdBy String
+}
+
+model GiftCard {
+  id String @id
+  codeHash String @unique
+  currency String
+  balanceMinor Int
+  active Boolean @default(true)
   createdAt DateTime @default(now())
 }

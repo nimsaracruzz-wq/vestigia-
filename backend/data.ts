@@ -8,4 +8,4 @@ export {
   type Review,
   type SizeChart,
   type SizeChartRow,
-} from "../src/data.ts";
+} from "../src/data.js";

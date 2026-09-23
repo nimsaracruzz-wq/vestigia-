@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,12 +59,24 @@ const FAQ_DATA: FAQItem[] = [
   }
 ];
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQ_DATA.map((item) => ({
+    "@type": "Question",
+    "name": item.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": item.answer,
+    },
+  })),
+};
+
 export default function FAQ() {
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   useEffect(() => {
-    document.title = "Frequently Asked Questions (FAQ) | VESTIGIA";
     window.scrollTo(0, 0);
   }, []);
 
@@ -74,16 +87,18 @@ export default function FAQ() {
     : FAQ_DATA.filter((item) => item.category === activeCategory);
 
   return (
-    <motion.div
+    <div
       className="policy-page-container"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
+      <SEOHead
+        title="Frequently Asked Questions | VESTIGIA"
+        description="Answers about VESTIGIA orders, global shipping, returns, product sizing, garment care, accounts, and secure payments."
+        canonicalUrl="https://thevestigia.com/faq"
+        jsonLd={faqJsonLd}
+      />
       {/* Hero Header */}
       <header className="policy-hero">
-        <div className="policy-hero__inner">
+        <Reveal className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -92,7 +107,7 @@ export default function FAQ() {
           <p className="policy-subtitle">
             Find immediate answers regarding orders, global express shipping, garment care, sizing, returns, and payment options.
           </p>
-        </div>
+        </Reveal>
       </header>
 
       {/* Main Layout */}
@@ -133,7 +148,7 @@ export default function FAQ() {
 
         {/* Accordion List */}
         <main className="policy-body">
-          <section className="policy-section">
+          <Reveal as="section" className="policy-section">
             <h2>{activeCategory === "All" ? "All Questions" : activeCategory}</h2>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "24px" }}>
@@ -196,19 +211,19 @@ export default function FAQ() {
                 );
               })}
             </div>
-          </section>
+          </Reveal>
 
           {/* Contact Box */}
-          <section className="policy-section policy-contact-card" style={{ marginTop: "40px" }}>
+          <Reveal as="section" className="policy-section policy-contact-card" style={{ marginTop: "40px" }}>
             <HelpCircle size={28} />
             <h3>Still Have Questions?</h3>
             <p>Our client care concierges are ready to assist you personally.</p>
             <div className="policy-contact-links">
               <Link to="/contact" className="primary-link dark">Contact Us</Link>
             </div>
-          </section>
+          </Reveal>
         </main>
       </div>
-    </motion.div>
+    </div>
   );
 }

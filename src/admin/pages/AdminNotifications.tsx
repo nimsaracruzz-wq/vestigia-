@@ -1,3 +1,4 @@
+import { Reveal } from "../../animation/Reveal";
 import React, { useState, useEffect } from "react";
 import { useAdmin } from "../AdminContext";
 import { API_BASE_URL } from "../../config/api";
@@ -67,7 +68,7 @@ export default function AdminNotifications() {
 
   return (
     <div className="admin-page" style={{ maxWidth: "1000px" }}>
-      <div className="admin-page-header mb-6">
+      <Reveal className="admin-page-header mb-6">
         <div>
           <h1 style={{ display: "flex", alignItems: "center", gap: "10px", margin: "0 0 6px 0", fontSize: "1.6rem" }}>
             <Bell size={24} style={{ color: "#d97706" }} /> Order Notifications &amp; Owner Alerts
@@ -76,7 +77,7 @@ export default function AdminNotifications() {
             Configure real-time order notifications sent to the store owner whenever a customer places an order.
           </p>
         </div>
-      </div>
+      </Reveal>
 
       {/* SUCCESS / ERROR TOAST */}
       {saved && (

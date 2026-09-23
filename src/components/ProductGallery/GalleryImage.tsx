@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GallerySkeleton } from "./GallerySkeleton";
 import { slideVariants } from "./GalleryAnimations";
+import { useReveal } from "../../animation/Reveal";
 
 interface GalleryImageProps {
   src: string;
@@ -39,6 +40,7 @@ function deriveWebPSrc(src: string): string | null {
 
 export const GalleryImage: React.FC<GalleryImageProps> = React.memo(
   ({ src, alt, direction = 0, priority = true, onClick, aspectRatio = "3/4" }) => {
+    const entrance = useReveal({ variant: "scale" });
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
@@ -70,7 +72,8 @@ export const GalleryImage: React.FC<GalleryImageProps> = React.memo(
     }, []);
 
     return (
-      <div
+      <motion.div
+        {...entrance}
         className="vst-gallery-main-image-container"
         style={{ aspectRatio }}
         onClick={onClick}
@@ -133,7 +136,7 @@ export const GalleryImage: React.FC<GalleryImageProps> = React.memo(
             />
           </motion.picture>
         </AnimatePresence>
-      </div>
+      </motion.div>
     );
   }
 );

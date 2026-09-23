@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon",
+    "dev": "nodemon --watch server.ts --watch data.ts --watch utils --ext ts,json --exec \"npm run build && npm run start\"",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/backend/server.js",
     "postinstall": "prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -1,128 +1,49 @@
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { type Product } from "../data";
-import { useAdmin } from "../admin/AdminContext";
-import ProductCard from "../components/common/ProductCard";
-
-import { SEOHead } from "../components/common/SEOHead";
-
-type ShopProps = {
-  onQuickShop: (product: Product) => void;
-};
-
-const shopJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  "name": "Shop The First Release — VESTIGIA® Luxury Apparel",
-  "description": "Explore the complete VESTIGIA® Collection. Italian architectural design, 280 GSM heavyweight organic cotton, and refined streetwear silhouettes.",
-  "url": "https://thevestigia.com/shop/",
-  "isPartOf": { "@id": "https://thevestigia.com/#website" },
-  "breadcrumb": {
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://thevestigia.com/" },
-      { "@type": "ListItem", "position": 2, "name": "Shop", "item": "https://thevestigia.com/shop/" }
-    ]
-  }
-};
-
-export default function Shop({ onQuickShop }: ShopProps) {
-  const { products } = useAdmin();
-
-  return (
-    <motion.div
-      className="shop-page-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
-      style={{ background: '#fff', minHeight: '100vh' }}
-    >
-      <SEOHead
-        title="Shop The First Release | VESTIGIA® Luxury Apparel"
-        description="Explore the complete VESTIGIA® Collection. Italian architectural design, 280 GSM heavyweight organic cotton, and refined streetwear silhouettes."
-        canonicalUrl="https://thevestigia.com/shop/"
-        ogImage="https://thevestigia.com/images/products/vestigia_logo.png"
-        ogType="website"
-        jsonLd={shopJsonLd}
-      />
-      {/* Top Banner */}
-      <div className="shop-header-banner" style={{ padding: '80px 24px 60px', textAlign: 'center', background: '#f6f3ed' }}>
-        <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', marginBottom: '12px' }}>
-          SHOP
-        </p>
-        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 400, color: '#171412', margin: '0 0 16px' }}>
-          THE FIRST RELEASE.
-        </h1>
-        <p style={{ fontSize: '1rem', color: '#666', maxWidth: '480px', margin: '0 auto', lineHeight: 1.6 }}>
-          Three essential pieces introducing the world of VESTIGIA.
-        </p>
-      </div>
-
-      {/* Product Catalog Grid (No filters/sidebar for 3 items, exclusive centered layout) */}
-      <div className="shop-layout-grid" style={{ maxWidth: '1200px', margin: '0 auto', padding: '80px 24px 100px' }}>
-        <div className="shop-product-results">
-          <div 
-            className="product-grid" 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-              gap: '40px',
-              justifyContent: 'center'
-            }}
-          >
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onQuickShop={() => onQuickShop(product)}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Brand Statement */}
-      <section 
-        className="shop-bottom-statement" 
-        style={{ 
-          background: '#f6f3ed', 
-          borderTop: '1px solid #eaeaea',
-          padding: '100px 24px' 
-        }}
-      >
-        <div 
-          style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-            gap: '48px', 
-            alignItems: 'center', 
-            maxWidth: '1200px', 
-            margin: '0 auto' 
-          }}
-        >
-          <div style={{ padding: '0 16px' }}>
-            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(1.8rem, 3vw, 2.5rem)', fontWeight: 400, margin: '0 0 20px', color: '#171412' }}>
-              THIS IS ONLY THE BEGINNING.
-            </h2>
-            <p style={{ color: '#444', lineHeight: 1.8, marginBottom: '32px', fontSize: '0.95rem' }}>
-              The first VESTIGIA release establishes the foundation of our identity. 
-              New pieces, stories, and expressions will follow.
-            </p>
-            <Link className="primary-link dark" to="/story">
-              Discover Our Story
-            </Link>
-          </div>
-          <div style={{ overflow: 'hidden' }}>
-            <img
-              src="/images/products/signature_detail.png"
-              alt="VESTIGIA textile close-up campaign illustration"
-              style={{ width: '100%', objectFit: 'cover', maxHeight: '400px' }}
-            />
-          </div>
-        </div>
-      </section>
-    </motion.div>
-  );
+﻿import { useEffect,useRef,useState } from 'react';
+import { Link,useParams,useSearchParams } from 'react-router-dom';
+import type { Product } from '../data';
+import { useAdmin } from '../admin/AdminContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { useHomepage } from '../homepage/HomepageContext';
+import ProductCard from '../components/common/ProductCard';
+import { SEOHead } from '../components/common/SEOHead';
+import { absoluteUrl,breadcrumbJsonLd,collectionJsonLd,slugifySeo } from '../utils/seo';
+import { defaultShopSettings,emptyShopFilters,readShopFilters,writeShopFilters,filterShopProducts,type ShopFilters } from '../../shared/shop';
+import { selectHomepageProducts } from '../../shared/homepageProducts';
+import FilterDrawer from '../shop/FilterDrawer';
+import SortSheet from '../shop/SortSheet';
+import { API_BASE_URL } from '../config/api';
+import '../shop/shop.css';
+import '../shop/mobile-polish.css';
+export default function Shop({onQuickShop}:{onQuickShop:(p:Product)=>void}) {
+ const {products,isSynced}=useAdmin(),{currency}=useCurrency(),{config}=useHomepage();
+ const {category}=useParams(),[params,setParams]=useSearchParams(),[filterOpen,setFilterOpen]=useState(false),[bestSellers,setBestSellers]=useState<number[]>([]);
+ const nav=useRef<HTMLElement>(null);const settings={...defaultShopSettings,...config?.shop};
+ const [sortOpen,setSortOpen]=useState(false);
+ const requested=category||params.get('category')||settings.defaultCollection;
+ const active=requested==='all'?'':requested;
+ const merchandising=config?.sections.filter(s=>s.type==='product_carousel'&&s.enabled)||[];
+ const selectedSection=merchandising.find(s=>s.id===active);
+ const categories=[...new Set(products.flatMap(p=>[p.category,p.productType||'']).filter(Boolean))];
+ const currentCategory=categories.find(c=>slugifySeo(c)===slugifySeo(active||''));
+ const filters=readShopFilters(params);
+ if(filters.priceCurrency&&filters.priceCurrency!==currency){filters.min='';filters.max='';}
+ const needsSales=selectedSection?.type==='product_carousel'&&selectedSection.settings.source==='best_selling';
+ useEffect(()=>{if(!needsSales)return;const controller=new AbortController();fetch(API_BASE_URL+'/storefront/homepage/best-sellers',{signal:controller.signal}).then(r=>r.ok?r.json():[]).then(setBestSellers).catch(()=>{});return()=>controller.abort();},[needsSales]);
+ useEffect(()=>{nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[active]);
+ const collectionProducts=selectedSection?.type==='product_carousel'?selectHomepageProducts(products,{...selectedSection.settings,maxProducts:Number.MAX_SAFE_INTEGER},currency,bestSellers):active?products.filter(p=>slugifySeo(p.category)===slugifySeo(active)||slugifySeo(p.productType||'')===slugifySeo(active)):products;
+ let filtered:Product[]=[],filterError='';try{filtered=filterShopProducts(collectionProducts,filters,currency);}catch{filterError=`The price filter is invalid for ${currency}. Clear filters or enter a valid range.`;}
+ const page=Math.min(100,Math.max(1,Math.floor(Number(params.get('page'))||1))),visible=filtered.slice(0,settings.pageSize*page);
+ const title=selectedSection?.type==='product_carousel'?selectedSection.settings.heading:currentCategory||settings.heading;
+ const description=selectedSection?.type==='product_carousel'?selectedSection.settings.body:settings.description;
+ const canonical=category?`/collections/${encodeURIComponent(category)}`:'/shop';
+ const hasFilters=filters.sizes.length+filters.colors.length+Number(!!filters.availability)+Number(!!filters.min)+Number(!!filters.max)+Number(!!filters.search);
+ const apply=(value:ShopFilters)=>setParams(writeShopFilters(params,value,currency));
+ const links=[{id:'',label:'All',url:'/shop?category=all'},...merchandising.map(s=>({id:s.id,label:s.type==='product_carousel'?s.settings.heading:s.label,url:`/collections/${s.id}`})),...categories.filter(c=>!merchandising.some(s=>s.id===slugifySeo(c))).map(c=>({id:slugifySeo(c),label:c,url:`/collections/${slugifySeo(c)}`}))];
+ return <div className="vestigia-shop"><SEOHead title={`${title} | VESTIGIA`} description={description} canonicalUrl={absoluteUrl(canonical)} noIndex={!!hasFilters||params.has('sort')||params.has('category')} jsonLd={[collectionJsonLd(title,description,canonical,visible),breadcrumbJsonLd([{name:'Home',path:'/'},{name:'Shop',path:'/shop'}])]}/>
+ {settings.introEnabled?<header className="vs-intro"><p>{settings.label}</p><h1>{title}</h1>{description&&<div>{description}</div>}</header>:<h1 className="sr-only">{title}</h1>}
+ <div className="vs-catalog">{settings.collectionNavigation&&<nav ref={nav} className="vs-collections" aria-label="Collections">{links.map(l=><Link key={l.id} to={l.url} aria-current={(active===l.id||!active&&!l.id)?'page':undefined}>{l.label}</Link>)}</nav>}
+ <div className="vs-toolbar">{settings.productCount&&<span role="status">{isSynced?`${filtered.length} ${filtered.length===1?'product':'products'}`:'Loading pieces…'}</span>}<div>{settings.filters&&<button type="button" onClick={()=>setFilterOpen(true)} aria-expanded={filterOpen} aria-haspopup="dialog">Filter{hasFilters?` (${hasFilters})`:''}</button>}{settings.sort&&<><button className="vs-mobile-sort" type="button" aria-haspopup="dialog" aria-expanded={sortOpen} onClick={()=>setSortOpen(true)}>Sort</button><label className="vs-desktop-sort">Sort <select aria-label="Sort products" value={filters.sort} onChange={e=>apply({...filters,sort:e.target.value})}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option></select></label></>}</div></div>
+ {!!hasFilters&&<div className="vs-active-filters"><span>{[...filters.sizes,...filters.colors,filters.availability.replaceAll('_',' '),filters.min&&`From ${filters.min} ${currency}`,filters.max&&`To ${filters.max} ${currency}`,filters.search].filter(Boolean).join(' · ')}</span><button onClick={()=>apply({...emptyShopFilters,sort:filters.sort})}>Clear filters</button></div>}
+ {!isSynced?<div className="vs-grid vs-skeleton" aria-label="Loading products" aria-busy="true">{[0,1,2,3].map(i=><div key={i}><div/><p/><span/></div>)}</div>:filtered.length?<><div className="vs-grid">{visible.map((product,i)=><ProductCard key={product.id} product={product} priority={i<2} reveal={false} onQuickShop={()=>onQuickShop(product)} display={{quickAdd:settings.quickAdd,wishlist:settings.wishlist,colors:true,badges:true,badge:''}}/>)}</div>{visible.length<filtered.length&&<div className="vs-load-more"><p>Showing {visible.length} of {filtered.length}</p><Link to={{pathname:category?`/collections/${category}`:'/shop',search:(()=>{const next=new URLSearchParams(params);next.set('page',String(page+1));return next.toString();})()}} preventScrollReset>Load more</Link></div>}</>:<section className="vs-empty"><h2>No pieces found.</h2><p>{filterError||'Adjust your filters to continue exploring.'}</p><button onClick={()=>apply({...emptyShopFilters})}>Clear filters</button>{active&&<Link to="/shop?category=all">Explore all pieces</Link>}</section>}
+ </div>{sortOpen&&<SortSheet value={filters.sort} onChange={sort=>apply({...filters,sort})} onClose={()=>setSortOpen(false)}/>} {filterOpen&&<FilterDrawer products={collectionProducts} value={filters} onApply={apply} onClose={()=>setFilterOpen(false)}/>}</div>;
 }

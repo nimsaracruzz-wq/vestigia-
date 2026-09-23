@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -19,12 +20,8 @@ export default function TermsOfService() {
   }, []);
 
   return (
-    <motion.div
+    <div
       className="policy-page-container"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
     >
       <SEOHead
         title="Terms of Service | VESTIGIA® Legal Terms"
@@ -35,7 +32,7 @@ export default function TermsOfService() {
         jsonLd={termsJsonLd}
       />
       <header className="policy-hero">
-        <div className="policy-hero__inner">
+        <Reveal className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -49,7 +46,7 @@ export default function TermsOfService() {
             <span><Clock size={14} /> Last Updated: August 2026</span>
             <span><Scale size={14} /> International E-Commerce Terms</span>
           </div>
-        </div>
+        </Reveal>
       </header>
 
       <div className="policy-layout">
@@ -69,65 +66,65 @@ export default function TermsOfService() {
         </aside>
 
         <main className="policy-body">
-          <section id="acceptance" className="policy-section">
+          <Reveal as="section" id="acceptance" className="policy-section">
             <h2>1. Acceptance of Terms</h2>
             <p>
               These Terms of Service ("Terms") govern your use of the website <code>vestigia.com</code> and all online purchases 
               made through VESTIGIA. By placing an order or creating an account, you acknowledge that you have 
               read and agreed to these Terms.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="store-terms" className="policy-section">
+          <Reveal as="section" id="store-terms" className="policy-section">
             <h2>2. Online Store Terms</h2>
             <p>
               By agreeing to these Terms, you represent that you are at least the age of majority in your country of residence. 
               You may not use our garments or platform for any illegal or unauthorized purpose.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="products" className="policy-section">
+          <Reveal as="section" id="products" className="policy-section">
             <h2>3. Products & Pricing</h2>
             <p>
               We make every effort to display the colors and fit of our tailored garments as accurately as possible. 
               Prices for our products are subject to change without prior notice and are displayed in your selected currency (EUR, USD, JPY).
             </p>
-          </section>
+          </Reveal>
 
-          <section id="orders" className="policy-section">
+          <Reveal as="section" id="orders" className="policy-section">
             <h2>4. Order Acceptance & Billing Information</h2>
             <p>
               We reserve the right to refuse or cancel any order placed with us. You agree to provide current, complete, 
               and accurate purchase and account information for all orders.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="shipping" className="policy-section">
+          <Reveal as="section" id="shipping" className="policy-section">
             <h2>5. Shipping, Taxes & Customs Duty</h2>
             <p>
               We ship internationally from our studio in Sri Lanka using express global logistics networks (DHL / FedEx). 
               International shipments may be subject to local import duties and taxes.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="intellectual" className="policy-section">
+          <Reveal as="section" id="intellectual" className="policy-section">
             <h2>6. Intellectual Property Rights</h2>
             <p>
               All content on this site—including garment designs, editorial imagery, brand trademarks, logos, and text—is the exclusive 
               intellectual property of VESTIGIA. No portion of this platform may be reproduced without prior written permission.
             </p>
-          </section>
+          </Reveal>
 
-          <section id="contact" className="policy-section policy-contact-card">
+          <Reveal as="section" id="contact" className="policy-section policy-contact-card">
             <FileText size={28} />
             <h3>Questions Regarding Terms of Service</h3>
             <p>If you have questions or require legal clarification, please reach out to our legal department.</p>
             <div className="policy-contact-links">
               <a href="mailto:legal@vestigia.com" className="primary-link dark">Contact Legal Department</a>
             </div>
-          </section>
+          </Reveal>
         </main>
       </div>
-    </motion.div>
+    </div>
   );
 }

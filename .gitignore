@@ -11,4 +11,4 @@ vite.config.d.ts
 .env.*
 .DS_Store
 scratch/
-
+backend/private/

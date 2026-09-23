@@ -1,3 +1,4 @@
+import { Reveal } from "../animation/Reveal";
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Lock, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
@@ -25,8 +26,8 @@ export default function ActivateAccount() {
       setErrorMessage("Invalid activation token.");
       return;
     }
-    if (password.length < 6) {
-      setErrorMessage("Password must be at least 6 characters long.");
+    if (password.length < 12) {
+      setErrorMessage("Password must be at least 12 characters long.");
       return;
     }
     if (password !== confirmPassword) {
@@ -52,7 +53,7 @@ export default function ActivateAccount() {
 
   return (
     <div className="account-page-shell" style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
-      <div className="activation-card" style={{ maxWidth: "440px", width: "100%", background: "#ffffff", padding: "2.5rem", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.06)", border: "1px solid #f0e9df" }}>
+      <Reveal className="activation-card" style={{ maxWidth: "440px", width: "100%", background: "#ffffff", padding: "2.5rem", borderRadius: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.06)", border: "1px solid #f0e9df" }}>
         {isActivated ? (
           <div style={{ textAlign: "center" }}>
             <div style={{ width: "64px", height: "64px", background: "#ecfdf5", color: "#059669", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}>
@@ -92,7 +93,7 @@ export default function ActivateAccount() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 12 characters"
                   required
                   style={{ width: "100%", padding: "0.75rem 1rem", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "0.95rem" }}
                 />
@@ -121,7 +122,7 @@ export default function ActivateAccount() {
             </form>
           </div>
         )}
-      </div>
+      </Reveal>
     </div>
   );
 }

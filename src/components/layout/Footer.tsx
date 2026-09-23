@@ -1,5 +1,19 @@
+import { Reveal, RevealGroup } from "../../animation/Reveal";
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { API_BASE_URL } from "../../config/api";
+import FooterNavigation, { type FooterGroup, type FooterLink } from "./FooterNavigation";
+
+const footerGroups: FooterGroup[] = [
+  { id: "shop", title: "Shop", links: [{ label: "All Products", url: "/shop" }, { label: "The First Release", url: "/shop" }] },
+  { id: "about", title: "About", links: [{ label: "Our Story", url: "/story" }, { label: "About VESTIGIA", url: "/about" }, { label: "Journal", url: "/journal" }] },
+  { id: "services", title: "Client Services", links: [{ label: "Contact", url: "/contact" }, { label: "Shipping & Delivery", url: "/shipping-policy" }, { label: "Frequently Asked Questions", url: "/faq" }, { label: "Returns", url: "/refund-policy" }] },
+  { id: "legal", title: "Legal", links: [{ label: "Privacy Policy", url: "/privacy-policy" }, { label: "Terms of Service", url: "/terms-of-service" }] },
+];
+
+const socialLinks: FooterLink[] = [
+  { label: "Instagram", url: "https://instagram.com" },
+  { label: "TikTok", url: "https://tiktok.com" },
+];
 
 export default function Footer() {
   const [email, setEmail] = useState("");
@@ -7,181 +21,46 @@ export default function Footer() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubscribe = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError("");
-    if (!email.trim() || !email.includes("@")) return;
-
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     setLoading(true);
     try {
-      const res = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-      if (res.ok) {
-        setSubscribed(true);
-        setEmail("");
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Something went wrong. Please try again.");
-      }
-    } catch {
-      setError("Network error. Please try again.");
+      const response = await fetch(`${API_BASE_URL}/newsletter/subscribe`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: normalizedEmail, source: "footer_inner_circle" }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message ?? "Please try again in a moment.");
+      setSubscribed(true);
+      setEmail("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Please try again in a moment.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <footer className="lux-footer">
-      {/* Newsletter strip */}
-      <div className="lux-footer__newsletter">
-        <div className="lux-footer__newsletter-emblem-wrap">
-          <img
-            src="/images/products/vestigia_logo.png"
-            alt=""
-            aria-hidden="true"
-            className="vst-emblem vst-emblem--sm"
-          />
-        </div>
-        <p className="lux-footer__newsletter-eyebrow">Private Access</p>
-        <h2 className="lux-footer__newsletter-heading">
-          Join the Inner Circle
-        </h2>
-        <p className="lux-footer__newsletter-sub">
-          Receive first access to new collections, private sales, and editorial
-          stories.
-        </p>
-        {subscribed ? (
-          <p className="lux-footer__newsletter-thanks">
-            Welcome to Vestigia. &nbsp;You are now on the list.
-          </p>
-        ) : (
-          <form className="lux-footer__form" onSubmit={handleSubscribe}>
-            <input
-              id="footer-email"
-              type="email"
-              placeholder="Your email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-              className="lux-footer__input"
-            />
-            <button type="submit" className="lux-footer__submit" disabled={loading}>
-              {loading ? "…" : "Subscribe"}
-            </button>
-            {error && <p style={{ color: "#f87171", fontSize: "0.8rem", marginTop: "0.5rem" }}>{error}</p>}
-          </form>
+    <>
+      <RevealGroup className="lux-footer__newsletter">
+        <div className="lux-footer__newsletter-emblem-wrap"><img src="/images/products/vestigia-logo-192.png" decoding="async" alt="" aria-hidden="true" className="vst-emblem vst-emblem--sm" /></div>
+        <Reveal as="p" className="lux-footer__newsletter-eyebrow">Private Access</Reveal>
+        <Reveal as="h2" className="lux-footer__newsletter-heading">JOIN THE INNER CIRCLE</Reveal>
+        <Reveal as="p" className="lux-footer__newsletter-sub">Be the first to discover new collections, exclusive offers, styling inspiration, and special Vestigia updates.</Reveal>
+        {subscribed ? <p className="lux-footer__newsletter-thanks">Please check your email to confirm your subscription.</p> : (
+          <Reveal as="form" className="lux-footer__form" onSubmit={handleSubscribe}>
+            <label htmlFor="footer-email" className="sr-only">Email address</label>
+            <input id="footer-email" type="email" placeholder="Enter your email" value={email} onChange={(event) => setEmail(event.target.value)} required disabled={loading} className="lux-footer__input" />
+            <button type="submit" className="lux-footer__submit lux-footer__submit--inner-circle" disabled={loading}>{loading ? "…" : "Subscribe"}</button>
+            <p className="lux-footer__newsletter-consent">By subscribing, you agree to receive Vestigia emails. You can unsubscribe at any time.</p>
+            {error && <p role="alert" className="lux-footer__newsletter-error">{error}</p>}
+          </Reveal>
         )}
-      </div>
-
-      {/* Main links grid */}
-      <div className="lux-footer__main">
-        <div className="lux-footer__brand">
-          <div className="lux-footer__emblem-wrap">
-            <img
-              src="/images/products/vestigia_logo.png"
-              alt="VESTIGIA Emblem"
-              className="vst-emblem vst-emblem--md"
-            />
-          </div>
-          <span className="lux-footer__wordmark" style={{ textTransform: 'uppercase', letterSpacing: '0.1em' }}>VESTIGIA</span>
-          <div className="lux-footer__tagline" style={{ fontSize: '0.75rem', lineHeight: '1.6', color: '#bbb', marginTop: '12px' }}>
-            <p style={{ margin: '2px 0', letterSpacing: '0.05em' }}>DESIGNED IN ITALY.</p>
-            <p style={{ margin: '2px 0', letterSpacing: '0.05em' }}>MADE IN SRI LANKA.</p>
-            <p style={{ margin: '8px 0 2px', letterSpacing: '0.15em', fontSize: '0.7rem', color: '#888', fontWeight: 600 }}>LEAVE YOUR MARK.</p>
-          </div>
-        </div>
-
-        <nav className="lux-footer__nav">
-          <div className="lux-footer__nav-col">
-            <p className="lux-footer__nav-label">Shop</p>
-            <ul className="lux-footer__nav-list">
-              <li><Link to="/shop">All Products</Link></li>
-              <li><Link to="/product/vestigia-signature-tee">Signature Tee</Link></li>
-              <li><Link to="/product/vestigia-origin-tee">Origin Tee</Link></li>
-              <li><Link to="/product/vestigia-essential-tee">Essential Tee</Link></li>
-            </ul>
-          </div>
-          <div className="lux-footer__nav-col">
-            <p className="lux-footer__nav-label">Information</p>
-            <ul className="lux-footer__nav-list">
-              <li><Link to="/about">About Us</Link></li>
-              <li><Link to="/story">Our Story</Link></li>
-              <li><Link to="/shipping-policy">Shipping & Delivery</Link></li>
-              <li><Link to="/contact">Contact Concierge</Link></li>
-              <li><Link to="/faq">Frequently Asked Questions</Link></li>
-            </ul>
-          </div>
-          <div className="lux-footer__nav-col">
-            <p className="lux-footer__nav-label">Legal & Policies</p>
-            <ul className="lux-footer__nav-list">
-              <li><Link to="/privacy-policy">Privacy Policy</Link></li>
-              <li><Link to="/terms-of-service">Terms of Service</Link></li>
-              <li><Link to="/refund-policy">Refund & Return Policy</Link></li>
-            </ul>
-          </div>
-          <div className="lux-footer__nav-col">
-            <p className="lux-footer__nav-label">Social</p>
-            <ul className="lux-footer__nav-list">
-              <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer">Instagram</a></li>
-              <li><a href="https://tiktok.com" target="_blank" rel="noopener noreferrer">TikTok</a></li>
-            </ul>
-          </div>
-        </nav>
-      </div>
-
-      {/* Bottom bar */}
-      <div className="lux-footer__bottom">
-        <p className="lux-footer__copy">
-          &copy; 2026 VESTIGIA. ALL RIGHTS RESERVED.
-        </p>
-
-        <div className="lux-footer__bottom-right">
-          <CurrencySwitcher />
-
-          <div className="lux-footer__payments">
-            {["Visa", "Mastercard", "Amex", "Apple Pay"].map((method) => (
-              <span key={method} className="lux-footer__payment-badge">
-                {method}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-import { useCurrency, type CurrencyCode } from "../../context/CurrencyContext";
-
-function CurrencySwitcher() {
-  const { currency, setCurrency } = useCurrency();
-
-  return (
-    <div className="currency-switcher" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <label htmlFor="currency-select" style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: '#888', letterSpacing: '0.05em' }}>Currency</label>
-      <select
-        id="currency-select"
-        value={currency}
-        onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-        style={{
-          background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.2)',
-          color: '#fff',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '0.75rem',
-          outline: 'none',
-          cursor: 'pointer'
-        }}
-      >
-        <option value="EUR" style={{ color: '#000' }}>EUR (€)</option>
-        <option value="USD" style={{ color: '#000' }}>USD ($)</option>
-        <option value="JPY" style={{ color: '#000' }}>JPY (¥)</option>
-      </select>
-    </div>
+      </RevealGroup>
+      <FooterNavigation description={"DESIGNED IN ITALY.\nMADE IN SRI LANKA.\nLEAVE YOUR MARK."} groups={footerGroups} socials={socialLinks} copyright="© 2026 VESTIGIA. ALL RIGHTS RESERVED." adminLink />
+    </>
   );
 }

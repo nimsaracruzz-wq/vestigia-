@@ -1,3 +1,6 @@
+import { useDialogFocus } from '../../hooks/useDialogFocus';
+import { useEntrance } from "../../animation/Reveal";
+import { useScrollLock } from "../../hooks/useScrollLock";
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Search, X } from "lucide-react";
@@ -5,6 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { type Product } from "../../data";
 import { useCurrency } from "../../context/CurrencyContext";
 import { useAdmin } from "../../admin/AdminContext";
+import ProductImage from "./ProductImage";
+import { getProductPrice } from "../../utils/productMedia";
 
 type SearchOverlayProps = {
   open: boolean;
@@ -12,10 +17,14 @@ type SearchOverlayProps = {
 };
 
 export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
+  useScrollLock(open);
+  useDialogFocus(open, onClose, '.search-panel');
+  const backdropEntrance = useEntrance("fade");
+  const panelEntrance = useEntrance("scale");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { formatPrice: money } = useCurrency();
+  const { formatPrice: money, currency } = useCurrency();
   const { products } = useAdmin();
 
   // Focus input on open, reset on close
@@ -65,10 +74,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           {/* Dim backdrop — click to close */}
           <motion.div
             className="search-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            {...backdropEntrance}
             onClick={onClose}
             aria-hidden="true"
           />
@@ -76,10 +82,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           {/* Search Panel */}
           <motion.div
             className="search-panel"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
+            {...panelEntrance}
             role="dialog"
             aria-modal="true"
             aria-label="Site Search Overlay"
@@ -144,11 +147,11 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                         onClick={onClose}
                         className="search-result-item"
                       >
-                        <img src={product.image} alt={product.alt} />
+                        <ProductImage product={product} variant="product" />
                         <div>
                           <h4>{product.name}</h4>
                           <p>{product.category}</p>
-                          <strong>{money(product.price)}</strong>
+                          <strong>{money(getProductPrice(product, currency))}</strong>
                         </div>
                       </Link>
                     ))}

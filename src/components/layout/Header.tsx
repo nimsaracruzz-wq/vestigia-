@@ -16,7 +16,7 @@ export default function Header({ onCartToggle, onMenuToggle, onSearchToggle }: H
 
   // Certain pages (like Shop, PDP, Account, Checkout) should have a solid header.
   // Home page starts transparent and gets solid on scroll.
-  const isHome = location.pathname === "/";
+  const isHome = location.pathname === "/" || location.pathname === "/homepage-preview";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,11 +27,12 @@ export default function Header({ onCartToggle, onMenuToggle, onSearchToggle }: H
       }
     };
 
-    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const headerClass = `header ${scrolled || !isHome ? "scrolled" : "transparent"}`;
+  const headerClass = `header ${scrolled ? "scrolled" : isHome ? "transparent" : "solid"}`;
 
   return (
     <header className={headerClass}>
@@ -52,7 +53,8 @@ export default function Header({ onCartToggle, onMenuToggle, onSearchToggle }: H
 
       <Link className="brand" to="/" aria-label="VESTIGIA home">
         <img
-          src="/images/products/vestigia_logo.png"
+          src="/images/products/vestigia-logo-192.png"
+          decoding="async"
           alt=""
           aria-hidden="true"
           className="header-emblem"
@@ -62,7 +64,7 @@ export default function Header({ onCartToggle, onMenuToggle, onSearchToggle }: H
 
 
       <div className="header-actions">
-        <button className="icon-button" type="button" onClick={onSearchToggle} aria-label="Search site">
+        <button className="icon-button header-search" type="button" onClick={onSearchToggle} aria-label="Search site">
           <Search size={20} />
         </button>
         <Link className="icon-button wishlist-button" to="/account?tab=wishlist" aria-label="View wishlist">

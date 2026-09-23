@@ -20,14 +20,21 @@ export type Address = {
   id: string;
   label?: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
   line1: string;
   line2?: string;
   city: string;
   state: string;
   zip: string;
   country: string;
+  phoneCountry?: string;
+  phoneDialCode?: string;
   phone?: string;
   isDefault?: boolean;
+  isDefaultShipping?: boolean;
+  isDefaultBilling?: boolean;
 };
 
 interface UserContextType {
@@ -95,27 +102,53 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return response.json();
   };
 
+  const normalizeAddress = (addr: any): Address => {
+    const firstName = addr.firstName || addr.name?.split(" ")?.[0] || "";
+    const lastName = addr.lastName || addr.name?.split(" ")?.slice(1).join(" ") || "";
+    return {
+      id: String(addr.id ?? `addr_${Date.now()}`),
+      label: addr.label || "Home",
+      name: addr.name || `${firstName} ${lastName}`.trim(),
+      firstName,
+      lastName,
+      company: addr.company || "",
+      line1: addr.line1 || addr.address || "",
+      line2: addr.line2 || addr.apartment || "",
+      city: addr.city || "",
+      state: addr.state || "",
+      zip: addr.zip || "",
+      country: addr.country || "",
+      phone: addr.phone || "",
+      phoneCountry: addr.phoneCountry || "US",
+      phoneDialCode: addr.phoneDialCode || "+1",
+      isDefault: Boolean(addr.isDefault ?? addr.isDefaultShipping),
+      isDefaultShipping: Boolean(addr.isDefaultShipping ?? addr.isDefault),
+      isDefaultBilling: Boolean(addr.isDefaultBilling),
+    };
+  };
+
   const mapCustomerToProfile = (cust: any): UserProfile => {
     const name = cust.name || "";
     const [firstName, ...lastNameParts] = name.split(" ");
     const lastName = lastNameParts.join(" ");
-    const addresses = Array.isArray(cust.addresses)
+    const rawAddresses = Array.isArray(cust.addresses)
       ? cust.addresses
       : (typeof cust.addresses === "string" ? JSON.parse(cust.addresses) : []);
+    const addresses = rawAddresses.map(normalizeAddress);
     const defaultAddr = addresses.find((a: any) => a.isDefault) || addresses[0] || null;
 
     return {
-      firstName,
-      lastName,
+      firstName: firstName || defaultAddr?.firstName || "",
+      lastName: lastName || defaultAddr?.lastName || "",
       email: cust.email,
-      phone: cust.phone || "",
+      phone: cust.phone || defaultAddr?.phone || "",
       phoneCountry: defaultAddr?.phoneCountry || "US",
       phoneDialCode: defaultAddr?.phoneDialCode || "+1",
       address: defaultAddr?.line1 || "",
       city: defaultAddr?.city || "",
       state: defaultAddr?.state || "",
       zip: defaultAddr?.zip || "",
-      country: defaultAddr?.country || "",
+      country: defaultAddr?.country || "United States",
       addresses,
     };
   };
@@ -219,23 +252,70 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const addAddress = async (address: Omit<Address, "id">) => {
-    const id = `addr_${Date.now()}`;
-    const newAddr: Address = { id, ...address, isDefault: Boolean(address.isDefault) };
+    const nameParts = (address.name || "").trim().split(/\s+/);
+    const firstName = address.firstName || nameParts[0] || user?.firstName || "";
+    const lastName = address.lastName || nameParts.slice(1).join(" ") || user?.lastName || "";
+    let newAddr: Address;
+
+    if (token) {
+      try {
+        const created = await apiRequest("/customers/addresses", {
+          method: "POST",
+          body: JSON.stringify({
+            label: address.label || "Home",
+            firstName,
+            lastName,
+            company: address.company,
+            address: address.line1,
+            apartment: address.line2,
+            city: address.city,
+            state: address.state,
+            zip: address.zip,
+            country: address.country,
+            phone: address.phone || user?.phone,
+            phoneCountry: address.phoneCountry || user?.phoneCountry,
+            phoneDialCode: address.phoneDialCode || user?.phoneDialCode,
+            isDefaultShipping: Boolean(address.isDefault),
+            isDefaultBilling: Boolean(address.isDefaultBilling),
+          }),
+        });
+        newAddr = normalizeAddress(created);
+      } catch (err: any) {
+        console.error("Failed to sync address to server:", err.message);
+        newAddr = { id: `addr_${Date.now()}`, ...address, firstName, lastName, isDefault: Boolean(address.isDefault) };
+      }
+    } else {
+      newAddr = { id: `addr_${Date.now()}`, ...address, firstName, lastName, isDefault: Boolean(address.isDefault) };
+    }
+
     const existing = user?.addresses ?? [];
-    const nextAddresses: Address[] = address.isDefault
+    const nextAddresses: Address[] = newAddr.isDefault
       ? [...existing.map((a) => ({ ...a, isDefault: false })), newAddr]
       : [...existing, newAddr];
 
-    if (user) {
+    if (user && !token) {
       await updateUser({ ...user, addresses: nextAddresses });
+    } else if (user) {
+      setUser({ ...user, addresses: nextAddresses });
     }
   };
 
   const removeAddress = async (id: string) => {
     const existing = user?.addresses ?? [];
     const nextAddresses = existing.filter((a) => a.id !== id);
+    if (token && /^\d+$/.test(id)) {
+      try {
+        await apiRequest(`/customers/addresses/${id}`, { method: "DELETE" });
+      } catch (err: any) {
+        console.error("Failed to delete address from server:", err.message);
+      }
+    }
     if (user) {
-      await updateUser({ ...user, addresses: nextAddresses });
+      if (token) {
+        setUser({ ...user, addresses: nextAddresses });
+      } else {
+        await updateUser({ ...user, addresses: nextAddresses });
+      }
     }
   };
 
@@ -366,7 +446,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     <UserContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        isAuthenticated: Boolean(token && user),
         isLoading,
         error,
         createAccount,
