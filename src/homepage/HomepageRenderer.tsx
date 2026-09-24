@@ -13,6 +13,7 @@ import ProductCarousel, { selectHomepageProducts } from './ProductCarousel';
 import HeroImage from './HeroImage';
 import HotspotPreview from './HotspotPreview';
 import './homepage.css';
+import SectionBoundary from './SectionBoundary';
 import './hero-hotspots.css';
 
 export function CmsLink({value,className}: {value:LinkContent;className?:string}) { return value.label&&value.url ? value.url.startsWith('/')?<Link className={className} to={value.url}>{value.label}</Link>:<a className={className} href={value.url}>{value.label}</a>:null; }
@@ -61,5 +62,5 @@ export default function HomepageRenderer({config,onQuickShop,preview=false}: {co
   const needsSales=config.sections.some(s=>s.enabled&&s.type==='product_carousel'&&s.settings.source==='best_selling');
   useEffect(()=>{if(!needsSales)return;const controller=new AbortController();fetch(API_BASE_URL+'/storefront/homepage/best-sellers',{signal:controller.signal}).then(r=>r.ok?r.json():[]).then(setBestSellers).catch(()=>{});return()=>controller.abort();},[needsSales]);
   const sections=orderedSections(config).filter(s=>s.type!=='announcement');
-  return <div className="hp-page"><SEOHead title={config.seo.title} description={config.seo.description} ogImage={config.seo.image} canonicalUrl={config.seo.canonical||'/'} noIndex={preview||!config.seo.index}/>{!sections.some(s=>s.type==='hero')&&<h1 className="sr-only">{config.seo.title}</h1>}{sections.map(s=><RenderSection key={s.id} section={s} products={isSynced?products:[]} bestSellers={bestSellers} onQuickShop={onQuickShop}/>)}{!isSynced&&<p className="hp-loading" role="status">Loading the collection…</p>}</div>;
+  return <div className="hp-page"><SEOHead title={config.seo.title} description={config.seo.description} ogImage={config.seo.image} canonicalUrl={config.seo.canonical||'/'} noIndex={preview||!config.seo.index}/>{!sections.some(s=>s.type==='hero')&&<h1 className="sr-only">{config.seo.title}</h1>}{sections.map(s=><SectionBoundary key={s.id} resetKey={s}><RenderSection section={s} products={isSynced?products:[]} bestSellers={bestSellers} onQuickShop={onQuickShop}/></SectionBoundary>)}{!isSynced&&<p className="hp-loading" role="status">Loading the collection…</p>}</div>;
 }

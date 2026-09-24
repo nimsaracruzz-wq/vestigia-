@@ -7,6 +7,7 @@
     "dev": "nodemon --watch server.ts --watch data.ts --watch utils --ext ts,json --exec \"npm run build && npm run start\"",
     "build": "tsc",
     "start": "node dist/backend/server.js",
+    "start:production": "node deploy.mjs",
     "postinstall": "prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

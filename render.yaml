@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: vestigia
+    runtime: node
+    plan: starter
+    buildCommand: npm ci --include=dev && npm --prefix backend ci --include=dev && npm --prefix backend run build && npm run build
+    startCommand: cd backend && npm run start:production
+    healthCheckPath: /api/health
+    disk:
+      name: vestigia-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PROVIDER
+        value: sqlite
+      - key: DATABASE_URL
+        value: file:/var/data/vestigia.db
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: PUBLIC_SNAPSHOT_PATH
+        value: /var/data/published-storefront.json
+      - key: BACKUP_STORAGE_PATH
+        value: /var/data/backups
+      - key: VITE_API_URL
+        value: /api
+      - key: SERVE_STOREFRONT
+        value: "true"
+      - key: PUBLIC_SITE_URL
+        sync: false
+      - key: VITE_SITE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BACKUP_ENCRYPTION_KEY
+        generateValue: true
+      - key: ADMIN_INITIAL_PASSWORD
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: VITE_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: ALLOW_MOCK_PAYMENTS
+        value: "false"

@@ -1,3 +1,4 @@
+import { installStorefront } from './utils/storefrontRoutes.js';
 import { installHomepageRoutes } from './utils/homepageRoutes.js';
 import { normalizeCountryTaxRate } from './utils/countryTax.js';
 import 'dotenv/config';
@@ -45,16 +46,10 @@ const stripeConfigurationIssue = stripeSecretKey && !stripeSecretKeyLooksValid
   : null;
 
 // ─── Prisma: SQLite locally, PostgreSQL on Railway ───────────────────────────
-let prisma: PrismaClient;
-if (process.env.DATABASE_PROVIDER === 'sqlite') {
-  // Local development with BetterSqlite3 adapter
-  const { PrismaBetterSqlite3 } = await import('@prisma/adapter-better-sqlite3');
-  const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL || 'file:./vestigia-dev.db' });
-  prisma = new PrismaClient({ adapter } as any);
-} else {
-  // Railway / PostgreSQL — standard PrismaClient uses DATABASE_URL env var
-  prisma = new PrismaClient();
-}
+if (process.env.DATABASE_PROVIDER && process.env.DATABASE_PROVIDER !== 'sqlite' || process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('file:')) throw new Error('This build uses the SQLite Prisma schema. Configure DATABASE_PROVIDER=sqlite and a persistent file: DATABASE_URL; PostgreSQL requires a separate schema and adapter migration.');
+if(process.env.NODE_ENV==='production'&&!process.env.DATABASE_URL)throw new Error('DATABASE_URL is required in production.');
+const { PrismaBetterSqlite3 } = await import('@prisma/adapter-better-sqlite3');
+const prisma = new PrismaClient({adapter:new PrismaBetterSqlite3({url:process.env.DATABASE_URL||'file:./vestigia-dev.db'})});
 
 const app = express();
 app.disable('x-powered-by');
@@ -74,7 +69,7 @@ app.use((_req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads'));
 const backupStorageDir = getBackupStorageDir(process.cwd());
 let maintenanceMode = false;
 let maintenanceReason = '';
@@ -315,6 +310,7 @@ const validateUploadedImageOrThrow = (file?: Express.Multer.File) => {
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins: (string | RegExp)[] = [
+  ...(isDevMode ? [
   // Local dev — any localhost port
   /^http:\/\/localhost(:\d+)?$/,
   /^http:\/\/127\.0\.0\.1(:\d+)?$/,
@@ -322,6 +318,7 @@ const allowedOrigins: (string | RegExp)[] = [
   /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
   /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
   /^http:\/\/172\.\d+\.\d+\.\d+(:\d+)?$/,
+  ] : []),
   ...(isDevMode ? [
     /\.loca\.lt$/,
     /\.ngrok\.io$/,
@@ -381,8 +378,8 @@ app.use('/uploads', express.static(uploadDir, {
 }));
 
 // ─── Health check (Railway uses this to verify the service is up) ─────────────
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (_req, res) => {
+  try {await prisma.$queryRawUnsafe('SELECT 1');res.json({status:'ok',timestamp:new Date().toISOString()});}catch{res.status(503).json({status:'database_unavailable'});}
 });
 
 app.get('/api/checkout/config', (_req, res) => {
@@ -394,7 +391,7 @@ app.get('/api/checkout/config', (_req, res) => {
   });
 });
 
-app.get('/', (_req, res) => {
+app.get('/api', (_req, res) => {
   res.json({
     message: 'VESTIGIA Backend API is active',
     status: 'healthy',
@@ -5046,12 +5043,16 @@ async function maybeRunScheduledBackup() {
   }
 }
 
-installHomepageRoutes(app, prisma, authenticateAdmin, adminWriteRateLimit, serializeProduct);
+const publishedStorefront=installHomepageRoutes(app, prisma, authenticateAdmin, adminWriteRateLimit, serializeProduct);
 installPricingRoutes(app, prisma, authenticateAdmin, stripe, allowMockPayments);
+
+installStorefront(app,publishedStorefront);
+app.use('/api',(_req,res)=>res.status(404).json({error:'API route not found'}));
 
 async function startServer() {
   await seedDatabase();
   await pricingAudit(prisma);
+  await publishedStorefront.get(true);
   await getBackupSettings();
   void maybeRunScheduledBackup();
   setInterval(() => void maybeRunScheduledBackup(), 15 * 60 * 1000);

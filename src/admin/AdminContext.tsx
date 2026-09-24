@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { readPublicBootstrap } from '../homepage/bootstrap';
 import { API_BASE_URL } from "../config/api";
 import {
   products as initialProducts,
@@ -237,7 +238,7 @@ function buildProductFormData(product: any) {
 }
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(()=>readPublicBootstrap()?.products||[]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
@@ -256,7 +257,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
     return savedAuth;
   });
-  const [isSynced, setIsSynced] = useState(false);
+  const [isSynced, setIsSynced] = useState(()=>!!readPublicBootstrap());
 
   const refreshOrdersAndCustomers = async () => {
     const token = getAdminToken();

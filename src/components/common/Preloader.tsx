@@ -6,7 +6,7 @@ interface PreloaderProps {
 }
 
 export default function Preloader({ onComplete }: PreloaderProps) {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(()=>!document.getElementById('vestigia-public-data'));
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {

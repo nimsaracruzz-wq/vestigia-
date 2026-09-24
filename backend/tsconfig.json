@@ -8,6 +8,7 @@
     "strict": true,
     "skipLibCheck": true,
     "rootDir": "..",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "jsx": "react-jsx"
   }
 }

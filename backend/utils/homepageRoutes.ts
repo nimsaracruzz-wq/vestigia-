@@ -1,3 +1,4 @@
+import { PublishedStorefront } from './publishedStorefront.js';
 import type { Express, RequestHandler } from 'express';
 import type { PrismaClient } from '@prisma/client';
 import fs from 'node:fs/promises';
@@ -27,12 +28,12 @@ export async function homepageWarnings(db: PrismaClient, config: HomepageConfig)
 
 export function installHomepageRoutes(app: Express, db: PrismaClient, auth: RequestHandler, rateLimit: RequestHandler, serializeProduct: (product: any) => any) {
   const wrap = (fn: RequestHandler): RequestHandler => async (req,res,next) => { try { await fn(req,res,next); } catch (e) { res.status(400).json({ error: e instanceof Error ? e.message : 'Homepage request failed' }); } };
+  const published=new PublishedStorefront(db,serializeProduct,()=>ensureHomepage(db));
   app.get('/api/storefront/homepage', wrap(async (_req,res) => {
-    const record = await ensureHomepage(db);
-    // Revalidate on every request. Publishing changes the ETag immediately.
-    res.set('Cache-Control','no-cache');
-    res.set('ETag', `"homepage-${record.publishedRevision}"`);
-    res.json({ config: JSON.parse(record.published), version: record.publishedRevision });
+    const snapshot=await published.get();
+    res.set('Cache-Control','public, max-age=0, must-revalidate');
+    res.set('ETag', `"homepage-${snapshot.version}"`);
+    res.json({config:snapshot.config,version:snapshot.version});
   }));
   app.get('/api/admin/homepage', auth, wrap(async (_req,res) => {
     const record = await ensureHomepage(db);
@@ -59,6 +60,7 @@ export function installHomepageRoutes(app: Express, db: PrismaClient, auth: Requ
     const warnings = await homepageWarnings(db, config);
     const result = await db.homepage.updateMany({ where: { id: 1, revision: record.revision }, data: { published: JSON.stringify(config), publishedRevision: record.revision, publishedAt: new Date() } });
     if (!result.count) { res.status(409).json({ error: 'Draft changed during publish. Reload and try again.' }); return; }
+    await published.published(config,record.revision);
     res.json({ publishedRevision: record.revision, publishedAt: new Date().toISOString(), warnings });
   }));
   app.get('/api/admin/homepage/products', auth, wrap(async (req,res) => {
@@ -112,4 +114,5 @@ export function installHomepageRoutes(app: Express, db: PrismaClient, auth: Requ
     const rows = await db.orderItem.groupBy({by:['productId'],where:{order:{paymentStatus:'PAID',status:{notIn:['cancelled','refunded']}}},_sum:{quantity:true},orderBy:{_sum:{quantity:'desc'}},take:24});
     res.set('Cache-Control','no-cache').json(rows.filter(r=>r.productId).map(r=>r.productId));
   }));
+  return published;
 }
