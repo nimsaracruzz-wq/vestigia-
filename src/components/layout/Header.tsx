@@ -19,17 +19,21 @@ export default function Header({ onCartToggle, onMenuToggle, onSearchToggle }: H
   const isHome = location.pathname === "/" || location.pathname === "/homepage-preview";
 
   useEffect(() => {
+    let frame = 0;
+    let previous = window.scrollY > 50;
+    setScrolled(previous);
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const next = window.scrollY > 50;
+        if (next !== previous) { previous = next; setScrolled(next); }
+      });
     };
 
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => { window.removeEventListener("scroll", handleScroll); cancelAnimationFrame(frame); };
   }, []);
 
   const headerClass = `header ${scrolled ? "scrolled" : isHome ? "transparent" : "solid"}`;

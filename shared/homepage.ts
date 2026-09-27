@@ -37,7 +37,7 @@ export function newSection<T extends SectionType>(type: T, id: string, heading =
   const banner: Banner = { ...copy, ...media, vertical: 'center', overlay: 'medium', textTheme: 'light', desktopHeight: 'standard', mobileHeight: 'standard' };
   const settings: SectionSettings = {
     announcement: { messages: [{ id: 'message-1', text: 'THE FIRST RELEASE — AVAILABLE NOW', url: '/shop', enabled: true }], rotation: false, interval: 6, background: 'black', textTheme: 'light' },
-    hero: { ...banner, desktopHeight: 'full', mobileHeight: 'full', hotspots: [], desktopFocalX: 50, desktopFocalY: 0, tabletFocalX: 50, tabletFocalY: 0, mobileFocalX: 50, mobileFocalY: 50 },
+    hero: { ...banner, image: '/images/products/vestigia_hero_desktop.webp', mobileImage: '/images/products/vestigia_hero_mobile.webp', desktopHeight: 'full', mobileHeight: 'full', hotspots: [], desktopFocalX: 50, desktopFocalY: 0, tabletFocalX: 50, tabletFocalY: 0, mobileFocalX: 50, mobileFocalY: 50 },
     product_carousel: { ...copy, source: 'manual', category: '', productIds: [], excludedIds: [], maxProducts: 8, sort: 'newest', layout: 'carousel', desktopItems: 4, tabletItems: 2.5, mobileItems: 1.2, arrows: true, wishlist: true, quickAdd: true, colors: true, badges: true, badge: '', autoplay: false, loop: false },
     manifesto: { ...copy, alignment: 'center', background: 'ivory' },
     editorial_banner: banner,
@@ -50,7 +50,7 @@ export function newSection<T extends SectionType>(type: T, id: string, heading =
 
 export function initialHomepage(productIds: number[] = [], announcement?: { enabled: boolean; text: string }): HomepageConfig {
   const hero = newSection('hero', 'hero', 'LEAVE YOUR MARK.');
-  Object.assign(hero.settings, { mobileImage: '/images/products/vestigia-hero-768.jpg', eyebrow: 'THE FIRST RELEASE', body: 'Contemporary clothing shaped by Italian vision and made in Sri Lanka.', alignment: 'center', cta: link('Shop the first release', '/shop'), secondaryCta: link('Discover our story', '/story') });
+  Object.assign(hero.settings, { eyebrow: 'THE FIRST RELEASE', body: 'Contemporary clothing shaped by Italian vision and made in Sri Lanka.', alignment: 'center', cta: link('Shop the first release', '/shop'), secondaryCta: link('Discover our story', '/story') });
   const arrivals = newSection('product_carousel', 'new-arrivals', 'NEW ARRIVALS');
   Object.assign(arrivals.settings, { eyebrow: 'LATEST FROM VESTIGIA', source: 'newest', badge: 'NEW', cta: link('View all', '/shop') });
   const manifesto = newSection('manifesto', 'manifesto', 'DESIGNED TO REMAIN.');
@@ -58,18 +58,18 @@ export function initialHomepage(productIds: number[] = [], announcement?: { enab
   const featured = newSection('product_carousel', 'first-release', 'THE FIRST RELEASE');
   Object.assign(featured.settings, { eyebrow: 'ONE BEGINNING.', source: productIds.length ? 'manual' : 'newest', productIds, layout: 'grid', cta: link('Explore the collection', '/shop') });
   const campaign = newSection('editorial_banner', 'campaign', 'BUILT AROUND IDENTITY.');
-  Object.assign(campaign.settings, { image: '/images/products/vestigia-introduction-960.jpg', vertical: 'bottom', cta: link('Explore the collection', '/shop') });
+  Object.assign(campaign.settings, { image: '/images/products/built_around_vestigia.webp', vertical: 'bottom', cta: link('Explore the collection', '/shop') });
   const wanted = newSection('product_carousel', 'most-wanted', 'MOST WANTED');
   Object.assign(wanted.settings, { productIds, body: 'The pieces defining VESTIGIA.', cta: link('View all', '/shop') });
   wanted.enabled = productIds.length > 0;
   const identity = newSection('editorial_split', 'identity', 'BUILT AROUND IDENTITY.');
-  Object.assign(identity.settings, { eyebrow: 'THE VESTIGIA PHILOSOPHY', image: '/images/products/vestigia-introduction-960.jpg', alt: 'VESTIGIA Signature Tee worn by a model', body: 'Heavyweight construction. Relaxed proportions. Understated details. The Signature Tee establishes the foundation of VESTIGIA.', cta: link('Discover the story', '/story') });
+  Object.assign(identity.settings, { eyebrow: 'THE VESTIGIA PHILOSOPHY', image: '/images/products/built_around_vestigia.webp', alt: 'VESTIGIA Signature Tee worn by a model', body: 'Heavyweight construction. Relaxed proportions. Understated details. The Signature Tee establishes the foundation of VESTIGIA.', cta: link('Discover the story', '/story') });
   const craft = newSection('editorial_split', 'craft', 'CRAFTED BEYOND TIME.');
-  Object.assign(craft.settings, { layout: 'image_right', background: 'ivory', body: 'Every piece is designed to outlast trends and become part of your story.', cta: link('Our philosophy', '/story') });
+  Object.assign(craft.settings, { image: '/images/products/vestigia_gallery_1.webp', layout: 'image_right', background: 'ivory', body: 'Every piece is designed to outlast trends and become part of your story.', cta: link('Our philosophy', '/story') });
   const legacy = newSection('editorial_banner', 'legacy', 'INSPIRED BY ITALIAN LEGACY.');
   Object.assign(legacy.settings, { image: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=1600&q=85', alt: 'Architectural details', body: 'Clean silhouettes, refined proportions, and contemporary Italian aesthetics define every collection.' });
   const precision = newSection('editorial_split', 'precision', 'MADE WITH PRECISION.');
-  Object.assign(precision.settings, { image: '/images/products/signature_detail.png', alt: 'VESTIGIA fabric and stitching detail', body: 'Each VESTIGIA garment is carefully produced with attention to detail.', background: 'ivory' });
+  Object.assign(precision.settings, { image: '/images/products/vestigia_detail.webp', alt: 'VESTIGIA fabric and stitching detail', body: 'Each VESTIGIA garment is carefully produced with attention to detail.', background: 'ivory' });
   const lookbook = newSection('lookbook', 'world', 'THE VESTIGIA WORLD');
   lookbook.settings.items = [media.image, identity.settings.image, precision.settings.image, legacy.settings.image].map((image, n) => ({ ...media, image, id: `gallery-${n}`, alt: ['VESTIGIA campaign', identity.settings.alt, precision.settings.alt, legacy.settings.alt][n], caption: '', url: '', enabled: true }));
   const newsletter = newSection('newsletter', 'newsletter', 'JOIN THE INNER CIRCLE.');

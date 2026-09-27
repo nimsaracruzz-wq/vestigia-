@@ -15,3 +15,57 @@
 @media(max-width:767px){.hp-hero .hp-hero-media img{object-position:var(--hero-mobile-x,50%) var(--hero-mobile-y,50%)}}
 @media(max-width:767px){.hp-product-skeleton{grid-template-columns:repeat(4,82%)}.hp-products--grid .hp-carousel-controls,.hp-products--lead .hp-carousel-controls{display:flex}.hp-section{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}}
 @media(prefers-reduced-motion:reduce){.hp-page *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Mobile campaign copy positions are independent of the image-anchored hotspots. */
+@media (max-width: 767px) {
+  .hp-hero > .hp-copy {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    text-align: center;
+    pointer-events: none;
+  }
+  .hp-hero > .hp-copy > .hp-eyebrow {
+    position: absolute;
+    top: 25%;
+    inset-inline: 20px;
+    margin: 0;
+    font-size: 10px;
+    line-height: 16px;
+  }
+  .hp-hero > .hp-copy > h1 {
+    position: absolute;
+    top: 31%;
+    inset-inline: 20px;
+    margin: 0;
+    font-size: clamp(44px, 11.5vw, 54px);
+    line-height: .92;
+    text-align: center;
+    text-wrap: initial;
+    overflow-wrap: normal;
+    animation-name: vestigia-fade;
+  }
+  .hp-hero-heading-break { display: block; }
+  .hp-hero > .hp-copy > .hp-body {
+    position: absolute;
+    inset-inline: 24px;
+    top: 70%;
+    margin: 0 auto;
+    max-width: 330px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .hp-hero > .hp-copy > .hp-actions {
+    position: absolute;
+    inset-inline: 24px;
+    top: 80%;
+    display: grid;
+    justify-items: center;
+    justify-content: center;
+    gap: 8px;
+    pointer-events: auto;
+  }
+  .hp-hero .hp-actions .hp-link { min-height: 44px; padding: 10px 16px; }
+}

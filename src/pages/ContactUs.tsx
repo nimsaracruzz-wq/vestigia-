@@ -1,7 +1,8 @@
-import { Reveal } from "../animation/Reveal";
+import { PageIntro } from '../animation/PageIntro';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle2, ArrowLeft } from "lucide-react";
 import { SEOHead } from "../components/common/SEOHead";
 
@@ -58,7 +59,7 @@ export default function ContactUs() {
       />
       {/* Hero Header */}
       <header className="policy-hero">
-        <Reveal className="policy-hero__inner">
+        <PageIntro as="div" className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -68,7 +69,7 @@ export default function ContactUs() {
             Have a question regarding fit, order status, tailored garment care, or bespoke requests? 
             Our Client Concierge team is here to assist you with dedicated attention.
           </p>
-        </Reveal>
+        </PageIntro>
       </header>
 
       {/* Content Layout */}
@@ -186,7 +187,7 @@ export default function ContactUs() {
                   <input
                     id="contact-order"
                     type="text"
-                    placeholder="VST-2026-0001"
+                    placeholder="VST-7A3F92C1D8E4B605"
                     value={formData.orderNumber}
                     onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
                   />

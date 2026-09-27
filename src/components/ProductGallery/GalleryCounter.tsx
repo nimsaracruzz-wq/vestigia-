@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 
 interface GalleryCounterProps {
   current: number;
@@ -21,7 +21,6 @@ export const GalleryCounter: React.FC<GalleryCounterProps> = React.memo(
           initial={{ opacity: 0, y: 3 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -3 }}
-          transition={{ duration: 0.2 }}
           className="vst-counter-current"
         >
           {formattedCurrent}

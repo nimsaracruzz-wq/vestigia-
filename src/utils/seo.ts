@@ -1,3 +1,4 @@
+import { productSchema, productTitle, productDescription, canonicalProduct, slug, type SeoProduct } from '../../shared/seo/product';
 import { type Product } from "../data";
 
 export const SITE_URL = ((import.meta.env.VITE_SITE_URL as string | undefined) || "https://thevestigia.com").replace(/\/+$/, "");
@@ -16,18 +17,13 @@ export const absoluteUrl = (value = "/") => {
 export const productPath = (product: Pick<Product, "id" | "slug">) =>
   `/product/${product.slug || product.id}`;
 
-export const slugifySeo = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+export const slugifySeo = slug;
 
 export const collectionPath = (category: string) =>
   `/collections/${slugifySeo(category)}`;
 
 export const productCanonicalUrl = (product: Product) =>
-  product.canonicalUrl || absoluteUrl(productPath(product));
+  canonicalProduct(product,SITE_URL);
 
 export const cleanText = (value = "", max = 180) =>
   value
@@ -39,22 +35,28 @@ export const cleanText = (value = "", max = 180) =>
 export const imageUrl = (value?: string) => absoluteUrl(value || "/images/products/vestigia_logo.png");
 
 export const productSeoTitle = (product: Product) =>
-  product.seoTitle || `${product.name} | ${BRAND_DISPLAY_NAME}`;
+  productTitle(product);
 
 export const productSeoDescription = (product: Product) =>
-  product.seoDescription || cleanText(product.description, 155);
+  productDescription(product);
 
 export const organizationJsonLd = (): JsonLd => ({
   "@context": "https://schema.org",
-  "@type": "Organization",
+  "@type": ["Organization", "OnlineStore"],
   "@id": `${SITE_URL}/#organization`,
   name: BRAND_DISPLAY_NAME,
   url: SITE_URL,
   logo: DEFAULT_OG_IMAGE,
   sameAs: [
-    "https://www.instagram.com/vestigia_official",
-    "https://twitter.com/vestigia_official",
+    "https://instagram.com/thevestigia",
+    "https://tiktok.com/@thevestigia",
   ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer service",
+    email: "support@thevestigia.com",
+    availableLanguage: ["English", "Italian"],
+  },
 });
 
 export const websiteJsonLd = (): JsonLd => ({
@@ -62,11 +64,13 @@ export const websiteJsonLd = (): JsonLd => ({
   "@type": "WebSite",
   "@id": `${SITE_URL}/#website`,
   url: SITE_URL,
-  name: `${BRAND_DISPLAY_NAME} Official Online Store`,
+  name: `${BRAND_DISPLAY_NAME}`,
+  alternateName: `${BRAND_DISPLAY_NAME} Official Online Store`,
+  inLanguage: "en",
   publisher: { "@id": `${SITE_URL}/#organization` },
   potentialAction: {
     "@type": "SearchAction",
-    target: `${SITE_URL}/shop?search={search_term_string}`,
+    target: `${SITE_URL}/shop?q={search_term_string}`,
     "query-input": "required name=search_term_string",
   },
 });
@@ -82,43 +86,7 @@ export const breadcrumbJsonLd = (items: Array<{ name: string; path: string }>): 
   })),
 });
 
-export const productJsonLd = (product: Product, currency = "USD"): JsonLd => {
-  const offerPrice = product.prices?.[currency as "USD" | "EUR" | "JPY" | "GBP"]?.priceMinor;
-  const price = offerPrice == null
-    ? NaN
-    : offerPrice / (currency === "JPY" ? 1 : 100);
-  const inventory = product.inventory ? Object.values(product.inventory).reduce((sum, value) => sum + Number(value || 0), 0) : 1;
-  const images = (product.images?.length ? product.images : [product.modelImage || product.image]).filter(Boolean).map(imageUrl);
-  const condition = product.condition === "used"
-    ? "UsedCondition"
-    : product.condition === "refurbished"
-      ? "RefurbishedCondition"
-      : "NewCondition";
-
-  return {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "@id": `${productCanonicalUrl(product)}#product`,
-    name: product.name,
-    image: images,
-    description: productSeoDescription(product),
-    sku: product.sku || `VST-${String(product.id).padStart(4, "0")}`,
-    mpn: product.mpn || product.sku || `VST-${String(product.id).padStart(4, "0")}`,
-    gtin: product.gtin || undefined,
-    brand: { "@type": "Brand", name: product.brand || BRAND_DISPLAY_NAME },
-    material: product.material || undefined,
-    category: product.productType || product.category,
-    offers: Number.isFinite(price) ? {
-      "@type": "Offer",
-      url: productCanonicalUrl(product),
-      priceCurrency: currency,
-      price: price.toFixed(currency === "JPY" ? 0 : 2),
-      itemCondition: `https://schema.org/${condition}`,
-      availability: inventory > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      seller: { "@id": `${SITE_URL}/#organization` },
-    } : undefined,
-  };
-};
+export const productJsonLd = (product: Product, currency: 'USD'|'EUR'|'JPY'|'GBP' = 'EUR'): JsonLd => productSchema(product as SeoProduct,currency,SITE_URL);
 
 export const collectionJsonLd = (name: string, description: string, path: string, products: Product[] = []): JsonLd => ({
   "@context": "https://schema.org",

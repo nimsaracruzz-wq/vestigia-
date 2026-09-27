@@ -1,7 +1,8 @@
-import { Reveal } from "../animation/Reveal";
+import { PageIntro } from '../animation/PageIntro';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { heroProducts, type Product } from "../data";
 import { useAdmin } from "../admin/AdminContext";
 import { collectionPath } from "../utils/seo";
@@ -40,11 +41,11 @@ export default function Lookbook({ onQuickShop }: LookbookProps) {
         ])}
       />
       {/* Intro Header */}
-      <Reveal as="header" className="lookbook-header-section">
+      <PageIntro as="header" className="lookbook-header-section">
         <p>Summer Editorial 2026</p>
         <h1>Under the Solstice Sun</h1>
         <span>A cinematic study of raw fabrics, quiet statements, and fluid silhouettes.</span>
-      </Reveal>
+      </PageIntro>
 
       {/* Slide 1: Neutral Tailoring */}
       <section className="lookbook-scene-section">

@@ -25,11 +25,10 @@ let db: any, sql: Database.Database, folder: string, product: any, method: any;
 before(async()=>{
  folder=fs.mkdtempSync(path.join(os.tmpdir(),'vestigia-pricing-'));
  const target=path.join(folder,'test.sqlite');sql=new Database(target);
- const source=new Database(path.resolve('vestigia-dev.db'),{readonly:true});
- const schema=source.prepare("SELECT type,sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_%' ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 ELSE 2 END").all() as {type:string;sql:string}[];
- sql.pragma('foreign_keys=OFF');for(const row of schema)sql.exec(row.sql);sql.pragma('foreign_keys=ON');source.close();
+ const migrations=fs.readdirSync('prisma/migrations').filter(name=>fs.existsSync('prisma/migrations/'+name+'/migration.sql')).sort();
+ for(const name of migrations)sql.exec(fs.readFileSync('prisma/migrations/'+name+'/migration.sql','utf8'));
  db=new PrismaClient({adapter:new PrismaBetterSqlite3({url:target})});
- for(const [market,currency]of [['JP','JPY'],['EU','EUR'],['US','USD'],['UK','GBP']])await db.priceList.create({data:{id:market+'_RETAIL',market,name:market,currency,status:'ACTIVE',taxJurisdiction:'*'}});
+ for(const [market,currency]of [['JP','JPY'],['EU','EUR'],['US','USD'],['UK','GBP']])await db.priceList.upsert({where:{id:market+'_RETAIL'},update:{status:'ACTIVE',taxJurisdiction:'*'},create:{id:market+'_RETAIL',market,name:market,currency,status:'ACTIVE',taxJurisdiction:'*'}});
  const region=await db.shippingRegion.create({data:{name:'Test region'}});
  for(const [countryCode,countryName]of [['JP','Japan'],['FR','France']])await db.shippingCountry.create({data:{regionId:region.id,countryCode,countryName,taxRateBps:null}});
  method=await db.shippingMethod.create({data:{regionId:region.id,name:'Standard',price:999,estimatedDays:'3 days'}});
@@ -123,3 +122,5 @@ test('partial refunds use original JPY amount, enforce remaining balance and ide
  assert.equal((await post({...body,requestId:'test-refund-00000003',currency:'EUR'})).status,400);
  }finally{server.close();}
 });
+
+test('unpublished products cannot receive a payable quote',async()=>{await db.product.update({where:{id:product.id},data:{published:false}});try{await assert.rejects(()=>new PricingService(db).calculateCart(payload()),/unavailable/);}finally{await db.product.update({where:{id:product.id},data:{published:true}});}});

@@ -44,11 +44,11 @@ export default function Products() {
     }
   };
 
-  const handleSubmit = (data: any) => {
+  const handleSubmit = async (data: any) => {
     if (editingProduct) {
-      updateProduct(data as Product);
+      await updateProduct(data as Product);
     } else {
-      addProduct(data);
+      await addProduct(data);
     }
     setIsModalOpen(false);
   };

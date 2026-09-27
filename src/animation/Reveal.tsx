@@ -1,5 +1,5 @@
 import { Children, createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
-import { motion, type HTMLMotionProps } from "framer-motion";
+import { m as motion, type HTMLMotionProps } from "framer-motion";
 import { animationConfig, revealPreset, staggerDelay, type RevealOptions, type RevealTone } from "./config";
 import "./reveal.css";
 
@@ -56,7 +56,7 @@ export function useReveal({ once = true, trigger = "viewport", disabled = false,
     "data-reveal": options.variant || "fadeUp",
     initial: instant ? false as const : "hidden",
     animate: instant || trigger === "mount" ? "visible" : undefined,
-    whileInView: trigger === "viewport" ? "visible" : undefined,
+    whileInView: !instant && trigger === "viewport" ? "visible" : undefined,
     viewport: { ...animationConfig.viewport, once },
     variants: { hidden: preset.hidden, visible: preset.visible },
     transition: preset.transition,
@@ -67,7 +67,7 @@ export function useReveal({ once = true, trigger = "viewport", disabled = false,
 
 type Tag = "div" | "section" | "article" | "aside" | "header" | "footer" | "nav" | "ul" | "li" | "span" | "p" | "h1" | "h2" | "h3" | "figure" | "blockquote" | "form";
 type ElementProps = Omit<HTMLMotionProps<"div">, "children"> & { children?: ReactNode };
-type RevealProps = Omit<ElementProps, "initial" | "animate" | "whileInView" | "variants" | "transition"> & Options & { as?: Tag };
+export type RevealProps = Omit<ElementProps, "initial" | "animate" | "whileInView" | "variants" | "transition"> & Options & { as?: Tag };
 
 export function Reveal({ as = "div", variant, tone, delay, duration, once, trigger, disabled, allowNested, children, onFocusCapture, ...props }: RevealProps) {
   const entrance = useReveal({ variant, tone, delay, duration, once, trigger, disabled, allowNested });
@@ -122,7 +122,14 @@ export function RevealOverlay({ onFocusCapture, ...props }: HTMLMotionProps<"div
 }
 
 export function useDrawerEntrance(side: "left" | "right" = "right") {
-  const entrance = useEntrance("fade");
-  const hidden = { ...entrance.variants.hidden, x: entrance.transition.duration === 0 ? 0 : side === "left" ? "-100%" : "100%" };
-  return { ...entrance, variants: { hidden, visible: { opacity: 1, x: 0 } }, exit: hidden };
+  // Dialog focus is immediate, but must not cancel or permanently disable its slide.
+  const reduced = useSyncExternalStore(reducedStore.subscribe, reducedStore.get, serverSnapshot);
+  const hidden = { x: reduced ? 0 : side === "left" ? "-100%" : "100%" };
+  return {
+    initial: reduced ? false as const : "hidden",
+    animate: "visible",
+    exit: "hidden",
+    variants: { hidden, visible: { x: 0 } },
+    transition: { duration: reduced ? 0 : animationConfig.duration.drawer, ease: animationConfig.ease },
+  };
 }

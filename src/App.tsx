@@ -3,9 +3,16 @@ import CmsFooter from './homepage/CmsFooter';
 const HomepageAdmin = lazy(() => import('./admin/homepage/HomepageAdmin'));
 const HomepagePreview = lazy(() => import('./homepage/HomepagePreview'));
 import { lazy, Suspense, useState, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { MotionConfig } from "framer-motion";
+import { BrowserRouter, Routes, Route, useLocation, Navigate, useParams } from "react-router-dom";
+import { MotionProvider } from './animation/MotionProvider';
+import { AnimatePresence } from 'framer-motion';
+import { PageTransition } from './animation/PageTransition';
 import { RevealProvider } from "./animation/Reveal";
+
+function LegacyProductRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/product/${id}`} replace />;
+}
 
 // Core components & context
 import { CartProvider } from "./context/CartContext";
@@ -24,7 +31,6 @@ import CartDrawer from "./components/common/CartDrawer";
 import SearchOverlay from "./components/common/SearchOverlay";
 import QuickShopModal from "./components/common/QuickShopModal";
 import CookieConsent from "./components/common/CookieConsent";
-import Preloader from "./components/common/Preloader";
 import { CookieConsentProvider } from "./context/CookieConsentContext";
 
 // Pages
@@ -92,7 +98,6 @@ function MainAppShell() {
 
   return (
     <>
-      <Preloader />
       <div className="site-shell">
         {!isCheckout && (
           <div className={`storefront-header-region${location.pathname === '/shop' || location.pathname.startsWith('/collections/') ? ' shop-header-region' : ''}`}>
@@ -107,12 +112,12 @@ function MainAppShell() {
 
         <main className={isCheckout ? "main-content-area checkout-mode" : "main-content-area"}>
           <Suspense fallback={<div className="route-loading" role="status">Loading page...</div>}>
-            <Routes location={location} key={location.pathname}>
+            <PageTransition><Routes>
               <Route path="/" element={<Home onQuickShop={(p) => setQuickProduct(p)} />} />
               <Route path="/shop" element={<Shop onQuickShop={(p) => setQuickProduct(p)} />} />
               <Route path="/collections/:category" element={<Shop onQuickShop={(p) => setQuickProduct(p)} />} />
               <Route path="/product/:id" element={<ProductDetail onQuickShop={(p) => setQuickProduct(p)} />} />
-              <Route path="/shop/product/:id" element={<ProductDetail onQuickShop={(p) => setQuickProduct(p)} />} />
+              <Route path="/shop/product/:id" element={<LegacyProductRedirect />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/account" element={<Account />} />
               <Route path="/activate" element={<ActivateAccount />} />
@@ -131,7 +136,7 @@ function MainAppShell() {
               <Route path="/newsletter/confirm" element={<NewsletterConfirm />} />
               <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribe />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
+            </Routes></PageTransition>
           </Suspense>
         </main>
 
@@ -139,9 +144,9 @@ function MainAppShell() {
 
         {/* Global drawers & modals */}
         <CartDrawer open={cartOpen} onClose={closeCart} />
-        <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onCartToggle={openCart} />
+        <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
         <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
-        <QuickShopModal product={quickProduct} onClose={() => setQuickProduct(null)} />
+        <AnimatePresence>{quickProduct && <QuickShopModal key={quickProduct.id} product={quickProduct} onClose={() => setQuickProduct(null)} />}</AnimatePresence>
       </div>
     </>
   );
@@ -176,7 +181,7 @@ import { CurrencyProvider } from "./context/CurrencyContext";
 
 export default function App() {
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionProvider>
       <AdminProvider>
         <CurrencyProvider>
           <UserProvider>
@@ -198,6 +203,6 @@ export default function App() {
           </UserProvider>
         </CurrencyProvider>
       </AdminProvider>
-    </MotionConfig>
+    </MotionProvider>
   );
 }

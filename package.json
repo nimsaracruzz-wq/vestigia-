@@ -7,8 +7,11 @@
     "dev": "vite",
     "dev:all": "concurrently -k -n FRONTEND,BACKEND \"vite --host 0.0.0.0\" \"npm --prefix backend run dev\"",
     "generate-sitemap": "node scripts/generate-sitemap.js",
-    "build": "node scripts/generate-sitemap.js && tsc -b && vite build",
-    "preview": "vite preview"
+    "build": "tsc -b && vite build && node scripts/compress-assets.mjs",
+    "preview": "vite preview",
+    "seo:audit": "node scripts/seo-audit.mjs",
+    "check:budgets": "node scripts/performance-budget.mjs",
+    "test:seo": "npm --prefix backend run build && node --test backend/dist/backend/tests/seo.test.js"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.7.0",

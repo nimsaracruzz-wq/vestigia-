@@ -1,34 +1,10 @@
-# VESTIGIA® Official Robots.txt
-# https://thevestigia.com
-
 User-agent: *
 Allow: /
-Allow: /images/
-Allow: /uploads/
-Disallow: /admin/
-Disallow: /checkout/
-Disallow: /account/
-Disallow: /activate/
+Disallow: /admin
 Disallow: /api/
-Disallow: /*?*search=
-Disallow: /*?*sort=
-Disallow: /*?*category=
-
-# AI Search Engine Authorization (GEO / AEO)
-User-agent: GPTBot
-Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-# Sitemap Location
+Allow: /api/feeds/
+Disallow: /homepage-preview
+Disallow: /checkout
+Disallow: /cart
+Disallow: /account
 Sitemap: https://thevestigia.com/sitemap.xml

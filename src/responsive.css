@@ -12,7 +12,6 @@ html { scroll-behavior: auto; }
   .lux-footer__main, .lux-footer__nav, .success-details-layout) > * { min-width: 0; }
 .site-shell :where(.product-info, .details-col, .item-meta, .policy-content,
   .account-main-content, .checkout-account-mode-note) { overflow-wrap: anywhere; }
-.route-loading { min-height: 50svh; display: grid; place-items: center; padding: 100px 24px; }
 .contact-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 24px; }
 .contact-form-grid > * { min-width: 0; }
 

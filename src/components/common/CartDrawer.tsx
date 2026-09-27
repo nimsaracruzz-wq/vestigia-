@@ -3,7 +3,7 @@ import { useScrollLock } from "../../hooks/useScrollLock";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, X, Tag, ShoppingBag, ArrowRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../../context/CartContext";
 import { useCurrency } from "../../context/CurrencyContext";
 import { useAdmin } from "../../admin/AdminContext";
@@ -36,16 +36,17 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     updateQuantity,
     removeFromCart,
   } = useCart();
-  const { settings, products } = useAdmin();
+  const { settings, products, isSynced } = useAdmin();
   const { formatPrice: money, currency } = useCurrency();
 
   const [promoInput, setPromoInput] = useState("");
-
-  const hasUnavailableItems = cart.some(item => {
+  // Only flag items as unavailable after the product list has finished syncing from the API.
+  // During the initial load (isSynced=false, products=[]) we must not block checkout.
+  const hasUnavailableItems = isSynced && cart.some(item => {
     const liveProduct = products.find(p => p.id === item.product.id);
-    if (!liveProduct) return true;
+    if (!liveProduct) return true; // product deleted
     const stockKey = `${item.selectedColor}_${item.selectedSize}`;
-    return liveProduct.inventory && liveProduct.inventory[stockKey] === 0;
+    return liveProduct.inventory != null && liveProduct.inventory[stockKey] === 0;
   });
 
 
@@ -115,7 +116,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
                 >
                   <p className="cart-drawer__shipping-text">
                     {remaining > 0 ? (
@@ -130,7 +130,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                       style={{ width: "100%", transformOrigin: "left" }}
                       initial={{ scaleX: 0 }}
                       animate={{ scaleX: progressPercent / 100 }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                   </div>
                 </motion.div>
@@ -145,9 +144,10 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 <AnimatePresence>
                   {cart.map((item, index) => {
                     const liveProduct = products.find(p => p.id === item.product.id);
-                    const isDeleted = !liveProduct;
+                    // Only treat as deleted if the product list has fully loaded
+                    const isDeleted = isSynced && !liveProduct;
                     const stockKey = `${item.selectedColor}_${item.selectedSize}`;
-                    const isOutOfStock = liveProduct && liveProduct.inventory && liveProduct.inventory[stockKey] === 0;
+                    const isOutOfStock = liveProduct != null && liveProduct.inventory != null && liveProduct.inventory[stockKey] === 0;
                     const isUnavailable = isDeleted || isOutOfStock;
 
                     return (

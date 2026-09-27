@@ -1,3 +1,4 @@
+import { urlPolicy } from '../../../shared/seo/policy';
 import React, { useEffect } from "react";
 import { absoluteUrl, DEFAULT_OG_IMAGE, SITE_URL, type JsonLd } from "../../utils/seo";
 
@@ -29,7 +30,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   const fullTitle = title.includes("VESTIGIA") ? title : `${title} | VESTIGIA`;
   const normalizedCanonical = absoluteUrl(canonicalUrl);
   const normalizedOgImage = absoluteUrl(ogImage);
-  const robots = `${noIndex ? "noindex" : "index"}, ${noFollow ? "nofollow" : "follow"}, max-image-preview:large, max-snippet:-1, max-video-preview:-1`;
+  const robots = `${noIndex || urlPolicy(window.location.pathname,window.location.search).noIndex || document.documentElement.dataset.noindex === 'true' ? "noindex" : "index"}, ${noFollow ? "nofollow" : "follow"}, max-image-preview:large, max-snippet:-1, max-video-preview:-1`;
   const jsonLdPayload = JSON.stringify(jsonLd ?? null);
 
   useEffect(() => {
@@ -67,10 +68,10 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     setMetaTag('meta[property="og:url"]', "property", "og:url", normalizedCanonical);
     setMetaTag('meta[property="og:image"]', "property", "og:image", normalizedOgImage);
     setMetaTag('meta[property="og:image:alt"]', "property", "og:image:alt", ogImageAlt);
-    setMetaTag('meta[property="og:locale"]', "property", "og:locale", "en_US");
+    setMetaTag('meta[property="og:locale"]', "property", "og:locale", "it_IT");
 
     setMetaTag('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
-    setMetaTag('meta[name="twitter:site"]', "name", "twitter:site", "@vestigia_official");
+
     setMetaTag('meta[name="twitter:title"]', "name", "twitter:title", fullTitle);
     setMetaTag('meta[name="twitter:description"]', "name", "twitter:description", description);
     setMetaTag('meta[name="twitter:image"]', "name", "twitter:image", normalizedOgImage);
@@ -83,6 +84,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     }
     canonicalLink.setAttribute("href", normalizedCanonical);
 
+    document.querySelectorAll('script[type="application/ld+json"]:not(#vestigia-jsonld-schema)').forEach(el=>el.remove());
     const scriptId = "vestigia-jsonld-schema";
     let scriptElement = document.getElementById(scriptId) as HTMLScriptElement | null;
     if (jsonLd) {
@@ -96,7 +98,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     } else if (scriptElement) {
       scriptElement.remove();
     }
-  }, [fullTitle, description, normalizedCanonical, normalizedOgImage, ogImageAlt, ogType, keywords, robots, jsonLdPayload, jsonLd]);
+  }, [fullTitle, description, normalizedCanonical, normalizedOgImage, ogImageAlt, ogType, keywords, robots, jsonLdPayload]);
 
   return null;
 };

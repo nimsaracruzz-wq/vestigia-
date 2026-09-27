@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { readPublicBootstrap } from '../homepage/bootstrap';
 import { API_BASE_URL } from "../config/api";
 import {
@@ -110,8 +110,8 @@ interface AdminContextType {
   promoCodes: PromoCode[];
   settings: StoreSettings;
   journal: JournalArticle[];
-  addProduct: (p: Omit<Product, "id">) => void;
-  updateProduct: (p: Product) => void;
+  addProduct: (p: Omit<Product, "id">) => Promise<void>;
+  updateProduct: (p: Product) => Promise<void>;
   deleteProduct: (id: number) => void;
   updateProductInventory: (id: number, inventory: Record<string, number>) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<Order | null>;
@@ -174,7 +174,8 @@ async function apiRequest(path: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    const error = new Error(`API request failed: ${response.status}`) as Error & { status?: number };
+    const data = await response.json().catch(() => null);
+    const error = new Error(data?.error || `API request failed: ${response.status}`) as Error & { status?: number };
     error.status = response.status;
     throw error;
   }
@@ -194,6 +195,7 @@ function buildProductFormData(product: any) {
   formData.append("productType", String(product.productType ?? ""));
   formData.append("price", String(product.price ?? 0));
   formData.append("prices", JSON.stringify(product.prices ?? {}));
+  formData.append("priceChangeReason", String(product.priceChangeReason ?? "Product details updated"));
   formData.append("compareAt", product.compareAt !== undefined && product.compareAt !== null ? String(product.compareAt) : "");
   formData.append("badge", String(product.badge ?? ""));
   formData.append("image", String(product.image ?? ""));
@@ -212,6 +214,7 @@ function buildProductFormData(product: any) {
   formData.append("seoDescription", String(product.seoDescription ?? ""));
   formData.append("seoKeywords", String(product.seoKeywords ?? ""));
   formData.append("canonicalUrl", String(product.canonicalUrl ?? ""));
+  formData.append("published", String(product.published ?? true));
   formData.append("robotsIndex", String(product.robotsIndex ?? true));
   formData.append("robotsFollow", String(product.robotsFollow ?? true));
   formData.append("brand", String(product.brand ?? "Vestigia"));
@@ -291,7 +294,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     const sync = async () => {
       // Sync public data in parallel so settings/announcement load without blocking
       const [productsRes, settingsRes, promosRes, journalRes] = await Promise.allSettled([
-        apiRequest("/products"),
+        apiRequest(isAuthenticated ? "/admin/products" : "/products"),
         apiRequest("/settings"),
         apiRequest("/promos"),
         apiRequest("/journal"),
@@ -327,35 +330,20 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { localStorage.setItem("vstigia_adm_auth", JSON.stringify(isAuthenticated)); }, [isAuthenticated]);
 
-  const addProduct = (p: Omit<Product, "id">) => {
-    const nextProduct = { ...p, id: Math.max(...products.map((item) => item.id), 0) + 1 };
-    setProducts(prev => [...prev, nextProduct]);
-    void apiRequest("/products", {
+  const addProduct = async (p: Omit<Product, "id">) => {
+    const created = await apiRequest("/products", {
       method: "POST",
-      body: buildProductFormData(nextProduct),
-    }).then((created) => {
-      if (created) {
-        setProducts((prev) => prev.map((item) => (item.id === nextProduct.id ? created as Product : item)));
-      }
-    }).catch(() => undefined);
+      body: buildProductFormData(p),
+    });
+    if (created) setProducts(prev => [...prev, created as Product]);
   };
 
-  const updateProduct = (p: Product) => {
-    setProducts(prev => prev.map(x => x.id === p.id ? p : x));
-    void apiRequest(`/products/${p.id}`, {
+  const updateProduct = async (p: Product) => {
+    const updated = await apiRequest(`/products/${p.id}`, {
       method: "PUT",
       body: buildProductFormData(p),
-    }).then((updated) => {
-      if (updated) {
-        setProducts(prev => prev.map(x => x.id === p.id ? updated as Product : x));
-      }
-    }).catch((err) => {
-      console.error("Failed to update product:", err);
-      // Revert optimistic update by re-fetching from API
-      void apiRequest("/products").then((remote) => {
-        if (Array.isArray(remote)) setProducts(remote as Product[]);
-      }).catch(() => undefined);
     });
+    if (updated) setProducts(prev => prev.map(x => x.id === p.id ? updated as Product : x));
   };
 
   const deleteProduct = (id: number) => {
@@ -548,6 +536,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
 export function useAdmin() {
   const ctx = useContext(AdminContext);
+  const publicProducts = useMemo(
+    () => ctx?.products.filter(p => p.published !== false) ?? [],
+    [ctx?.products]
+  );
   if (!ctx) throw new Error("useAdmin must be used within AdminProvider");
-  return ctx;
+  return window.location.pathname.startsWith("/admin") ? ctx : { ...ctx, products: publicProducts };
 }

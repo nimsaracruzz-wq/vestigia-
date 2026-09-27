@@ -40,6 +40,7 @@ export class PricingService {
       const key = JSON.stringify([product.id, size, color]);
       if (seen.has(key)) throw new Error('Duplicate variant lines are not allowed');
       seen.add(key);
+      if (product.published === false) throw new Error('Product is unavailable');
       if (!JSON.parse(product.sizes).includes(size) || !JSON.parse(product.colors).includes(color)) throw new Error('Variant is unavailable');
       const stock = product.inventory.find((i: any) => i.size === size && i.color === color);
       if (!stock || stock.stock < quantity) throw new Error(`${product.name} does not have enough stock`);

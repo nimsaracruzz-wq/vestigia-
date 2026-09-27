@@ -3,7 +3,8 @@ import { ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCookieConsent } from "../../context/CookieConsentContext";
 import { useCurrency, type CurrencyCode } from "../../context/CurrencyContext";
-import { Reveal, RevealGroup } from "../../animation/Reveal";
+import { RevealGroup } from "../../animation/Reveal";
+import { SectionReveal as Reveal } from "../../animation/SectionReveal";
 
 export type FooterLink = {
   label: string;

@@ -1,7 +1,8 @@
-import { Reveal } from "../animation/Reveal";
+import { PageIntro } from '../animation/PageIntro';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 
 export default function Story() {
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function Story() {
       style={{ background: "#fff", color: "#171412", minHeight: "100vh" }}
     >
       {/* PAGE HERO */}
-      <Reveal as="header"
+      <PageIntro as="header"
         className="story-hero"
         style={{
           padding: "140px 24px 100px",
@@ -51,7 +52,7 @@ export default function Story() {
             </p>
           </div>
         </div>
-      </Reveal>
+      </PageIntro>
 
       {/* STORY MOVEMENT PANEL */}
       <section style={{ padding: "100px 24px", maxWidth: "800px", margin: "0 auto" }}>

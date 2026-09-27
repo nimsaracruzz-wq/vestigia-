@@ -1,11 +1,10 @@
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useEntrance } from "../../animation/Reveal";
 import { useScrollLock } from "../../hooks/useScrollLock";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Search, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { type Product } from "../../data";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { useCurrency } from "../../context/CurrencyContext";
 import { useAdmin } from "../../admin/AdminContext";
 import ProductImage from "./ProductImage";
@@ -22,7 +21,6 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const backdropEntrance = useEntrance("fade");
   const panelEntrance = useEntrance("scale");
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Product[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const { formatPrice: money, currency } = useCurrency();
   const { products } = useAdmin();
@@ -35,7 +33,6 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       }, 100);
     } else {
       setQuery("");
-      setResults([]);
     }
   }, [open]);
 
@@ -50,19 +47,17 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   }, [open, onClose]);
 
   // Live filtering products
-  useEffect(() => {
+  const results = useMemo(() => {
     if (query.trim().length > 1) {
       const lowerQuery = query.toLowerCase();
-      const filtered = products.filter(
+      return products.filter(
         (product) =>
           product.name.toLowerCase().includes(lowerQuery) ||
           product.category.toLowerCase().includes(lowerQuery) ||
           product.description.toLowerCase().includes(lowerQuery)
       );
-      setResults(filtered);
-    } else {
-      setResults([]);
     }
+    return [];
   }, [query, products]);
 
   const popularSearches = ["signature", "origin", "essential", "vestigia", "tee"];

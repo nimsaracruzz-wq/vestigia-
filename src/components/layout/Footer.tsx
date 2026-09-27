@@ -11,8 +11,8 @@ const footerGroups: FooterGroup[] = [
 ];
 
 const socialLinks: FooterLink[] = [
-  { label: "Instagram", url: "https://instagram.com" },
-  { label: "TikTok", url: "https://tiktok.com" },
+  { label: "Instagram", url: "https://instagram.com/thevestigia" },
+  { label: "TikTok", url: "https://tiktok.com/@thevestigia" },
 ];
 
 export default function Footer() {

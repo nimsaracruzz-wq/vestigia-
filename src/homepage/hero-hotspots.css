@@ -5,6 +5,9 @@
 .hp-hotspot-layer .hp-hotspot{position:absolute;transform:translate(-50%,-50%);width:48px;height:48px;padding:3px;border:0;background:transparent;border-radius:50%;pointer-events:auto;display:grid;place-items:center;cursor:pointer}
 .hp-hotspot-layer .hp-hotspot span{width:40px;height:40px;display:grid;place-items:center;background:rgba(245,242,235,.22);border:1px solid rgba(255,255,255,.75);border-radius:50%;backdrop-filter:blur(3px);color:white;font:300 20px/1 Arial,sans-serif}
 .hp-hotspot:focus-visible{outline:2px solid white;outline-offset:2px}
+.site-shell .hp-hotspot:active:not(:disabled){transform:translate(-50%,-50%)}
+.hp-hotspot-layer .hp-hotspot span{transition:transform var(--motion-instant,120ms),background-color var(--motion-fast,180ms);pointer-events:none}
+.hp-hotspot-layer .hp-hotspot:active span{transform:scale(.96);background:rgba(245,242,235,.38)}
 .hp-preview-backdrop{position:fixed;inset:0;z-index:10010;background:#0006;display:grid;place-items:center;padding:20px}
 .hp-product-preview{position:relative;width:min(460px,100%);max-height:90dvh;overflow:auto;display:grid;grid-template-columns:100px minmax(0,1fr);gap:20px;background:#faf8f3;color:#111;padding:36px 24px 24px}
 .hp-product-preview>img{width:100%;aspect-ratio:4/5;object-fit:cover}

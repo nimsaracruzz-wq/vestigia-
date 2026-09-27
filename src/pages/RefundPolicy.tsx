@@ -1,7 +1,8 @@
-import { Reveal } from "../animation/Reveal";
+import { PageIntro } from '../animation/PageIntro';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { RefreshCw, Truck, ShieldCheck, ArrowLeft, Mail, Clock } from "lucide-react";
 import { SEOHead } from "../components/common/SEOHead";
 
@@ -40,7 +41,7 @@ export default function RefundPolicy() {
         jsonLd={returnJsonLd}
       />
       <header className="policy-hero">
-        <Reveal className="policy-hero__inner">
+        <PageIntro as="div" className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -54,7 +55,7 @@ export default function RefundPolicy() {
             <span><Clock size={14} /> Last Updated: August 2026</span>
             <span><ShieldCheck size={14} /> 30-Day Satisfaction Guarantee</span>
           </div>
-        </Reveal>
+        </PageIntro>
       </header>
 
       <div className="policy-layout">

@@ -7,12 +7,14 @@ import { useEffect } from "react";
 export function useImagePreload(images: string[], activeIndex: number) {
   useEffect(() => {
     if (!images || images.length <= 1) return;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType ?? '')) return;
 
     const nextIndex = (activeIndex + 1) % images.length;
     const prevIndex = (activeIndex - 1 + images.length) % images.length;
 
     const imagesToPreload = Array.from(
-      new Set([images[activeIndex], images[nextIndex], images[prevIndex]])
+      new Set(window.matchMedia('(max-width:767px)').matches ? [images[nextIndex]] : [images[nextIndex], images[prevIndex]])
     ).filter(Boolean);
 
     const preload = () => {

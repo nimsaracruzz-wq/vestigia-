@@ -5,7 +5,7 @@ import { formatMoney, toMinor, toMajor } from "../../shared/money";
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, CreditCard, Shield, Truck, CheckCircle2, ArrowRight, Loader, User, Info, Lock, Gift, Building } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useCart } from "../context/CartContext";
@@ -115,7 +115,7 @@ function CheckoutContent() {
   const [lockedCurrency] = useState(currency);
   const money = (amount: number) => Number.isFinite(amount) ? formatMoney(toMinor(String(amount), lockedCurrency), lockedCurrency) : 'Awaiting quote';
   useEffect(() => { lockCheckout(); return () => unlockCheckout(); }, []);
-  const { products } = useAdmin();
+  const { products, isSynced } = useAdmin();
   const { user, isAuthenticated, createAccount, updateUser, checkEmailStatus, activateAccount, login } = useUser();
 
   const [step, setStep] = useState<Step>("shipping");
@@ -550,12 +550,12 @@ function CheckoutContent() {
       return;
     }
 
-    // Check if any cart item is unavailable
-    const hasUnavailable = cart.some(item => {
+    // Check if any cart item is unavailable — only reliable after products have synced
+    const hasUnavailable = isSynced && cart.some(item => {
       const liveProduct = products.find(p => p.id === item.product.id);
       if (!liveProduct) return true;
       const stockKey = `${item.selectedColor}_${item.selectedSize}`;
-      return liveProduct.inventory && liveProduct.inventory[stockKey] === 0;
+      return liveProduct.inventory != null && liveProduct.inventory[stockKey] === 0;
     });
 
     if (hasUnavailable) {
@@ -595,6 +595,7 @@ function CheckoutContent() {
         if (!stripe || !elements) throw new Error("Payment form is still loading. Please try again.");
         const card = elements.getElement(CardElement);
         if (!card) throw new Error("Card details are required.");
+        const paymentAddress = sameAsShipping ? shippingForm : billingForm;
 
         const result = await stripe.confirmCardPayment(paymentIntent.clientSecret, {
           payment_method: {
@@ -603,6 +604,14 @@ function CheckoutContent() {
               name: cardName.trim(),
               email: shippingForm.email,
               phone: shippingForm.phone,
+              address: {
+                line1: paymentAddress.address,
+                line2: !sameAsShipping ? billingForm.apartment || undefined : undefined,
+                city: paymentAddress.city,
+                state: paymentAddress.state,
+                postal_code: paymentAddress.zip.trim(),
+                country: getCountryOptionByCountry(paymentAddress.country)?.iso,
+              },
             },
           },
         });
@@ -1323,6 +1332,7 @@ function CheckoutContent() {
                         <CardElement
                           id="card-element"
                           options={{
+                            hidePostalCode: true,
                             style: {
                               base: {
                                 fontSize: "16px",

@@ -1,4 +1,5 @@
-import { RevealOverlay, RevealModal, Reveal, RevealGroup } from "../animation/Reveal";
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
+import { RevealOverlay, RevealModal, RevealGroup } from "../animation/Reveal";
 import { moneyLabel, formatMajor } from "../utils/money";
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
@@ -10,7 +11,7 @@ import {
 import { useCurrency } from "../context/CurrencyContext";
 import { useUser, Address } from "../context/UserContext";
 import { useAdmin } from "../admin/AdminContext";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
 import { products, type Product } from "../data";
 import ProductImage from "../components/common/ProductImage";

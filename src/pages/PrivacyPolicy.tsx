@@ -1,7 +1,8 @@
-import { Reveal } from "../animation/Reveal";
+import { PageIntro } from '../animation/PageIntro';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { Shield, Lock, UserCheck, Server, ArrowLeft, Mail, Clock } from "lucide-react";
 
 export default function PrivacyPolicy() {
@@ -15,7 +16,7 @@ export default function PrivacyPolicy() {
       className="policy-page-container"
     >
       <header className="policy-hero">
-        <Reveal className="policy-hero__inner">
+        <PageIntro as="div" className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -29,7 +30,7 @@ export default function PrivacyPolicy() {
             <span><Clock size={14} /> Last Updated: August 2026</span>
             <span><Shield size={14} /> Encrypted & GDPR Compliant</span>
           </div>
-        </Reveal>
+        </PageIntro>
       </header>
 
       <div className="policy-layout">

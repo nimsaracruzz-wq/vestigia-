@@ -1,0 +1,53 @@
+:root {
+  --motion-instant: 120ms;
+  --motion-fast: 180ms;
+  --motion-normal: 280ms;
+  --motion-reveal: 360ms;
+  --motion-slow: 420ms;
+  --motion-ease: cubic-bezier(.22,1,.36,1);
+}
+.page-transition { min-width: 0; }
+.page-reveal[data-page-reveal="standard"] { animation: vestigia-fade var(--motion-normal) var(--motion-ease); }
+[data-page-intro] > :is(h1,h2,p,span,div,nav) { animation: vestigia-intro var(--motion-reveal) var(--motion-ease) backwards; }
+[data-page-intro] > :nth-child(2) { animation-delay:40ms; }
+[data-page-intro] > :nth-child(3) { animation-delay:80ms; }
+[data-page-intro] > :nth-child(n+4) { animation-delay:120ms; }
+[data-page-intro="commerce"] > * { animation-name:vestigia-fade; animation-duration:var(--motion-fast); animation-delay:0ms; }
+.page-reveal:focus-within,[data-page-intro]:focus-within > * { animation:none; }
+@keyframes vestigia-intro { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+@keyframes vestigia-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vestigia-sheet { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.site-shell :is(button,a,input,select,textarea):focus-visible { outline: 2px solid #927644; outline-offset: 4px; }
+.site-shell :is(button,.primary-button,.hp-link,.cart-drawer__checkout-btn) {
+  transition: transform var(--motion-instant) var(--motion-ease), opacity var(--motion-fast), background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast);
+}
+.site-shell :is(button,.primary-button,.hp-link):active:not(:disabled):not(.hp-hotspot) { transform: scale(.98); }
+.desktop-nav a { text-underline-offset: 6px; text-decoration-thickness: 1px; }
+.desktop-nav a:hover { text-decoration: underline; }
+.size-row button,.qs-size-btn { transition: border-color var(--motion-fast), background-color var(--motion-fast), color var(--motion-fast); }
+.vc-wishlist svg { transition: fill var(--motion-fast), transform var(--motion-fast); }
+.vc-wishlist.saved svg { transform:scale(1.03); }
+.hp-product-preview { animation:vestigia-sheet var(--motion-normal) var(--motion-ease); }
+.vst-gallery-stage { touch-action: pan-y pinch-zoom; }
+.vst-gallery-skeleton,.vst-skeleton-shimmer { animation: none !important; }
+.vst-gallery-main-image-container .vst-gallery-img { transition: opacity var(--motion-fast); }
+.vst-gallery-img { will-change:auto; }
+.shop-filter-backdrop,.shop-sort-backdrop { animation: vestigia-fade var(--motion-fast); }
+.shop-filter-dialog,.shop-sort-dialog { animation: vestigia-sheet var(--motion-normal) var(--motion-ease); }
+.route-loading { min-height: 100svh; display: grid; place-items: center; padding: 100px 24px; }
+@media (hover:hover) and (pointer:fine) {
+  .vc-image-link img { transition: opacity var(--motion-normal), transform var(--motion-slow) var(--motion-ease); }
+  .vc-image-link:hover img { transform: scale(1.02); }
+}
+@media (max-width:767px) {
+  .page-reveal[data-page-reveal="standard"] { animation-duration:var(--motion-fast); }
+  [data-page-intro] > :is(h1,h2,p,span,div,nav) { animation-name:vestigia-fade; animation-duration:var(--motion-normal); animation-delay:0ms; }
+  .site-shell .icon-button { min-width:44px; min-height:44px; }
+  .cart-drawer,.menu-drawer { max-width:100vw; overscroll-behavior:contain; }
+  .hp-hotspot-layer .hp-hotspot span { backdrop-filter:none; }
+}
+/* Includes portals outside .site-shell and CSS from lazy-loaded routes. */
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:.01ms !important; animation-delay:0ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+  .page-reveal,[data-page-intro] > * { animation:none !important; }
+}

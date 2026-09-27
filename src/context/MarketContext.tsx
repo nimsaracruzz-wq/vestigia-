@@ -3,7 +3,9 @@ import { MARKETS, marketForCurrency, type Currency, type Market, formatMoney, to
 export type CurrencyCode = Currency;
 function savedCurrency(): Currency {
   const locked = sessionStorage.getItem('vestigia_checkout_currency');
-  const saved = locked || localStorage.getItem('vstigia_currency');
+  const requested = new URLSearchParams(window.location.search).get('currency');
+  const landingCurrency = ['EUR','USD','JPY','GBP'].includes(requested||'') ? requested : null;
+  const saved = locked || landingCurrency || localStorage.getItem('vstigia_currency');
   if (['JPY','USD','EUR','GBP'].includes(saved || '')) return saved as Currency;
   const locale = navigator.language.toUpperCase();
   return locale.includes('JP') ? 'JPY' : locale.includes('GB') ? 'GBP' : 'EUR';
@@ -13,7 +15,7 @@ const MarketContext = createContext<Context | undefined>(undefined);
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [currency, setState] = useState<Currency>(savedCurrency);
   const [checkoutLocked, setLocked] = useState(!!sessionStorage.getItem('vestigia_checkout_currency'));
-  const explicit = useRef(!!localStorage.getItem('vstigia_currency'));
+  const explicit = useRef(!!localStorage.getItem('vstigia_currency') || ['EUR','USD','JPY','GBP'].includes(new URLSearchParams(window.location.search).get('currency')||''));
   const market = marketForCurrency(currency);
   const setCurrency = (c: Currency) => {
     if (c === currency) return;
@@ -25,6 +27,8 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     setState(c);
   };
   useEffect(() => {
+    const requested=new URLSearchParams(window.location.search).get('currency');
+    if(['EUR','USD','JPY','GBP'].includes(requested||'')&&!sessionStorage.getItem('vestigia_checkout_currency'))localStorage.setItem('vstigia_currency',requested!);
     const onStorage=(event: StorageEvent)=> { if(event.key==='vstigia_currency'&&!sessionStorage.getItem('vestigia_checkout_currency'))setState(savedCurrency()); };
     window.addEventListener('storage',onStorage);
     const syncAvailableMarket = async () => {

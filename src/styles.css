@@ -1052,7 +1052,7 @@ img {
   right: auto;
   top: 0;
   transform: translateX(-105%);
-  transition: transform 0.28s cubic-bezier(0.32, 0, 0.15, 1);
+  /* Motion owns the drawer transform; CSS must not interpolate its frames again. */
   width: 100%;
   z-index: 250;
   overflow-y: auto;
@@ -1647,8 +1647,7 @@ img {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  /* A flat dimmer avoids repainting the page during drawer motion. */
   z-index: 248;
 }
 

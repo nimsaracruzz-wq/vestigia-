@@ -49,13 +49,13 @@ test('every preset ends visible and reduced motion removes all movement and dela
 test('mobile and admin movement is smaller and faster than storefront desktop', () => {
   const desktop = revealPreset(), mobile = revealPreset({ mobile: true }), admin = revealPreset({ tone: 'admin' });
   assert.ok(mobile.hidden.y < desktop.hidden.y);
-  assert.ok(admin.hidden.y < mobile.hidden.y);
+  assert.equal(admin.hidden.y, mobile.hidden.y);
   assert.ok(mobile.transition.duration < desktop.transition.duration);
   assert.ok(admin.transition.duration < mobile.transition.duration);
 });
 
 test('long catalogs have bounded delays, and the first four cards are staggered', () => {
-  assert.deepEqual([0, 1, 2, 3].map(i => staggerDelay(i)), [0, 0.08, 0.16, 0.24]);
+  assert.deepEqual([0, 1, 2, 3].map(i => staggerDelay(i)), [0, 0.04, 0.08, 0.12]);
   for (let index = 0; index < 1000; index++) assert.ok(staggerDelay(index) <= animationConfig.maxDelay);
   assert.equal(revealPreset({ delay: 10 }).transition.delay, animationConfig.maxDelay);
   assert.equal(staggerDelay(-3), 0);

@@ -1,9 +1,8 @@
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { RevealOverlay, RevealModal } from "../../animation/Reveal";
 import { useScrollLock } from "../../hooks/useScrollLock";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { X, Check, ShoppingBag } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
 import { isProductInStock, variantStock } from '../../../shared/shop';
 import { useCart } from "../../context/CartContext";
 import { type Product } from "../../data";
@@ -20,7 +19,6 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
   useScrollLock(!!product);
   useDialogFocus(!!product, onClose, '.qs-modal');
   const { addToCart, openCart, cart } = useCart();
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const { formatPrice: money, currency } = useCurrency();
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -39,7 +37,6 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
       setError("");
       setAdded(false);
     }
-    return () => clearTimeout(timer.current);
   }, [product]);
 
   // Close on Escape
@@ -65,15 +62,11 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
     if (variantStock(product,selectedColor,selectedSize) <= quantity) { setError('This size is unavailable or all remaining pieces are already in your bag.'); return; }
     addToCart(product, selectedSize, selectedColor);
     setAdded(true);
-    // Close modal and open cart after a brief confirmation flash
-    timer.current = setTimeout(() => {
-      onClose();
-      openCart();
-    }, 650);
+    onClose();
+    openCart();
   };
 
   return (
-    <AnimatePresence>
       <RevealOverlay
         className="qs-backdrop"
         onClick={onClose}
@@ -172,6 +165,5 @@ export default function QuickShopModal({ product, onClose }: QuickShopProps) {
           </div>
         </RevealModal>
       </RevealOverlay>
-    </AnimatePresence>
   );
 }

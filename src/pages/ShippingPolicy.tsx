@@ -1,7 +1,8 @@
-import { Reveal } from "../animation/Reveal";
+import { PageIntro } from '../animation/PageIntro';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { Truck, Globe, Clock, PackageCheck, ShieldCheck, ArrowLeft, Mail } from "lucide-react";
 
 export default function ShippingPolicy() {
@@ -16,7 +17,7 @@ export default function ShippingPolicy() {
     >
       {/* Hero Header */}
       <header className="policy-hero">
-        <Reveal className="policy-hero__inner">
+        <PageIntro as="div" className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -30,7 +31,7 @@ export default function ShippingPolicy() {
             <span><Clock size={14} /> Last Updated: August 2026</span>
             <span><Globe size={14} /> Worldwide Express Delivery</span>
           </div>
-        </Reveal>
+        </PageIntro>
       </header>
 
       {/* Main Content Layout */}

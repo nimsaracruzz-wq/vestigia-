@@ -25,6 +25,9 @@ export type SizeChart = {
 };
 
 export type Product = {
+  published?: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
   id: number;
   name: string;
   slug?: string;
@@ -88,7 +91,7 @@ export type JournalArticle = {
 
 export const heroProducts: Product[] = [
   {
-    id: 17,
+    id: 1,
     name: "VESTIGIA Aurelius Oversized Tee - Black",
     slug: "vestigia-aurelius-oversized-tee-black",
     category: "Clothing",
@@ -124,7 +127,7 @@ export const heroProducts: Product[] = [
     reviews: []
   },
   {
-    id: 18,
+    id: 2,
     name: "VESTIGIA Aurelius Oversized Tee - White",
     slug: "vestigia-aurelius-oversized-tee-white",
     category: "Clothing",

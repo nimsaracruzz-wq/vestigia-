@@ -1,8 +1,11 @@
 import { RevealModal, Reveal, RevealGroup } from "../animation/Reveal";
+import { useDialogFocus } from '../hooks/useDialogFocus';
+import { useScrollLock } from '../hooks/useScrollLock';
+import { PageIntro } from '../animation/PageIntro';
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { Minus, Plus, Heart, Star, ChevronDown, ArrowLeft, Check, Ruler, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { type Product, type SizeChart } from "../data";
 import { useCart } from "../context/CartContext";
 import { useAdmin } from "../admin/AdminContext";
@@ -40,12 +43,14 @@ const getColorName = (hex: string) => {
 
 // ── Size Chart Modal Component ─────────────────────────────────────────────
 function SizeChartModal({ chart, onClose }: { chart: SizeChart; onClose: () => void }) {
+  useScrollLock(true);
+  useDialogFocus(true, onClose, '.size-chart-modal');
   const [unit, setUnit] = useState<"in" | "cm">(chart.unit);
 
   const colKeys = chart.columns.slice(1).map(c => normalizeChartKey(c));
 
   return (
-    <AnimatePresence>
+    <>
       <motion.div
         className="size-chart-backdrop"
         initial={{ opacity: 0 }}
@@ -118,7 +123,7 @@ function SizeChartModal({ chart, onClose }: { chart: SizeChart; onClose: () => v
           <strong>How to measure:</strong> Measure your chest at its fullest point, your waist at the narrowest point, and hips at the widest point. All measurements in natural standing position.
         </p>
       </RevealModal>
-    </AnimatePresence>
+    </>
   );
 }
 
@@ -135,7 +140,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   const { formatPrice, currency } = useCurrency();
 
   // Find product by id or slug
-  const product = products.find((p) => p.id === Number(id) || p.slug === id);
+  const product = products.find((p) => p.published !== false && (p.id === Number(id) || p.slug === id));
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
@@ -150,11 +155,14 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   // Accordion state
   const [activeAccordion, setActiveAccordion] = useState<string | null>("details");
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(addedTimer.current), []);
 
   // Sync PDP state when product changes.
   useEffect(() => {
     if (product) {
-      setSelectedColor(product.colors[0] || "");
+      const params = new URLSearchParams(location.search);
+      setSelectedColor(product.colors.find(c=>c===params.get('color')) || product.colors[0] || '');
       setActiveImageIndex(0);
       setQuantity(1);
       setError("");
@@ -162,16 +170,16 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       if (product.sizes.length === 1 && product.sizes[0] === "OS") {
         setSelectedSize("OS");
       } else {
-        setSelectedSize("");
+        setSelectedSize(product.sizes.find(s=>s===params.get('size')) || '');
       }
     }
-  }, [product]);
+  }, [product, location.search]);
 
   useEffect(() => {
     if (!product?.slug) return;
     const canonicalPath = productPath(product);
     if (location.pathname !== canonicalPath) {
-      navigate(canonicalPath, { replace: true });
+      navigate(canonicalPath + location.search, { replace: true });
     }
   }, [location.pathname, navigate, product]);
 
@@ -226,15 +234,17 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       setError("Please select a size before adding to cart.");
       const sizeSection = document.getElementById("mobile-pdp-size-section");
       if (sizeSection) {
-        sizeSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        sizeSection.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion:reduce)').matches ? 'instant' : 'smooth', block: "center" });
       }
       return;
     }
+    if ((product.inventory?.[selectedColor+'_'+selectedSize] ?? 0) < quantity) { setError('This quantity is unavailable.'); return; }
     setError("");
     addToCart(product, selectedSize, selectedColor, quantity);
     setAddedToCartText(true);
     openCart();
-    setTimeout(() => {
+    clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => {
       setAddedToCartText(false);
     }, 2000);
   };
@@ -253,10 +263,10 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   const breadcrumbSchema = breadcrumbJsonLd([
     { name: "Home", path: "/" },
     { name: "Shop", path: "/shop" },
-    { name: product.category, path: "/shop" },
+    { name: product.category, path: collectionPath(product.category) },
     { name: product.name, path: productPath(product) },
   ]);
-  const productSchema = productJsonLd(product, "USD");
+  const productSchema = productJsonLd(product, currency);
   const currentPrice = getProductPrice(product, currency);
   const compareAtPrice = getProductCompareAt(product, currency);
 
@@ -282,15 +292,17 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
           <ArrowLeft size={16} />
           <span>Back</span>
         </button>
-        <div className="breadcrumbs" role="navigation" aria-label="Breadcrumb">
-          <Link to="/">Home</Link>
-          <span>/</span>
-          <Link to="/shop">Shop</Link>
-          <span>/</span>
-          <Link to={collectionPath(product.category)}>{product.category}</Link>
-          <span>/</span>
-          <span className="breadcrumb-current">{product.name}</span>
-        </div>
+        <nav className="breadcrumbs" aria-label="Breadcrumb">
+          <ol style={{ display: 'flex', alignItems: 'center', gap: '8px', listStyle: 'none', margin: 0, padding: 0 }}>
+            <li><Link to="/">Home</Link></li>
+            <li aria-hidden="true">/</li>
+            <li><Link to="/shop">Shop</Link></li>
+            <li aria-hidden="true">/</li>
+            <li><Link to={collectionPath(product.category)}>{product.category}</Link></li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page"><span className="breadcrumb-current">{product.name}</span></li>
+          </ol>
+        </nav>
       </div>
 
       <div className="pdp-layout-grid">
@@ -305,7 +317,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
 
         {/* Right Column: Information Panel */}
         <div className="pdp-details-column">
-          <Reveal className="pdp-details-header">
+          <PageIntro as="div" commerce className="pdp-details-header">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '8px' }}>
               <span className="pdp-category-kicker">{product.productType || product.category}</span>
               <span style={{ fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#888', fontWeight: 600 }}>
@@ -316,13 +328,14 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
 
             <div className="pdp-price">
               {compareAtPrice && <span className="compare-at">{formatPrice(compareAtPrice)}</span>}
-              <span className="current-price">{formatPrice(currentPrice)}</span>
+              <span className="current-price">{formatPrice(currentPrice)} {currency}</span>
+              <span>{selectedSize ? ((product.inventory?.[`${selectedColor}_${selectedSize}`] ?? 0)>0 ? "In stock" : "Out of stock") : Object.values(product.inventory||{}).some(n=>n>0)?"In stock":"Out of stock"}</span>
             </div>
-          </Reveal>
+          </PageIntro>
 
-          <Reveal as="p" className="pdp-description-text">{product.description}</Reveal>
+          <Reveal disabled as="p" className="pdp-description-text">{product.description}</Reveal>
 
-          <Reveal className="pdp-selections-box">
+          <Reveal disabled className="pdp-selections-box">
             {/* Colors Selectors */}
             <div className="pdp-option-row color-option-row">
               <span className="option-label">Color</span>
@@ -363,7 +376,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                 <div className="size-row">
                   {product.sizes.map((size) => {
                     const stockKey = `${selectedColor}_${size}`;
-                    const stock = product.inventory && product.inventory[stockKey] !== undefined ? product.inventory[stockKey] : 10;
+                    const stock = product.inventory && product.inventory[stockKey] !== undefined ? product.inventory[stockKey] : 0;
                     const isOutOfStock = stock === 0;
 
                     return (
@@ -453,9 +466,9 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
           </Reveal>
 
           {/* Size Chart Modal */}
-          {sizeChartOpen && product.sizeChart && (
+          <AnimatePresence>{sizeChartOpen && product.sizeChart && (
             <SizeChartModal chart={product.sizeChart} onClose={() => setSizeChartOpen(false)} />
-          )}
+          )}</AnimatePresence>
 
           {/* Details Accordion Panel */}
           <div className="pdp-accordions-group">
@@ -477,7 +490,6 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25 }}
                   >
                     <ul>
                       {product.details.map((detail, i) => (
@@ -507,7 +519,6 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25 }}
                   >
                     <ul>
                       {product.care.map((careItem, i) => (
@@ -538,7 +549,6 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25 }}
                     >
                       <div className="size-chart-inline-wrap">
                         <div className="size-chart-inline-table-wrapper">
@@ -597,7 +607,6 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25 }}
                   >
                     <p>
                       Complimentary carbon-neutral standard shipping is automatically applied to orders over $150.

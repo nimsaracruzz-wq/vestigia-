@@ -10,6 +10,7 @@ export default defineConfig(({command,mode}) => {
  }
  return {
   plugins: [react()],
+  build: { rollupOptions: { output: { manualChunks: id => /node_modules[\\/](framer-motion|motion-dom|motion-utils)[\\/]/.test(id) ? 'motion' : undefined } } },
   server: {
     host: "0.0.0.0",
     proxy: {

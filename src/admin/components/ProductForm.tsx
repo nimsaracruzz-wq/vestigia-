@@ -1,15 +1,16 @@
+import { slug as seoSlug } from '../../../shared/seo/product';
 import React, { useEffect, useState } from "react";
 import { type Product, type SizeChart, type SizeChartRow } from "../../data";
 import { Plus, Trash2 } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 
 interface ProductFormProps {
   initialData?: Product | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => void | Promise<void>;
   onCancel: () => void;
 }
 
 const DEFAULT_COLUMNS = ["Size", "Chest", "Waist", "Length"];
-const API_BASE_URL = "/api";
 
 const normalizeColumnKey = (label: string) =>
   label.trim().toLowerCase().replace(/\s+/g, "_");
@@ -40,6 +41,8 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   const [productImage, setProductImage] = useState(initialData?.productImage || initialData?.image || "");
   const [isUploading, setIsUploading] = useState(false);
   const [imageError, setImageError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, role: "model" | "product" | "gallery") => {
     const file = e.target.files?.[0];
@@ -54,15 +57,23 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     setImageError("");
 
     try {
+      const token = localStorage.getItem("vstigia_adm_token");
+      if (!token) {
+        throw new Error("Please sign in to the admin panel again before uploading images.");
+      }
       const data = new FormData();
       data.append("file", file);
 
       const response = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: data
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Your admin session has expired or is not authorized. Please sign in again and retry the upload.");
+        }
         let errMsg = `Server error ${response.status}`;
         try {
           const errJson = await response.json();
@@ -134,6 +145,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     seoDescription: initialData?.seoDescription || "",
     seoKeywords: initialData?.seoKeywords || "",
     canonicalUrl: initialData?.canonicalUrl || "",
+    published: initialData?.published ?? true,
     robotsIndex: initialData?.robotsIndex ?? true,
     robotsFollow: initialData?.robotsFollow ?? true,
     brand: initialData?.brand || "Vestigia",
@@ -161,17 +173,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   const [isSeoKeywordsEdited, setIsSeoKeywordsEdited] = useState(!!initialData?.seoKeywords);
   const [isAltEdited, setIsAltEdited] = useState(!!initialData?.alt);
 
-  const slugify = (text: string): string => {
-    return text
-      .toString()
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')           // Replace spaces with -
-      .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-      .replace(/\-\-+/g, '-')         // Replace multiple - with single -
-      .replace(/^-+/, '')             // Trim - from start
-      .replace(/-+$/, '');            // Trim - from end
-  };
+  const slugify = seoSlug;
 
   // Safely parse sizeChart — backend may return it as a raw JSON string or a pre-parsed object
   const parsedSizeChart = (() => {
@@ -339,8 +341,9 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
   };
 
   // ── submit ──────────────────────────────────────────────────────────────
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isUploading || isSaving) return;
     if (photos.length === 0 && !modelImage && !productImage) {
       setImageError("Please upload at least one product photo.");
       return;
@@ -350,7 +353,10 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     const galleryImages = photos.length > 0 ? photos : [primaryImage];
 
     setImageError("");
-    onSubmit({
+    setSaveError("");
+    setIsSaving(true);
+    try {
+    await onSubmit({
       ...formData,
       price: Number(formData.price),
       prices: initialData?.prices || {},
@@ -380,6 +386,11 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         return cleaned;
       })(),
     });
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to save product. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -841,6 +852,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
           </div>
         </div>
         <div className="admin-form-row">
+          <div className="admin-form-group"><label><input type="checkbox" name="published" checked={Boolean(formData.published)} onChange={handleChange}/> Published on storefront</label></div>
           <div className="admin-form-group">
             <label>
               <input
@@ -988,8 +1000,9 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       </div>
 
       <div className="admin-form-actions">
-        <button type="button" onClick={onCancel} className="admin-btn admin-btn-secondary">Cancel</button>
-        <button type="submit" className="admin-btn admin-btn-primary">Save Product</button>
+        {saveError && <p role="alert" className="error-text">{saveError}</p>}
+        <button type="button" onClick={onCancel} disabled={isSaving} className="admin-btn admin-btn-secondary">Cancel</button>
+        <button type="submit" disabled={isSaving || isUploading} className="admin-btn admin-btn-primary">{isSaving ? "Saving..." : "Save Product"}</button>
       </div>
     </form>
   );

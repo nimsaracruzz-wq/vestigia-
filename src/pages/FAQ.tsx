@@ -1,7 +1,8 @@
-import { Reveal } from "../animation/Reveal";
+import { PageIntro } from '../animation/PageIntro';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { HelpCircle, ChevronDown, ArrowLeft } from "lucide-react";
 import { SEOHead } from "../components/common/SEOHead";
 
@@ -98,7 +99,7 @@ export default function FAQ() {
       />
       {/* Hero Header */}
       <header className="policy-hero">
-        <Reveal className="policy-hero__inner">
+        <PageIntro as="div" className="policy-hero__inner">
           <Link to="/" className="policy-back-link">
             <ArrowLeft size={16} /> Back to Store
           </Link>
@@ -107,7 +108,7 @@ export default function FAQ() {
           <p className="policy-subtitle">
             Find immediate answers regarding orders, global express shipping, garment care, sizing, returns, and payment options.
           </p>
-        </Reveal>
+        </PageIntro>
       </header>
 
       {/* Main Layout */}
@@ -199,7 +200,6 @@ export default function FAQ() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25 }}
                         >
                           <div style={{ padding: "0 20px 20px", fontSize: "0.9rem", color: "#555555", lineHeight: "1.65" }}>
                             {faq.answer}

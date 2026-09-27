@@ -1,3 +1,6 @@
+import { serializeProduct } from './utils/publicProduct.js';
+import { slug as seoSlug, productWarnings } from '../shared/seo/product.js';
+import { merchantFeed } from './utils/merchantFeed.js';
 import { installStorefront } from './utils/storefrontRoutes.js';
 import { installHomepageRoutes } from './utils/homepageRoutes.js';
 import { normalizeCountryTaxRate } from './utils/countryTax.js';
@@ -16,6 +19,8 @@ import crypto from 'crypto';
 import { sendPasswordResetEmail, sendOtpEmail, sendOrderConfirmationEmail, sendOrderStatusEmail, sendOwnerOrderNotificationEmail, sendWelcomeAccountEmail, sendVerificationEmail, sendSecurityNoticeEmail, sendNewsletterConfirmationEmail, sendNewsletterWelcomeEmail } from './utils/mailer.js';
 import Stripe from 'stripe';
 import { getCurrencyForCountry, SUPPORTED_CURRENCIES, PricingService, syncPrices, pricingAudit, paymentMatches, type SupportedCurrency } from './utils/pricing.js';
+import { parseProductPrices } from './utils/productPrices.js';
+import { randomOrderReference } from './utils/orderReference.js';
 import { requireCurrency, minor, toMinor, toMajor, formatMoney, MARKETS } from '../shared/money.js';
 import { installPricingRoutes, processPaymentEvent } from './utils/pricingRoutes.js';
 import {
@@ -433,74 +438,6 @@ const parseJson = <T>(value: string | null | undefined, fallback: T): T => {
   }
 };
 
-const serializeProduct = (product: {
-  id: number;
-  name: string;
-  category: string;
-  productType?: string | null;
-  price: number;
-  compareAt: number | null;
-  badge: string | null;
-  slug?: string | null;
-  colors: string;
-  image: string;
-  modelImage?: string | null;
-  productImage?: string | null;
-  images: string;
-  alt: string;
-  sizes: string;
-  description: string;
-  details: string;
-  care: string;
-  sizeChart?: string | null;
-  rating: number;
-  seoTitle?: string | null;
-  seoDescription?: string | null;
-  seoKeywords?: string | null;
-  canonicalUrl?: string | null;
-  robotsIndex?: boolean;
-  robotsFollow?: boolean;
-  brand?: string | null;
-  sku?: string | null;
-  gtin?: string | null;
-  mpn?: string | null;
-  condition?: string | null;
-  googleProductCategory?: string | null;
-  material?: string | null;
-  gender?: string | null;
-  ageGroup?: string | null;
-  imageTitle?: string | null;
-  redirectFrom?: string | null;
-  reviews?: Array<{ id: number; author: string; rating: number; date: string; comment: string; status: string }>;
-  inventory?: Array<{ color: string; size: string; stock: number }>;
-  basePriceMinor?: number | null;
-  baseCurrency?: string | null;
-  prices?: Array<{ currency: string; priceMinor: number; compareAtMinor: number | null; isActive: boolean; priceListId?: string | null; priceVersion?: number; mode?: string }>;
-}) => ({
-  ...product,
-  colors: parseJson<string[]>(product.colors, []),
-  images: parseJson<string[]>(product.images, []),
-  sizes: parseJson<string[]>(product.sizes, []),
-  details: parseJson<string[]>(product.details, []),
-  care: parseJson<string[]>(product.care, []),
-  sizeChart: product.sizeChart ? parseJson<object | null>(product.sizeChart, null) : null,
-  redirectFrom: product.redirectFrom ? parseJson<string[]>(product.redirectFrom, []) : [],
-  inventory: (product.inventory ?? []).reduce((acc, curr) => {
-    acc[`${curr.color}_${curr.size}`] = curr.stock;
-    return acc;
-  }, {} as Record<string, number>),
-  baseMoney: product.basePriceMinor != null && product.baseCurrency ? { amountMinor: product.basePriceMinor, currency: product.baseCurrency } : null,
-  prices: (product.prices ?? []).reduce((acc, price) => {
-    if (!price.isActive) return acc;
-    acc[price.currency as SupportedCurrency] = {
-      ...price,
-      priceMinor: price.priceMinor,
-      compareAtMinor: price.compareAtMinor,
-    };
-    return acc;
-  }, {} as Record<string, { priceMinor: number; compareAtMinor: number | null }>),
-});
-
 const serializeOrder = (order: any) => ({ ...order,
   subtotal: toMajor(order.subtotalMinor, requireCurrency(order.currency)),
   shipping: toMajor(order.shippingMinor, requireCurrency(order.currency)),
@@ -509,7 +446,7 @@ const serializeOrder = (order: any) => ({ ...order,
   items: order.items.map((i: any) => ({ ...i, price: toMajor(i.unitPriceMinor, requireCurrency(i.currency)) })),
 });
 
-// ─── Sequential Order Number Generator ────────────────────────────────────────
+// ─── Random Order References and Sequential Invoice Numbers ────────────────────────────────────────
 async function generateOrderId(db: any = prisma): Promise<{ orderId: string; invoiceNumber: string }> {
   const year = new Date().getFullYear();
   const counter = await db.orderCounter.upsert({
@@ -524,7 +461,7 @@ async function generateOrderId(db: any = prisma): Promise<{ orderId: string; inv
   const count = counter.year === year ? counter.count : 1;
   const padded = String(count).padStart(4, '0');
   return {
-    orderId: `VST-${year}-${padded}`,
+    orderId: await randomOrderReference(db),
     invoiceNumber: `INV-${year}-${padded}`,
   };
 }
@@ -572,21 +509,13 @@ const serializeJournalArticle = (article: {
   content: parseJson<string[]>(article.content, []),
 });
 
-const slugify = (text: string): string => {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')           // Replace spaces with -
-    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
-    .replace(/^-+/, '')             // Trim - from start
-    .replace(/-+$/, '');            // Trim - from end
-};
+const slugify = seoSlug;
 
 const mapProductInput = (body: any) => ({
+  ...(body.published !== undefined ? { published: parseBooleanField(body.published, true) } : {}),
+  updatedAt: new Date(),
   name: String(body.name ?? ''),
-  slug: body.slug ? String(body.slug) : (body.name ? slugify(body.name) : null),
+  slug: body.slug ? slugify(String(body.slug)) : (body.name ? slugify(body.name) : null),
   category: String(body.category ?? 'Clothing'),
   productType: body.productType ? String(body.productType) : null,
   price: body.basePriceMinor !== undefined ? toMajor(minor(body.basePriceMinor), requireCurrency(body.baseCurrency)) : Number(body.price ?? 0),
@@ -762,6 +691,7 @@ const parseArrayField = (value: unknown) => {
 };
 
 const getProductPayload = (body: any, file?: Express.Multer.File) => ({
+  published: body.published,
   name: body.name,
   slug: body.slug,
   category: body.category,
@@ -773,7 +703,7 @@ const getProductPayload = (body: any, file?: Express.Multer.File) => ({
   image: resolveProductImage(body, file),
   modelImage: body.modelImage ? String(body.modelImage) : null,
   productImage: body.productImage ? String(body.productImage) : null,
-  prices: body.prices,
+  prices: parseProductPrices(body.prices),
   baseCurrency: body.baseCurrency, basePriceMinor: body.basePriceMinor, priceChangeReason: body.priceChangeReason,
   images: parseArrayField(body.images),
   alt: body.alt,
@@ -984,12 +914,49 @@ const seedDatabase = async () => {
           where: { regionId: region.id, name: m.name },
         });
         if (!existingMethod) {
-          await prisma.shippingMethod.create({
+          const createdMethod = await prisma.shippingMethod.create({
             data: {
               regionId: region.id,
               ...m,
             },
           });
+          // Seed multi-currency shipping prices for all supported currencies
+          const SEED_CURRENCIES: Array<{ currency: string; multiplier: number; exp: number }> = [
+            { currency: 'EUR', multiplier: 1, exp: 100 },
+            { currency: 'USD', multiplier: 1, exp: 100 },
+            { currency: 'GBP', multiplier: 1, exp: 100 },
+            { currency: 'JPY', multiplier: 150, exp: 1 },
+          ];
+          for (const { currency, multiplier, exp } of SEED_CURRENCIES) {
+            const amountMinor = Math.round((m.price || 15) * multiplier * exp);
+            const freeThresholdMinor = m.freeShippingThreshold != null
+              ? Math.round(m.freeShippingThreshold * multiplier * exp)
+              : null;
+            await prisma.shippingPrice.upsert({
+              where: { shippingMethodId_currency: { shippingMethodId: createdMethod.id, currency: currency as any } },
+              create: { shippingMethodId: createdMethod.id, currency: currency as any, amountMinor, freeThresholdMinor },
+              update: {},
+            });
+          }
+        } else {
+          // For existing methods, ensure ShippingPrice rows exist for all currencies
+          const SEED_CURRENCIES: Array<{ currency: string; multiplier: number; exp: number }> = [
+            { currency: 'EUR', multiplier: 1, exp: 100 },
+            { currency: 'USD', multiplier: 1, exp: 100 },
+            { currency: 'GBP', multiplier: 1, exp: 100 },
+            { currency: 'JPY', multiplier: 150, exp: 1 },
+          ];
+          for (const { currency, multiplier, exp } of SEED_CURRENCIES) {
+            const amountMinor = Math.round((m.price || 15) * multiplier * exp);
+            const freeThresholdMinor = m.freeShippingThreshold != null
+              ? Math.round(m.freeShippingThreshold * multiplier * exp)
+              : null;
+            await prisma.shippingPrice.upsert({
+              where: { shippingMethodId_currency: { shippingMethodId: existingMethod.id, currency: currency as any } },
+              create: { shippingMethodId: existingMethod.id, currency: currency as any, amountMinor, freeThresholdMinor },
+              update: {},
+            });
+          }
         }
       } catch (err) {
         // Ignored for existing seeded entries
@@ -2061,277 +2028,22 @@ app.post('/api/auth/login', authRateLimit, async (req, res) => {
 
 // ─── ENTERPRISE SEO: ROBOTS.TXT & SITEMAPS SUITE ────────────────────────────
 
-app.get('/robots.txt', (_req, res) => {
-  const baseUrl = publicSiteUrl();
-  const robotsTxt = `User-agent: *
-Allow: /
-Allow: /images/
-Allow: /uploads/
-Disallow: /admin/
-Disallow: /checkout/
-Disallow: /account/
-Disallow: /activate/
-Disallow: /api/
-Disallow: /*?*search=
-Disallow: /*?*sort=
-Disallow: /*?*category=
-
-# AI & Search Agent Authorization (GEO / AEO)
-User-agent: GPTBot
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-User-agent: Applebot
-Allow: /
-
-Sitemap: ${baseUrl}/sitemap.xml
-Sitemap: ${baseUrl}/sitemap-products.xml
-Sitemap: ${baseUrl}/sitemap-categories.xml
-Sitemap: ${baseUrl}/sitemap-pages.xml
-Sitemap: ${baseUrl}/sitemap-journal.xml
-Sitemap: ${baseUrl}/sitemap-images.xml
-`;
-  res.header('Content-Type', 'text/plain');
-  res.status(200).send(robotsTxt);
-});
-
-app.get('/sitemap.xml', (_req, res) => {
-  const baseUrl = publicSiteUrl();
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <sitemap><loc>${baseUrl}/sitemap-pages.xml</loc></sitemap>
-  <sitemap><loc>${baseUrl}/sitemap-products.xml</loc></sitemap>
-  <sitemap><loc>${baseUrl}/sitemap-categories.xml</loc></sitemap>
-  <sitemap><loc>${baseUrl}/sitemap-journal.xml</loc></sitemap>
-  <sitemap><loc>${baseUrl}/sitemap-images.xml</loc></sitemap>
-</sitemapindex>`;
-  res.header('Content-Type', 'application/xml');
-  res.status(200).send(xml);
-});
-
-app.get('/sitemap-pages.xml', (_req, res) => {
-  const baseUrl = publicSiteUrl();
-  const now = new Date().toISOString();
-  const pages = ['', '/shop', '/about', '/story', '/lookbook', '/contact', '/faq', '/journal', '/terms-of-service', '/privacy-policy', '/shipping-policy', '/refund-policy'];
-
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
-
-  pages.forEach((p) => {
-    xml += `\n  <url>
-    <loc>${baseUrl}${p}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>${p === '' || p === '/shop' ? 'daily' : 'weekly'}</changefreq>
-    <priority>${p === '' ? '1.0' : p === '/shop' ? '0.9' : '0.7'}</priority>
-  </url>`;
-  });
-
-  xml += `\n</urlset>`;
-  res.header('Content-Type', 'application/xml');
-  res.status(200).send(xml);
-});
-
-app.get('/sitemap-products.xml', async (_req, res) => {
-  try {
-    const now = new Date().toISOString();
-    const products = await prisma.product.findMany({
-      where: { robotsIndex: true, name: { startsWith: 'VESTIGIA' } },
-      select: { id: true, slug: true, canonicalUrl: true },
-      orderBy: { id: 'asc' },
-    });
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
-
-    products.forEach((p) => {
-      xml += `\n  <url>
-    <loc>${xmlEscape(productPublicUrl(p))}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>`;
-    });
-
-    xml += `\n</urlset>`;
-    res.header('Content-Type', 'application/xml');
-    res.status(200).send(xml);
-  } catch (error) {
-    console.error('Sitemap products error:', error);
-    res.status(500).send('Error generating product sitemap');
-  }
-});
-
-app.get('/sitemap-categories.xml', async (_req, res) => {
-  const baseUrl = publicSiteUrl();
-  const dbProducts = await prisma.product.findMany({
-    where: { robotsIndex: true, name: { startsWith: 'VESTIGIA' } },
-    select: { category: true, productType: true },
-  });
-  const categorySlugs = new Set<string>();
-  dbProducts.forEach((product) => {
-    [product.category, product.productType].filter(Boolean).forEach((value) => {
-      const slug = slugify(String(value));
-      if (slug) categorySlugs.add(slug);
-    });
-  });
-  const categories = Array.from(categorySlugs).sort();
-
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
-
-  categories.forEach((c) => {
-    xml += `\n  <url>
-    <loc>${baseUrl}/collections/${c}</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>`;
-  });
-
-  xml += `\n</urlset>`;
-  res.header('Content-Type', 'application/xml');
-  res.status(200).send(xml);
-});
-
-app.get('/sitemap-journal.xml', async (_req, res) => {
-  try {
-    const baseUrl = publicSiteUrl();
-    const now = new Date().toISOString();
-    const articles = await prisma.journalArticle.findMany({ select: { id: true } });
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
-
-    articles.forEach((a) => {
-      xml += `\n  <url>
-    <loc>${baseUrl}/journal/${a.id}</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>`;
-    });
-
-    xml += `\n</urlset>`;
-    res.header('Content-Type', 'application/xml');
-    res.status(200).send(xml);
-  } catch (error) {
-    console.error('Sitemap journal error:', error);
-    res.status(500).send('Error generating journal sitemap');
-  }
-});
-
-app.get('/sitemap-images.xml', async (_req, res) => {
-  try {
-    const products = await prisma.product.findMany({
-      where: { robotsIndex: true, name: { startsWith: 'VESTIGIA' } },
-      select: { id: true, slug: true, canonicalUrl: true, name: true, image: true, images: true, imageTitle: true, alt: true },
-    });
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
-
-    products.forEach((p) => {
-      const allImages = [p.image, ...parseJson<string[]>(p.images, [])].filter(Boolean);
-      const uniqueImgs = Array.from(new Set(allImages));
-
-      xml += `\n  <url>
-    <loc>${xmlEscape(productPublicUrl(p))}</loc>`;
-
-      uniqueImgs.forEach((img) => {
-        const fullImg = absolutePublicUrl(img);
-        xml += `\n    <image:image>
-      <image:loc>${xmlEscape(fullImg)}</image:loc>
-      <image:title>${xmlEscape(p.imageTitle || p.alt || p.name)}</image:title>
-    </image:image>`;
-      });
-
-      xml += `\n  </url>`;
-    });
-
-    xml += `\n</urlset>`;
-    res.header('Content-Type', 'application/xml');
-    res.status(200).send(xml);
-  } catch (error) {
-    res.status(500).send('Error generating image sitemap');
-  }
-});
-
 // --- PRODUCTS ---
 const googleShoppingFeedHandler = async (_req: express.Request, res: express.Response) => {
-  try {
-    const dbProducts = await prisma.product.findMany({
-      include: { inventory: true, prices: true },
-      where: { robotsIndex: true, name: { startsWith: 'VESTIGIA' } },
-      orderBy: { id: 'asc' },
-    });
-
-    const baseUrl = publicSiteUrl();
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
-  <channel>
-    <title>Vestigia Product Feed</title>
-    <link>${baseUrl}</link>
-    <description>Google Shopping Feed for Vestigia refined apparel</description>
-`;
-
-    for (const product of dbProducts) {
-      const pUrl = productPublicUrl(product);
-      const imgUrl = absolutePublicUrl(product.productImage || product.modelImage || product.image);
-      const galleryImages = parseJson<string[]>(product.images, [])
-        .filter((image) => image && image !== product.image)
-        .slice(0, 10)
-        .map(absolutePublicUrl);
-
-      const totalStock = product.inventory.reduce((sum, item) => sum + item.stock, 0);
-      const availability = totalStock > 0 ? 'in_stock' : 'out_of_stock';
-      const usdPrice = product.prices.find((price) => price.currency === 'USD' && price.isActive);
-      const currency = usdPrice ? 'USD' : 'EUR';
-      const priceMajor = usdPrice ? moneyFromMinor(usdPrice.priceMinor, 'USD') : product.price;
-      const compareAtMajor = usdPrice?.compareAtMinor ? moneyFromMinor(usdPrice.compareAtMinor, 'USD') : product.compareAt;
-      const hasSalePrice = !!compareAtMajor && compareAtMajor > priceMajor;
-      const feedPrice = hasSalePrice ? compareAtMajor : priceMajor;
-
-      const cleanDesc = xmlEscape(product.seoDescription || product.description);
-      const cleanName = xmlEscape(product.seoTitle || product.name);
-      const feedId = xmlEscape(product.sku || `VST-${String(product.id).padStart(4, '0')}`);
-
-      xml += `    <item>
-      <g:id>${feedId}</g:id>
-      <title>${cleanName}</title>
-      <description>${cleanDesc}</description>
-      <link>${xmlEscape(pUrl)}</link>
-      <g:image_link>${xmlEscape(imgUrl)}</g:image_link>
-${galleryImages.map((image) => `      <g:additional_image_link>${xmlEscape(image)}</g:additional_image_link>`).join('\n')}
-      <g:availability>${availability}</g:availability>
-      <g:price>${feedPrice.toFixed(2)} ${currency}</g:price>
-${hasSalePrice ? `      <g:sale_price>${priceMajor.toFixed(2)} ${currency}</g:sale_price>\n` : ''}      <g:brand>${xmlEscape(product.brand || 'Vestigia')}</g:brand>
-      <g:condition>${xmlEscape(product.condition || 'new')}</g:condition>
-      <g:google_product_category>${xmlEscape(product.googleProductCategory || 'Apparel & Accessories > Clothing')}</g:google_product_category>
-      <g:product_type>${xmlEscape(product.productType || product.category)}</g:product_type>
-${product.gtin ? `      <g:gtin>${xmlEscape(product.gtin)}</g:gtin>\n` : ''}${product.mpn ? `      <g:mpn>${xmlEscape(product.mpn)}</g:mpn>\n` : ''}${product.material ? `      <g:material>${xmlEscape(product.material)}</g:material>\n` : ''}${product.gender ? `      <g:gender>${xmlEscape(product.gender)}</g:gender>\n` : ''}${product.ageGroup ? `      <g:age_group>${xmlEscape(product.ageGroup)}</g:age_group>\n` : ''}      <g:identifier_exists>${product.gtin || product.mpn ? 'yes' : 'no'}</g:identifier_exists>
-    </item>\n`;
-    }
-
-    xml += `  </channel>\n</rss>`;
-
-    res.header('Content-Type', 'application/xml');
-    res.status(200).send(xml);
-  } catch (error) {
-    console.error('Failed to generate Google Shopping feed:', error);
-    res.status(500).json({ error: 'Failed to generate product feed' });
-  }
+ try { const rows=await prisma.product.findMany({include:{inventory:true,prices:true}});
+ const result=merchantFeed(rows.map(serializeProduct),publicSiteUrl());
+ for(const warning of result.warnings) console.warn('[Merchant]',warning);
+ res.set('Cache-Control','no-cache').type('xml').send(result.xml);
+ } catch {res.status(503).json({error:'Product feed temporarily unavailable'});}
 };
 
 app.get('/api/feeds/google-shopping', googleShoppingFeedHandler);
 app.get('/api/products/google-feed', googleShoppingFeedHandler);
+app.get('/feeds/google-shopping.xml', googleShoppingFeedHandler);
+app.get('/feeds/google-shopping', googleShoppingFeedHandler);
+app.get('/feeds/products.xml', googleShoppingFeedHandler);
+
+app.get('/api/admin/products', authenticateAdmin, async (_req,res)=>{try{res.set('Cache-Control','private, no-store').json((await prisma.product.findMany({include:{reviews:true,inventory:true,prices:true},orderBy:{id:'asc'}})).map(serializeProduct));}catch{res.status(503).json({error:'Products unavailable'});}});
 
 app.get('/api/products', async (_req, res) => {
   try {
@@ -2347,7 +2059,7 @@ app.get('/api/products', async (_req, res) => {
     res.json(
       dbProducts
         .map(serializeProduct)
-        .filter((product) => String(product.name).startsWith('VESTIGIA')),
+        .filter((product) => product.published !== false),
     );
   } catch (error) {
     console.error(error);
@@ -2380,13 +2092,10 @@ app.get('/api/products/resolve/:idOrSlug', async (req, res) => {
       },
       orderBy: { id: 'asc' },
     });
-    const match = dbProducts.find((product) => (
-      (Number.isInteger(numericId) && product.id === numericId) ||
-      product.slug === idOrSlug ||
-      parseJson<string[]>(product.redirectFrom, []).includes(idOrSlug)
-    ));
+    const match = dbProducts.find(product => (Number.isInteger(numericId) && product.id === numericId) || product.slug === idOrSlug)
+      || dbProducts.find(product => parseJson<string[]>(product.redirectFrom, []).includes(idOrSlug));
 
-    if (!match) {
+    if (!match || match.published === false) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
@@ -2410,7 +2119,7 @@ app.post('/api/products', authenticateAdmin, adminWriteRateLimit, upload.single(
       payload.images = [payload.image];
     }
     const created = await prisma.$transaction(async tx => {
-      const product = await tx.product.create({ data: mapProductInput(payload) });
+      const product = await tx.product.create({ data: {...mapProductInput(payload),createdAt:new Date()} });
       await syncPrices(tx, product.id, payload.prices, String((req as any).admin?.username || 'admin'), String(payload.priceChangeReason || 'Initial prices'));
       return product;
     });
@@ -2423,6 +2132,7 @@ app.post('/api/products', authenticateAdmin, adminWriteRateLimit, upload.single(
       include: { reviews: true, inventory: true, prices: true },
     });
 
+    if(product) for(const warning of productWarnings(serializeProduct(product))) console.warn('[Product SEO]',product.id,warning);
     res.status(201).json(product ? serializeProduct(product) : null);
   } catch (error: any) {
     console.error(error);
@@ -2445,7 +2155,8 @@ app.put('/api/products/:id', authenticateAdmin, adminWriteRateLimit, upload.sing
     if (!existing) {
       return res.status(404).json({ error: 'Product not found' });
     }
-    const nextSlug = payload.slug ? String(payload.slug) : (payload.name ? slugify(String(payload.name)) : null);
+    const nextSlug = payload.slug ? slugify(String(payload.slug)) : existing.slug || slugify(String(payload.name || ''));
+    payload.slug = nextSlug;
     const previousRedirects = existing.redirectFrom ? parseJson<string[]>(existing.redirectFrom, []) : [];
     if (existing.slug && nextSlug && existing.slug !== nextSlug && !previousRedirects.includes(existing.slug)) {
       payload.redirectFrom = [...previousRedirects, existing.slug];
@@ -2467,6 +2178,7 @@ app.put('/api/products/:id', authenticateAdmin, adminWriteRateLimit, upload.sing
       include: { reviews: true, inventory: true, prices: true },
     });
 
+    if(product) for(const warning of productWarnings(serializeProduct(product))) console.warn('[Product SEO]',product.id,warning);
     res.json(product ? serializeProduct(product) : null);
   } catch (error: any) {
     console.error(error);
@@ -3471,7 +3183,7 @@ app.post('/api/orders/:id/duplicate', authenticateAdmin, async (req, res) => {
       return;
     }
 
-    const newId = `VST-${Date.now()}`;
+    const newId = await randomOrderReference(prisma);
     const duplicated = await prisma.order.create({
       data: {
         id: newId,

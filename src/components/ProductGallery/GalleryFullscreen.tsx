@@ -1,5 +1,8 @@
 import React, { useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from 'react-dom';
+import { useScrollLock } from '../../hooks/useScrollLock';
+import { useDialogFocus } from '../../hooks/useDialogFocus';
+import { m as motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePinchZoom } from "./hooks/usePinchZoom";
 import { useSwipe } from "./hooks/useSwipe";
@@ -31,6 +34,8 @@ export const GalleryFullscreen: React.FC<GalleryFullscreenProps> = ({
   onNext,
   onSelect,
 }) => {
+  useScrollLock(isOpen);
+  useDialogFocus(isOpen, onClose, '.vst-fullscreen-portal');
   const {
     scale,
     position,
@@ -89,21 +94,18 @@ export const GalleryFullscreen: React.FC<GalleryFullscreenProps> = ({
   useEffect(() => {
     if (isOpen) {
       window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden"; // Lock background scrolling
     }
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
     };
   }, [isOpen, handleKeyDown]);
 
-  if (!isOpen) return null;
 
   const currentSrc = images[activeIndex];
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="vst-fullscreen-portal" role="dialog" aria-modal="true" aria-label="Expanded Image Gallery">
+      {isOpen && <motion.div key="gallery-dialog" className="vst-fullscreen-portal" role="dialog" aria-modal="true" aria-label="Expanded Image Gallery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         {/* Dark Backdrop */}
         <motion.div
           className="vst-fullscreen-backdrop"
@@ -214,7 +216,7 @@ export const GalleryFullscreen: React.FC<GalleryFullscreenProps> = ({
             </div>
           </div>
         )}
-      </div>
-    </AnimatePresence>
+      </motion.div>}
+    </AnimatePresence>, document.body
   );
 };

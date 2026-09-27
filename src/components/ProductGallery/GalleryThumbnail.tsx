@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { useReveal } from "../../animation/Reveal";
 import { animationConfig, staggerDelay } from "../../animation/config";
 
@@ -20,10 +20,9 @@ export const GalleryThumbnail: React.FC<GalleryThumbnailProps> = React.memo(
     useEffect(() => {
       const activeThumb = thumbRefs.current[activeIndex];
       if (activeThumb && scrollContainerRef.current) {
-        activeThumb.scrollIntoView({
+        scrollContainerRef.current.scrollTo({
+          left: activeThumb.offsetLeft - scrollContainerRef.current.offsetLeft - (scrollContainerRef.current.clientWidth - activeThumb.offsetWidth) / 2,
           behavior: entrance.transition.duration === 0 ? "instant" : "smooth",
-          block: "nearest",
-          inline: "center",
         });
       }
     }, [activeIndex]);
@@ -61,8 +60,6 @@ export const GalleryThumbnail: React.FC<GalleryThumbnailProps> = React.memo(
                 {isActive && (
                   <motion.div
                     className="vst-thumbnail-active-border"
-                    layoutId="vst-active-thumb-indicator"
-                    transition={{ duration: animationConfig.duration.fast, ease: animationConfig.ease }}
                   />
                 )}
               </motion.button>

@@ -1,0 +1,47 @@
+{
+  "checks": [
+    {
+      "label": "motion",
+      "gzipBytes": 30161,
+      "limit": 36864,
+      "pass": true
+    },
+    {
+      "label": "entry",
+      "gzipBytes": 97920,
+      "limit": 114688,
+      "pass": true
+    },
+    {
+      "label": "product including gallery",
+      "gzipBytes": 8495,
+      "limit": 12288,
+      "pass": true
+    },
+    {
+      "label": "checkout",
+      "gzipBytes": 17500,
+      "limit": 22528,
+      "pass": true
+    },
+    {
+      "label": "public/images/products/vestigia-hero-768.jpg",
+      "bytes": 89611,
+      "limit": 512000,
+      "pass": true
+    },
+    {
+      "label": "public/images/products/vestigia-hero-1254.jpg",
+      "bytes": 203798,
+      "limit": 512000,
+      "pass": true
+    }
+  ],
+  "policy": {
+    "maximumStaggerSeconds": 0.12,
+    "maximumStaggerBatch": 4,
+    "noInfiniteDecorativeAnimations": true,
+    "noNewThirdPartyScripts": true,
+    "notes": "Drawer and modal code is part of entry; gallery is part of ProductDetail. Runtime node counts depend on viewport and CMS content; verify with a browser trace."
+  }
+}

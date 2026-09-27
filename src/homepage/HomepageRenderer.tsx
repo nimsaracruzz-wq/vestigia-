@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { HeroHeading } from '../../shared/HeroHeading';
 import { useReducedMotion } from 'framer-motion';
 import { orderedSections, type HomepageConfig, type HomepageSection, type Media, type Copy, type LinkContent, type NewsletterSettings, type AnnouncementSettings } from '../../shared/homepage';
 import { useAdmin } from '../admin/AdminContext';
@@ -7,7 +8,8 @@ import { useCurrency } from '../context/CurrencyContext';
 import type { Product } from '../data';
 import { API_BASE_URL } from '../config/api';
 import { resolveProductImageUrl } from '../utils/productMedia';
-import { Reveal } from '../animation/Reveal';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
+import { PageIntro } from '../animation/PageIntro';
 import { SEOHead } from '../components/common/SEOHead';
 import ProductCarousel, { selectHomepageProducts } from './ProductCarousel';
 import HeroImage from './HeroImage';
@@ -24,10 +26,10 @@ export function ResponsiveMedia({media,priority=false}: {media:Media;priority?:b
     <img src={resolveProductImageUrl(media.image)} alt={media.alt} width={1200} height={1500} loading={priority?'eager':'lazy'} fetchPriority={priority?'high':'auto'} decoding="async" onError={e=>{e.currentTarget.style.opacity='0';}} />
   </picture>;
 }
-function SectionCopy({copy,hero=false}: {copy:Copy;hero?:boolean}) { const Heading=hero?'h1':'h2';return <div className={`hp-copy hp-align-${copy.alignment} hp-width-${copy.textWidth}`}>
-  {copy.eyebrow&&<p className="hp-eyebrow">{copy.eyebrow}</p>}<Heading>{copy.heading}</Heading>{copy.body&&<p className="hp-body">{copy.body}</p>}
+function SectionCopy({copy,hero=false}: {copy:Copy;hero?:boolean}) { const Heading=hero?'h1':'h2',Container=hero?PageIntro:'div';return <Container as="div" className={`hp-copy hp-align-${copy.alignment} hp-width-${copy.textWidth}`}>
+  {copy.eyebrow&&<p className="hp-eyebrow">{copy.eyebrow}</p>}<Heading>{hero?<HeroHeading text={copy.heading}/>:copy.heading}</Heading>{copy.body&&<p className="hp-body">{copy.body}</p>}
   <div className="hp-actions"><CmsLink value={copy.cta} className="hp-link"/><CmsLink value={copy.secondaryCta} className="hp-link hp-link-secondary"/></div>
-  </div>; }
+  </Container>; }
 export function CmsAnnouncement({settings}: {settings:AnnouncementSettings}) {
   const messages=settings.messages.filter(m=>m.enabled),[index,setIndex]=useState(0),[paused,setPaused]=useState(false),reduced=useReducedMotion();
   useEffect(()=>{if(!settings.rotation||messages.length<2||reduced||paused)return;const timer=setInterval(()=>setIndex(i=>(i+1)%messages.length),settings.interval*1000);return()=>clearInterval(timer);},[settings.rotation,settings.interval,messages.length,reduced,paused]);

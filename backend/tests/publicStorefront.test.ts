@@ -12,7 +12,7 @@ const template='<!doctype html><html><head><title>Old title</title><meta name="d
 test('raw document has one H1, catalog links, published SEO and safe bootstrap before JavaScript',()=>{
  const config=initialHomepage([1]);config.seo.title='Published Vestigia title';
  const html=storefrontHtml(template,{config,products:[product],version:2});
- assert.equal((html.match(/<h1[ >]/g)||[]).length,1);assert.match(html,/<h1>LEAVE YOUR MARK\.<\/h1>/);assert.match(html,/href="\/product\/real-tee"/);assert.match(html,/<title>Published Vestigia title<\/title>/);assert.match(html,/property="og:title" content="Published Vestigia title"/);assert.match(html,/id="vestigia-public-data"/);assert.doesNotMatch(html,/Old title|"old":true/);
+ assert.equal((html.match(/<h1[ >]/g)||[]).length,1);assert.match(html,/<h1>LEAVE YOUR<span class="hp-hero-heading-break"> <\/span>MARK\.<\/h1>/);assert.match(html,/href="\/product\/real-tee"/);assert.match(html,/<title>Published Vestigia title<\/title>/);assert.match(html,/property="og:title" content="Published Vestigia title"/);assert.match(html,/id="vestigia-public-data"/);assert.doesNotMatch(html,/Old title|"old":true/);
  assert.equal((html.match(/name="description"/g)||[]).length,1);
  assert.doesNotMatch(safeJson({name:'</script><script>alert(1)</script>'}),/<\/script>/);
 });

@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 
 interface GallerySkeletonProps {
   aspectRatio?: string;
@@ -15,8 +15,7 @@ export const GallerySkeleton: React.FC<GallerySkeletonProps> = ({
       className={`vst-gallery-skeleton ${className}`}
       style={aspectRatio ? { aspectRatio } : undefined}
       initial={{ opacity: 0.6 }}
-      animate={{ opacity: [0.5, 0.85, 0.5] }}
-      transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+      animate={{ opacity: 1 }}
       aria-hidden="true"
     >
       <div className="vst-skeleton-shimmer" />

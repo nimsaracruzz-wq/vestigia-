@@ -42,6 +42,9 @@ model OrderCounter {
 }
 
 model Product {
+  published Boolean @default(true)
+  createdAt DateTime?
+  updatedAt DateTime?
   id          Int      @id @default(autoincrement())
   name        String
   slug        String?  @unique
@@ -130,7 +133,7 @@ model Review {
 }
 
 model Order {
-  id                    String      @id // e.g. VST-2026-0001
+  id                    String      @id // e.g. VST-7A3F92C1D8E4B605 (legacy references remain valid)
   invoiceNumber         String?     // e.g. INV-2026-0001
   customerId            Int?
   customerRecord        Customer?   @relation(fields: [customerId], references: [id])

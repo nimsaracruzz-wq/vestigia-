@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 
 interface GalleryZoomProps {
   children: React.ReactNode;
@@ -35,11 +35,7 @@ export const GalleryZoom: React.FC<GalleryZoomProps> = ({
           x: position.x,
           y: position.y,
         }}
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 30,
-        }}
+        transition={{ duration: 0 }}
       >
         {children}
       </motion.div>

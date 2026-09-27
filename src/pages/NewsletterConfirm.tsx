@@ -1,4 +1,4 @@
-import { Reveal } from "../animation/Reveal";
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, AlertCircle, Mail } from "lucide-react";

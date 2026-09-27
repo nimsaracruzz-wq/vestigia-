@@ -1,10 +1,15 @@
+import PublicProduct from './PublicProduct.js';
+import { HeroHeading } from './HeroHeading.js';
+import { catalog } from './seo/catalog.js';
+import { urlPolicy } from './seo/policy.js';
+import type { SeoProduct } from './seo/product.js';
 import { createElement } from 'react';
 import { orderedSections,type HomepageConfig,type HomepageSection,type Copy } from './homepage.js';
 import { selectHomepageProducts } from './homepageProducts.js';
 import { formatMoney } from './money.js';
 import { defaultShopSettings } from './shop.js';
-type Product={id:number;slug?:string;name:string;category:string;productType?:string;image:string;modelImage?:string;alt?:string;colors:string[];prices?:Record<string,{priceMinor:number;isActive?:boolean}>};
-function CopyBlock({copy,hero=false}:{copy:Copy;hero?:boolean}){return <div className={`hp-copy hp-align-${copy.alignment} hp-copy-${copy.textWidth}`}><p className="hp-eyebrow">{copy.eyebrow}</p>{createElement(hero?'h1':'h2',null,copy.heading)}<p className="hp-body">{copy.body}</p><div className="hp-actions">{[copy.cta,copy.secondaryCta].map((link,i)=>link.url&&<a key={i} className="hp-link" href={link.url}>{link.label}</a>)}</div></div>;}
+type Product=SeoProduct;
+function CopyBlock({copy,hero=false}:{copy:Copy;hero?:boolean}){return <div className={`hp-copy hp-align-${copy.alignment} hp-copy-${copy.textWidth}`}><p className="hp-eyebrow">{copy.eyebrow}</p>{createElement(hero?'h1':'h2',null,hero?<HeroHeading text={copy.heading}/>:copy.heading)}<p className="hp-body">{copy.body}</p><div className="hp-actions">{[copy.cta,copy.secondaryCta].map((link,i)=>link.url&&<a key={i} className="hp-link" href={link.url}>{link.label}</a>)}</div></div>;}
 function Cards({products}:{products:Product[]}){return <div className="vs-grid">{products.map(p=><article className="vc-card" key={p.id}><div className="vc-media"><a className="vc-image-link" href={`/product/${p.slug||p.id}`}><img src={p.modelImage||p.image} alt={p.alt||p.name} width={600} height={750} loading="lazy"/></a></div><div className="vc-info"><h3><a href={`/product/${p.slug||p.id}`}>{p.name}</a></h3><p className="vc-color">{p.colors.join(' / ')}</p>{p.prices?.EUR&&p.prices.EUR.isActive!==false&&<p className="vc-price">{formatMoney(p.prices.EUR.priceMinor,'EUR')}</p>}</div></article>)}</div>;}
 function Section({section,products}:{section:HomepageSection;products:Product[]}){
  const s=section.settings;
@@ -24,9 +29,8 @@ function Section({section,products}:{section:HomepageSection;products:Product[]}
 }
 export default function PublicStorefront({config,products,pathname='/',search=''}:{config:HomepageConfig;products:Product[];pathname?:string;search?:string}){
  const home=pathname==='/',sections=orderedSections(config),hero=sections.find(s=>s.type==='hero');
- const collection=pathname.startsWith('/collections/')?decodeURIComponent(pathname.slice('/collections/'.length)):new URLSearchParams(search).get('category');
- const feed=sections.find(s=>s.type==='product_carousel'&&s.id===collection);
- const filtered=feed?.type==='product_carousel'?selectHomepageProducts(products,{...feed.settings,maxProducts:48},'EUR',[],true):collection&&collection!=='all'?products.filter(p=>[p.category,p.productType].some(v=>v?.toLowerCase().replace(/[^a-z0-9]+/g,'-')===collection)):products;
- const title=feed?.type==='product_carousel'?feed.settings.heading:collection&&collection!=='all'?collection.replaceAll('-',' '):(config.shop||defaultShopSettings).heading;
- return <div className="site-shell public-document"><header className="public-document-nav"><a href="/">VESTIGIA</a><nav aria-label="Main navigation"><a href="/shop">Shop</a><a href="/story">Our story</a><a href="/account">Account</a></nav></header><main className="hp-page">{home?<>{!hero&&<h1>{config.seo.title}</h1>}{sections.map(s=><Section key={s.id} section={s} products={products}/>)}</>:<div className="vestigia-shop"><header className="vs-intro"><p>SHOP</p><h1>{title}</h1></header><div className="vs-catalog"><nav className="vs-collections"><a href="/shop">All</a>{sections.filter(s=>s.type==='product_carousel').map(s=><a key={s.id} href={`/collections/${s.id}`}>{s.type==='product_carousel'?s.settings.heading:s.label}</a>)}</nav><p>{filtered.length} products</p><Cards products={filtered.slice(0,48)}/></div></div>}</main><footer className="hp-footer"><p>{config.footer.description}</p><nav>{config.footer.groups.map(g=><section key={g.id}><h2>{g.title}</h2>{g.links.filter(l=>l.enabled).map(l=><p key={l.url}><a href={l.url}>{l.label}</a></p>)}</section>)}</nav><p>{config.footer.copyright}</p></footer></div>;
+ const product=pathname.startsWith('/product/')?products.find(p=>(p.slug||String(p.id))===decodeURIComponent(pathname.slice(9))):undefined;
+ const listing=catalog(config,products,pathname,search),{items:filtered,title}=listing;
+ const page=urlPolicy(pathname,search).page,visible=filtered.slice(0,listing.pageSize*page);
+ return <div className="site-shell public-document"><header className="public-document-nav"><a href="/">VESTIGIA</a><nav aria-label="Main navigation"><a href="/shop">Shop</a><a href="/story">Our story</a><a href="/account">Account</a></nav></header><main className="hp-page">{product?<PublicProduct product={product} search={search}/>:home?<>{!hero&&<h1>{config.seo.title}</h1>}{sections.map(s=><Section key={s.id} section={s} products={products}/>)}</>:<div className="vestigia-shop"><header className="vs-intro"><p>SHOP</p><h1>{title}</h1><p>{listing.description}</p></header><div className="vs-catalog"><nav className="vs-collections"><a href="/shop">All</a>{listing.links.map(l=><a key={l.path} href={l.path}>{l.title}</a>)}</nav><p>{filtered.length} products</p><Cards products={visible}/>{visible.length<filtered.length&&page<100&&<a href={pathname+'?page='+(page+1)}>More products</a>}</div></div>}</main><footer className="hp-footer"><p>{config.footer.description}</p><nav>{config.footer.groups.map(g=><section key={g.id}><h2>{g.title}</h2>{g.links.filter(l=>l.enabled).map(l=><p key={l.url}><a href={l.url}>{l.label}</a></p>)}</section>)}</nav><p>{config.footer.copyright}</p></footer></div>;
 }

@@ -1,0 +1,22 @@
+name: SEO and storefront checks
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix backend
+      - run: npm run build
+      - run: npm --prefix backend run build
+      - run: node --test dist/backend/tests/seo.test.js dist/backend/tests/publicStorefront.test.js dist/backend/tests/homepage.test.js dist/backend/tests/shop.test.js dist/backend/tests/heroHotspots.test.js dist/backend/tests/pricing.test.js
+        working-directory: backend
+      - run: node --test scripts/test-checkout-quote.mjs scripts/test-reveals.mjs
+      - run: npm run check:budgets

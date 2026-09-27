@@ -10,7 +10,11 @@ export class PublishedStorefront {
  private pending:Promise<PublicSnapshot>|null=null;
  private ready:Promise<void>;
  constructor(private db:PrismaClient,private serialize:(p:any)=>any,private ensure:()=>Promise<any>,private file=path.resolve(process.env.PUBLIC_SNAPSHOT_PATH||'private/published-storefront.json')){
-  this.ready=fs.readFile(file,'utf8').then(raw=>{const saved=JSON.parse(raw);this.snapshot={config:publicHomepage(saved.config),products:Array.isArray(saved.products)?saved.products:[],version:Number(saved.version)||0};}).catch(()=>{});
+  this.ready=fs.readFile(file,'utf8').then(raw=>{const saved=JSON.parse(raw);this.snapshot={config:publicHomepage(saved.config),products:Array.isArray(saved.products)?saved.products.filter((p:any)=>p.published!==false):[],version:Number(saved.version)||0};}).catch(()=>{});
+ }
+ async catalog():Promise<PublicSnapshot>{
+  const [snapshot,products]=await Promise.all([this.get(),this.db.product.findMany({include:{prices:true,inventory:true,reviews:true},orderBy:{id:'asc'}})]);
+  return {...snapshot,products:products.map(this.serialize).filter(p=>p.published!==false)};
  }
  async get(force=false):Promise<PublicSnapshot>{
   await this.ready;
@@ -25,7 +29,7 @@ export class PublishedStorefront {
    let content:unknown;
    try{content=JSON.parse(record.published);}catch{console.warn('[Homepage] Published JSON missing or invalid; using safe defaults');content=initialHomepage(products.map(p=>p.id));}
    const config=publicHomepage(content,message=>console.warn('[Homepage]',message));
-   this.snapshot={config,products:products.map(this.serialize),version:record.publishedRevision};this.refreshed=Date.now();
+   this.snapshot={config,products:products.map(this.serialize).filter(p=>p.published!==false),version:record.publishedRevision};this.refreshed=Date.now();
    await this.persist();
    console.info(`[Homepage] Loaded published version ${this.snapshot.version}`);
   }catch(error){this.refreshed=Date.now();console.error('[Homepage] Published retrieval failed; serving snapshot/default',error&&typeof error==='object'&&'code' in error?String(error.code):'read_or_parse_error');}

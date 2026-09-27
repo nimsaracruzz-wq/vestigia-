@@ -1,0 +1,144 @@
+{
+  "base": "http://127.0.0.1:4321",
+  "checked": 21,
+  "errors": [],
+  "warnings": [
+    "/about: initial HTML H1 count 0",
+    "/story: initial HTML H1 count 0",
+    "/lookbook: initial HTML H1 count 0",
+    "/contact: initial HTML H1 count 0",
+    "/faq: initial HTML H1 count 0",
+    "/shipping-policy: initial HTML H1 count 0",
+    "/refund-policy: initial HTML H1 count 0",
+    "/privacy-policy: initial HTML H1 count 0",
+    "/terms-of-service: initial HTML H1 count 0"
+  ],
+  "pages": [
+    {
+      "url": "https://thevestigia.com/",
+      "title": "VESTIGIA | Luxury Clothing &amp; Premium Essentials",
+      "canonical": "https://thevestigia.com/",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/shop",
+      "title": "THE FIRST RELEASE. | VESTIGIA",
+      "canonical": "https://thevestigia.com/shop",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/about",
+      "title": "About VESTIGIA | VESTIGIA",
+      "canonical": "https://thevestigia.com/about",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/story",
+      "title": "Our Story | VESTIGIA",
+      "canonical": "https://thevestigia.com/story",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/lookbook",
+      "title": "Lookbook | VESTIGIA",
+      "canonical": "https://thevestigia.com/lookbook",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/journal",
+      "title": "Journal | VESTIGIA",
+      "canonical": "https://thevestigia.com/journal",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/contact",
+      "title": "Contact VESTIGIA | VESTIGIA",
+      "canonical": "https://thevestigia.com/contact",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/faq",
+      "title": "Frequently Asked Questions | VESTIGIA",
+      "canonical": "https://thevestigia.com/faq",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/shipping-policy",
+      "title": "Shipping Policy | VESTIGIA",
+      "canonical": "https://thevestigia.com/shipping-policy",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/refund-policy",
+      "title": "Returns and Refunds | VESTIGIA",
+      "canonical": "https://thevestigia.com/refund-policy",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/privacy-policy",
+      "title": "Privacy Policy | VESTIGIA",
+      "canonical": "https://thevestigia.com/privacy-policy",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/terms-of-service",
+      "title": "Terms of Service | VESTIGIA",
+      "canonical": "https://thevestigia.com/terms-of-service",
+      "h1": 0
+    },
+    {
+      "url": "https://thevestigia.com/journal/1",
+      "title": "The Architecture of Weight: Our 280 GSM Heavyweight Jersey | VESTIGIA",
+      "canonical": "https://thevestigia.com/journal/1",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/journal/2",
+      "title": "Rome to Colombo: A Design and Craft Exchange | VESTIGIA",
+      "canonical": "https://thevestigia.com/journal/2",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/journal/3",
+      "title": "Restraint as a Concept: The Three-Piece Release | VESTIGIA",
+      "canonical": "https://thevestigia.com/journal/3",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/collections/new-arrivals",
+      "title": "NEW ARRIVALS | VESTIGIA",
+      "canonical": "https://thevestigia.com/collections/new-arrivals",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/collections/first-release",
+      "title": "THE FIRST RELEASE | VESTIGIA",
+      "canonical": "https://thevestigia.com/collections/first-release",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/collections/most-wanted",
+      "title": "MOST WANTED | VESTIGIA",
+      "canonical": "https://thevestigia.com/collections/most-wanted",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/collections/clothing",
+      "title": "Clothing | VESTIGIA",
+      "canonical": "https://thevestigia.com/collections/clothing",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/product/vestigia-aurelius-oversized-tee-black",
+      "title": "VESTIGIA Aurelius Oversized Tee - Black | VESTIGIA",
+      "canonical": "https://thevestigia.com/product/vestigia-aurelius-oversized-tee-black",
+      "h1": 1
+    },
+    {
+      "url": "https://thevestigia.com/product/vestigia-aurelius-oversized-tee-white",
+      "title": "VESTIGIA Aurelius Oversized Tee - White | VESTIGIA",
+      "canonical": "https://thevestigia.com/product/vestigia-aurelius-oversized-tee-white",
+      "h1": 1
+    }
+  ]
+}

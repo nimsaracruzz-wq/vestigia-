@@ -16,7 +16,8 @@ export function getProductImage(product: Partial<Product> | null | undefined) {
 }
 
 export function getDetailImages(product: Partial<Product> | null | undefined) {
-  const images = [getModelImage(product), ...(product?.images || []), getProductImage(product)];
+  // Product-only media is assigned to cart/checkout, not automatically to the gallery.
+  const images = [getModelImage(product), ...(product?.images || [])];
   return Array.from(new Set(images.filter(Boolean)));
 }
 
@@ -32,6 +33,7 @@ export function resolveProductImageUrl(image: string) {
 }
 
 export function getProductPrice(product: Partial<Product> | null | undefined, currency: CurrencyCode) {
+  if (product?.prices?.[currency]?.isActive === false) return Number.NaN;
   const fixed = product?.prices?.[currency]?.priceMinor;
   if (typeof fixed === "number") return fixed / (currency === "JPY" ? 1 : 100);
   return Number.NaN;

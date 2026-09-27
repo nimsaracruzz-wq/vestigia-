@@ -1,6 +1,8 @@
-import { Reveal, RevealImage } from "../animation/Reveal";
+import { PageIntro } from '../animation/PageIntro';
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
+import { RevealImage } from "../animation/Reveal";
 import React, { useEffect } from "react";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { SEOHead } from "../components/common/SEOHead";
 
 const storyJsonLd = {
@@ -46,7 +48,7 @@ export default function About() {
           borderBottom: "1px solid #eee8df",
         }}
       >
-        <Reveal
+        <PageIntro as="div"
           style={{ maxWidth: "720px", margin: "0 auto" }}
         >
           <div style={{ display: "inline-block", marginBottom: "16px" }}>
@@ -83,7 +85,7 @@ export default function About() {
           >
             OUR STORY
           </h1>
-        </Reveal>
+        </PageIntro>
       </header>
 
       {/* SECTION 1 — ORIGINS */}

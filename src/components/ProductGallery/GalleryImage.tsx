@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { GallerySkeleton } from "./GallerySkeleton";
 import { slideVariants } from "./GalleryAnimations";
 import { useReveal } from "../../animation/Reveal";
@@ -40,7 +40,7 @@ function deriveWebPSrc(src: string): string | null {
 
 export const GalleryImage: React.FC<GalleryImageProps> = React.memo(
   ({ src, alt, direction = 0, priority = true, onClick, aspectRatio = "3/4" }) => {
-    const entrance = useReveal({ variant: "scale" });
+    const entrance = useReveal({ variant: "fade", disabled: true });
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
@@ -126,9 +126,11 @@ export const GalleryImage: React.FC<GalleryImageProps> = React.memo(
               ref={imgRef}
               src={src}
               alt={alt}
+              width={800}
+              height={1067}
               decoding="async"
               loading={priority ? "eager" : "lazy"}
-              // @ts-ignore — fetchpriority is a valid HTML attribute not yet in TS types
+              // @ts-ignore — fetchpriority is a valid HTML attribute
               fetchpriority={priority ? "high" : "auto"}
               onLoad={handleLoad}
               onError={handleError}

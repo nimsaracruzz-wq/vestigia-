@@ -1,8 +1,10 @@
-import { Reveal, RevealGroup } from "../animation/Reveal";
+import { SectionReveal as Reveal } from '../animation/SectionReveal';
+import { RevealGroup } from "../animation/Reveal";
 import { useEffect } from "react";
+import { PageIntro } from '../animation/PageIntro';
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { Clock, ArrowLeft, ArrowRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { journalArticles } from "../data";
 
 import { SEOHead } from "../components/common/SEOHead";
@@ -31,7 +33,6 @@ export default function Journal() {
     "headline": activeArticle.title,
     "description": activeArticle.excerpt,
     "image": activeArticle.image ? `https://thevestigia.com${activeArticle.image}` : "https://thevestigia.com/images/products/vestigia_logo.png",
-    "author": { "@type": "Organization", "name": "VESTIGIA® Atelier" },
     "publisher": { "@id": "https://thevestigia.com/#organization" },
     "mainEntityOfPage": `https://thevestigia.com/journal/${activeArticle.id}`
   } : {
@@ -39,7 +40,7 @@ export default function Journal() {
     "@type": "CollectionPage",
     "name": "VESTIGIA® Journal — Luxury Fashion & Craftsmanship Stories",
     "description": "Editorial explorations of 280 GSM heavyweight cotton, Italian architectural design, and modern luxury streetwear.",
-    "url": "https://thevestigia.com/journal/",
+    "url": "https://thevestigia.com/journal",
     "isPartOf": { "@id": "https://thevestigia.com/#website" }
   };
 
@@ -58,7 +59,7 @@ export default function Journal() {
       <AnimatePresence mode="wait">
         {activeArticle ? (
           /* Single Article Read View */
-          <Reveal as="article"
+          <Reveal disabled as="article"
             key="article-view"
             className="single-article-container"
           >
@@ -67,7 +68,7 @@ export default function Journal() {
               <span>Back to Journal</span>
             </button>
 
-            <header className="article-header">
+            <PageIntro className="article-header">
               <div className="meta-row">
                 <span>{activeArticle.date}</span>
                 <span>•</span>
@@ -76,7 +77,7 @@ export default function Journal() {
                 </span>
               </div>
               <h1>{activeArticle.title}</h1>
-            </header>
+            </PageIntro>
 
             <div className="article-featured-image">
               <img src={activeArticle.image} alt={activeArticle.title} />
@@ -102,11 +103,11 @@ export default function Journal() {
             key="list-view"
             className="journal-listing-container"
           >
-            <Reveal as="header" className="journal-header-section">
+            <PageIntro className="journal-header-section">
               <p>The Vestigia Journal</p>
               <h1>Stories and fabric essays</h1>
               <span>Explorations in design philosophy, textile guides, and minimal lifestyle packing keys.</span>
-            </Reveal>
+            </PageIntro>
 
             <RevealGroup className="journal-articles-list-grid">
               {journalArticles.map((article, index) => (

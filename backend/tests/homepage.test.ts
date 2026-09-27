@@ -16,9 +16,9 @@ import {installHomepageRoutes} from '../utils/homepageRoutes.js';
 let db:PrismaClient,server:Server,base:string;
 before(async()=>{
  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'vestigia-homepage-')),target=path.join(folder,'test.db'),sql=new Database(target);
- const source=new Database(path.resolve('vestigia-dev.db'),{readonly:true});
- const schema=source.prepare("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_%' ORDER BY CASE type WHEN 'table' THEN 0 ELSE 1 END").all() as {sql:string}[];
- sql.pragma('foreign_keys=OFF');for(const row of schema)sql.exec(row.sql);sql.close();source.close();
+ const migrations=fs.readdirSync('prisma/migrations').filter(name=>fs.existsSync('prisma/migrations/'+name+'/migration.sql')).sort();
+ for(const name of migrations)sql.exec(fs.readFileSync('prisma/migrations/'+name+'/migration.sql','utf8'));
+ sql.close();
  db=new PrismaClient({adapter:new PrismaBetterSqlite3({url:target})});
  const app=express();app.use(express.json());
  installHomepageRoutes(app,db,(req,res,next)=>{if(req.headers.authorization!=='Bearer test-admin'){res.status(401).json({error:'Unauthorized'});return;}(req as any).admin={username:'CMS test'};next();},(_req,_res,next)=>next(),p=>p);
@@ -42,14 +42,14 @@ test('hero art direction preserves mobile source and uses independent focal posi
  assert.equal(heroMediaStyle(hero)['--hero-desktop-y'],'28%');assert.equal(heroMediaStyle(hero)['--hero-tablet-y'],'30%');assert.equal(heroMediaStyle(hero)['--hero-mobile-y'],'50%');
  hero.mobileImage='';assert.equal(heroImageSources(hero).mobile,hero.image);
  const config=initialHomepage();const stored=config.sections.find(s=>s.type==='hero')!;
- if(stored.type==='hero'){assert.equal(stored.settings.mobileImage,'/images/products/vestigia-hero-768.jpg');assert.equal(stored.settings.desktopFocalY,0);stored.settings.desktopFocalY=101;}
+ if(stored.type==='hero'){assert.equal(stored.settings.mobileImage,'/images/products/vestigia_hero_mobile.webp');assert.equal(stored.settings.desktopFocalY,0);stored.settings.desktopFocalY=101;}
  assert.throws(()=>validateHomepage(config),/0–100/);
 });
 
 test('art-direction migration preserves draft copy, section order and custom image choices',()=>{
  const sql=new Database(':memory:');sql.exec('CREATE TABLE Homepage (draft TEXT,published TEXT,revision INTEGER,publishedRevision INTEGER)');
  const config=initialHomepage();const hero=config.sections.find(s=>s.type==='hero')!;
- if(hero.type==='hero'){hero.settings.heading='Preserve my draft';hero.settings.mobileImage='';for(const key of ['desktopFocalX','desktopFocalY','tabletFocalX','tabletFocalY','mobileFocalX','mobileFocalY'])delete (hero.settings as any)[key];}
+ if(hero.type==='hero'){hero.settings.heading='Preserve my draft';hero.settings.image='/images/products/vestigia-hero-1254.jpg';hero.settings.mobileImage='';for(const key of ['desktopFocalX','desktopFocalY','tabletFocalX','tabletFocalY','mobileFocalX','mobileFocalY'])delete (hero.settings as any)[key];}
  sql.prepare('INSERT INTO Homepage VALUES (?,?,1,1)').run(JSON.stringify(config),JSON.stringify(config));
  for(const name of ['20260924000002_homepage_hero_art_direction','20260924000003_homepage_mobile_source'])sql.exec(fs.readFileSync(`prisma/migrations/${name}/migration.sql`,'utf8'));
  const row=sql.prepare('SELECT * FROM Homepage').get() as any;const draft=JSON.parse(row.draft);assert.equal(draft.sections[1].settings.heading,'Preserve my draft');assert.equal(draft.sections[1].settings.mobileImage,'/images/products/vestigia-hero-768.jpg');assert.equal(draft.sections[1].settings.desktopFocalY,0);assert.equal(row.revision,2);assert.deepEqual(draft.sections.map((s:any)=>s.id),config.sections.map(s=>s.id));assert.doesNotThrow(()=>validateHomepage(draft));sql.close();

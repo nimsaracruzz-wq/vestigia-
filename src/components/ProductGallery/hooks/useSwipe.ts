@@ -19,7 +19,7 @@ export function useSwipe({
   const touchEndY = useRef<number | null>(null);
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length > 1) return; // Ignore multi-touch (pinch)
+    if (e.touches.length > 1) { touchStartX.current = null; touchStartY.current = null; return; }
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     touchEndX.current = null;
@@ -33,7 +33,7 @@ export function useSwipe({
   }, []);
 
   const onTouchEnd = useCallback(() => {
-    if (!touchStartX.current || !touchStartY.current || !touchEndX.current || !touchEndY.current) {
+    if (touchStartX.current === null || touchStartY.current === null || touchEndX.current === null || touchEndY.current === null) {
       return;
     }
 
