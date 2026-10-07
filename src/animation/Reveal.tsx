@@ -130,6 +130,18 @@ export function useDrawerEntrance(side: "left" | "right" = "right") {
     animate: "visible",
     exit: "hidden",
     variants: { hidden, visible: { x: 0 } },
-    transition: { duration: reduced ? 0 : animationConfig.duration.drawer, ease: animationConfig.ease },
+    transition: { duration: reduced ? 0 : 0.44, ease: animationConfig.ease },
+  };
+}
+
+/** Dialog focus does not cancel the overlay entrance or exit. */
+export function useOverlayEntrance(panel = false) {
+  const reduced = useSyncExternalStore(reducedStore.subscribe, reducedStore.get, serverSnapshot);
+  const hidden = { opacity: 0, y: panel && !reduced ? -18 : 0 };
+  return {
+    initial: reduced ? false as const : hidden,
+    animate: { opacity: 1, y: 0 },
+    exit: { ...hidden, transition: { duration: reduced ? 0 : 0.28, ease: animationConfig.ease } },
+    transition: { duration: reduced ? 0 : panel ? 0.44 : 0.32, ease: animationConfig.ease },
   };
 }

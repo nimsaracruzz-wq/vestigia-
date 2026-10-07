@@ -1,10 +1,10 @@
-﻿import { useEffect, useId, useState } from 'react';
+﻿import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Plus, Minus, ChevronDown } from 'lucide-react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
-import { useEntrance, useDrawerEntrance } from '../../animation/Reveal';
-import { useScrollLock } from '../../hooks/useScrollLock';
+import { useOverlayEntrance, useDrawerEntrance } from '../../animation/Reveal';
+import { useOverlayNavigation } from '../../hooks/useOverlayNavigation';
 import { useCurrency, type CurrencyCode } from '../../context/CurrencyContext';
 import { useHomepage } from '../../homepage/HomepageContext';
 import './MobileMenu.css';
@@ -12,21 +12,21 @@ import './MobileMenu.css';
 type MobileMenuProps = { open: boolean; onClose: () => void };
 
 export default function MobileMenu({ open, onClose }: MobileMenuProps) {
-  useScrollLock(open);
+  const overlayNavigation = useOverlayNavigation(open, onClose);
   useDialogFocus(open, onClose, '.menu-drawer');
-  const backdropEntrance = useEntrance('fade');
+  const backdropEntrance = useOverlayEntrance();
   const drawerEntrance = useDrawerEntrance('left');
   const { currency, setCurrency, checkoutLocked } = useCurrency();
   const { config } = useHomepage();
   const [shopOpen, setShopOpen] = useState(false);
   const shopId = useId();
   const currencyId = useId();
-  useEffect(() => { if (!open) setShopOpen(false); }, [open]);
+
   const hasFirstRelease = config?.sections.some(section => section.id === 'first-release' && section.type === 'product_carousel' && section.enabled);
 
-  return <AnimatePresence>{open && <>
-    <motion.div className="drawer-backdrop vestigia-menu-backdrop" {...backdropEntrance} onClick={onClose} aria-hidden="true" />
-    <motion.aside className="menu-drawer vestigia-menu" {...drawerEntrance} aria-modal="true" role="dialog" aria-label="VESTIGIA navigation">
+  return <AnimatePresence onExitComplete={() => { setShopOpen(false); overlayNavigation.onExitComplete(); }}>{open && <>
+    <motion.div key="menu-backdrop" className="drawer-backdrop vestigia-menu-backdrop" {...backdropEntrance} onClick={onClose} aria-hidden="true" />
+    <motion.aside key="menu-panel" className="menu-drawer vestigia-menu" {...drawerEntrance} onClickCapture={overlayNavigation.onClickCapture} aria-modal="true" role="dialog" aria-label="VESTIGIA navigation">
       <div className="vestigia-menu__header">
         <Link className="vestigia-menu__brand" to="/" onClick={onClose} aria-label="VESTIGIA home">
           <img src="/images/products/vestigia-logo-192.png" alt="" width={34} height={34} />
@@ -52,6 +52,7 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
         <Link className="vestigia-menu__primary-link" to="/account" onClick={onClose}>Account</Link>
       </nav>
       <nav className="vestigia-menu__utility" aria-label="Client services">
+        <p className="vestigia-menu__eyebrow">Client services</p>
         <Link to="/account?tab=wishlist" onClick={onClose}>Wishlist</Link>
         <Link to="/contact" onClick={onClose}>Contact</Link>
         <div className="vestigia-menu__policies"><Link to="/shipping-policy" onClick={onClose}>Shipping</Link><span aria-hidden="true">&amp;</span><Link to="/refund-policy" onClick={onClose}>Returns</Link></div>
@@ -65,6 +66,7 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
         </label>
         <a href="https://instagram.com/thevestigia" target="_blank" rel="noopener noreferrer" onClick={onClose}>Instagram<span className="sr-only"> (opens in a new tab)</span></a>
       </nav>
+      <p className="vestigia-menu__signature">Every thread leaves a legacy</p>
     </motion.aside>
   </>}</AnimatePresence>;
 }

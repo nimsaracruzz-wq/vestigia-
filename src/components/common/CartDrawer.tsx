@@ -1,6 +1,6 @@
 import { variantQuantityLimit } from "../../../shared/stock";
 import { useDialogFocus } from '../../hooks/useDialogFocus';
-import { useScrollLock } from "../../hooks/useScrollLock";
+import { useOverlayNavigation } from "../../hooks/useOverlayNavigation";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, X, Tag, ShoppingBag, ArrowRight } from "lucide-react";
@@ -10,7 +10,7 @@ import { useCurrency } from "../../context/CurrencyContext";
 import { useAdmin } from "../../admin/AdminContext";
 import ProductImage from "./ProductImage";
 import EmptyBag from "./EmptyBag";
-import { Reveal, useEntrance, useDrawerEntrance } from "../../animation/Reveal";
+import { Reveal, useOverlayEntrance, useDrawerEntrance } from "../../animation/Reveal";
 import { animationConfig, staggerDelay } from "../../animation/config";
 import { getProductPrice } from "../../utils/productMedia";
 import { useUser } from "../../context/UserContext";
@@ -23,9 +23,9 @@ type CartDrawerProps = {
 };
 
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
-  useScrollLock(open);
+  const overlayNavigation = useOverlayNavigation(open, onClose);
   useDialogFocus(open, onClose, '.cart-drawer');
-  const backdropEntrance = useEntrance("fade");
+  const backdropEntrance = useOverlayEntrance();
   const drawerEntrance = useDrawerEntrance();
   const {
     cart,
@@ -100,7 +100,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
   const remaining = Math.max(0, freeShippingThreshold - cartTotal);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={overlayNavigation.onExitComplete}>
       {open && (
         <>
           {/* ── Backdrop ──────────────────────────────── */}
@@ -117,6 +117,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
             key="cart-drawer"
             className="cart-drawer"
             {...drawerEntrance}
+            onClickCapture={overlayNavigation.onClickCapture}
             aria-modal="true"
             role="dialog"
             aria-label="Shopping Cart"

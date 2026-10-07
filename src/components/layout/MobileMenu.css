@@ -1,14 +1,17 @@
 ﻿.menu-drawer.vestigia-menu {
-  width: 90vw;
-  max-width: 420px;
+  width: min(92vw, 440px);
+  max-width: 440px;
   height: 100dvh;
-  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  padding: max(24px, env(safe-area-inset-top)) clamp(24px, 7vw, 36px) max(24px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  background: #f7f4ed;
+  gap: 32px;
+  background: #faf9f6;
   color: #11110f;
-  box-shadow: none;
+  box-shadow: 16px 0 56px rgba(17,17,15,.08);
+  transform: none;
+  transition: none;
+  will-change: transform;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -21,7 +24,7 @@
   font-weight: 400;
   justify-content: flex-start;
 }
-.vestigia-menu__header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
+.vestigia-menu__header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; padding-bottom: 22px; border-bottom: 1px solid #e5e1d9; }
 .menu-drawer .vestigia-menu__brand { display: flex; align-items: center; gap: 10px; min-height: 44px; white-space: nowrap; }
 .vestigia-menu__brand img { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
 .vestigia-menu__brand span { font: 400 clamp(17px, 5vw, 22px)/1 Georgia, 'Times New Roman', serif; letter-spacing: .1em; }
@@ -31,28 +34,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 62px;
+  min-height: 64px;
   width: 100%;
   padding: 12px 0;
   background: transparent;
   border: 0;
   font-family: inherit;
-  font-size: 26px;
-  font-weight: 500;
+  font-size: 23px;
+  font-weight: 400;
   line-height: 1.3;
-  letter-spacing: .015em;
-  text-transform: uppercase;
+  letter-spacing: .025em;
+  text-transform: none;
   color: inherit;
   text-align: left;
   cursor: pointer;
 }
 .vestigia-menu__shop { border-bottom: 1px solid rgba(17,17,15,.12); margin-bottom: 8px; padding-bottom: 8px; }
-.vestigia-menu__accordion { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 240ms ease, opacity 240ms ease, visibility 240ms; }
+.vestigia-menu__accordion { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 360ms cubic-bezier(.22,1,.36,1), opacity 280ms ease, visibility 360ms; }
 .vestigia-menu__accordion.is-open { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
 .vestigia-menu__submenu { overflow: hidden; min-height: 0; }
-.menu-drawer .vestigia-menu__submenu a { min-height: 44px; font-size: 12px; line-height: 1.5; letter-spacing: .12em; text-transform: uppercase; }
+.menu-drawer .vestigia-menu__submenu a { min-height: 46px; padding-left: 16px; font-size: 13px; line-height: 1.5; letter-spacing: .04em; text-transform: none; color: #625b52; }
 .vestigia-menu__utility { margin-top: auto; border-top: 1px solid rgba(17,17,15,.12); padding-top: 18px; flex-shrink: 0; }
-.menu-drawer .vestigia-menu__utility a, .vestigia-menu__currency { min-height: 44px; font-size: 13px; line-height: 1.5; letter-spacing: .07em; text-transform: uppercase; }
+.menu-drawer .vestigia-menu__utility a, .vestigia-menu__currency { min-height: 44px; font-size: 13px; line-height: 1.5; letter-spacing: .025em; text-transform: none; }
 .vestigia-menu__policies { display: flex; align-items: center; gap: 7px; font-size: 13px; }
 .vestigia-menu__currency { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .vestigia-menu__currency-control { position: relative; display: flex; align-items: center; }
@@ -60,6 +63,9 @@
 .vestigia-menu__currency-control svg { position: absolute; right: 0; pointer-events: none; }
 .vestigia-menu__currency-control select:disabled { opacity: .5; cursor: default; }
 .vestigia-menu :is(a, button, select):focus-visible { outline: 1px solid #11110f; outline-offset: 3px; }
-.vestigia-menu-backdrop { background: rgba(17,17,15,.45); }
+.vestigia-menu-backdrop { background: rgba(17,17,15,.38); }
 @media (max-height: 700px) { .menu-drawer.vestigia-menu { gap: 20px; } .vestigia-menu .vestigia-menu__primary-link { min-height: 56px; } }
 @media (prefers-reduced-motion: reduce) { .vestigia-menu__accordion { transition: none; } }
+
+.vestigia-menu__eyebrow { margin: 0 0 14px; color: #82786c; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; }
+.vestigia-menu__signature { margin: 0; padding-top: 4px; color: #82786c; font: italic 12px/1.6 Georgia, serif; }

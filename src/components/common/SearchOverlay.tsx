@@ -1,6 +1,6 @@
 import { useDialogFocus } from '../../hooks/useDialogFocus';
-import { useEntrance } from "../../animation/Reveal";
-import { useScrollLock } from "../../hooks/useScrollLock";
+import { useOverlayEntrance } from "../../animation/Reveal";
+import { useOverlayNavigation } from "../../hooks/useOverlayNavigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Search, X } from "lucide-react";
@@ -16,10 +16,10 @@ type SearchOverlayProps = {
 };
 
 export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
-  useScrollLock(open);
+  const overlayNavigation = useOverlayNavigation(open, onClose);
   useDialogFocus(open, onClose, '.search-panel');
-  const backdropEntrance = useEntrance("fade");
-  const panelEntrance = useEntrance("scale");
+  const backdropEntrance = useOverlayEntrance();
+  const panelEntrance = useOverlayEntrance(true);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { formatPrice: money, currency } = useCurrency();
@@ -28,11 +28,10 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   // Focus input on open, reset on close
   useEffect(() => {
     if (open) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
-    } else {
-      setQuery("");
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
@@ -63,11 +62,12 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const popularSearches = ["signature", "origin", "essential", "vestigia", "tee"];
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={() => { setQuery(""); overlayNavigation.onExitComplete(); }}>
       {open && (
         <>
           {/* Dim backdrop — click to close */}
           <motion.div
+            key="search-backdrop"
             className="search-backdrop"
             {...backdropEntrance}
             onClick={onClose}
@@ -76,8 +76,10 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
 
           {/* Search Panel */}
           <motion.div
+            key="search-panel"
             className="search-panel"
             {...panelEntrance}
+            onClickCapture={overlayNavigation.onClickCapture}
             role="dialog"
             aria-modal="true"
             aria-label="Site Search Overlay"
