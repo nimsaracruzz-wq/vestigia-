@@ -1,3 +1,5 @@
+import { saveInventory } from '../utils/inventoryManagement.js';
+import { variantQuantityLimit } from '../../shared/stock.js';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -124,3 +126,27 @@ test('partial refunds use original JPY amount, enforce remaining balance and ide
 });
 
 test('unpublished products cannot receive a payable quote',async()=>{await db.product.update({where:{id:product.id},data:{published:false}});try{await assert.rejects(()=>new PricingService(db).calculateCart(payload()),/unavailable/);}finally{await db.product.update({where:{id:product.id},data:{published:true}});}});
+
+
+test('inventory saves real quantities, rejects invalid and stale edits, and rolls back partial saves', async () => {
+ const original = await db.inventory.findFirst({where:{productId:product.id}});
+ try {
+  const saved = await saveInventory(db, product.id, {black_M:7}, {black_M:10});
+  assert.equal(saved.inventory[0].stock,7);
+  assert.equal(saved.prices.find((p:any)=>p.currency==='JPY').priceMinor,7999);
+  await assert.rejects(()=>saveInventory(db,product.id,{black_M:8},{black_M:10}),/Stock changed/);
+  for (const value of [-1,1.5,100001,'9',null]) await assert.rejects(()=>saveInventory(db,product.id,{black_M:value},{black_M:7}),/whole stock/);
+  await assert.rejects(()=>saveInventory(db,product.id,{black_M:3,invalid_M:2},{black_M:7,invalid_M:0}),/whole stock/);
+  assert.equal((await db.inventory.findUnique({where:{id:original.id}})).stock,7);
+  await saveInventory(db,product.id,{black_M:0},{black_M:7});
+  await assert.rejects(()=>new PricingService(db).calculateCart(payload()),/stock/i);
+ } finally { await db.inventory.update({where:{id:original.id},data:{stock:original.stock}}); }
+});
+
+test('bag limits use real variant stock and cap order quantities at 99',()=>{
+ assert.equal(variantQuantityLimit(undefined,'black','M'),0);
+ assert.equal(variantQuantityLimit({black_M:4},'black','M'),4);
+ assert.equal(variantQuantityLimit({black_M:400},'black','M'),99);
+ for(const stock of [-1,NaN,1.5])assert.equal(variantQuantityLimit({black_M:stock},'black','M'),0);
+ assert.equal(variantQuantityLimit({black_M:4},'black','L'),0);
+});

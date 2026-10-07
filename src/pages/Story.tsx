@@ -173,18 +173,30 @@ export default function Story() {
       </section>
 
       {/* MIDDLE IMAGE SPREAD */}
-      <section style={{ overflow: "hidden", padding: "0 24px", marginBottom: "80px" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "24px" }}>
+      <section className="story-editorial" aria-label="The VESTIGIA story in photographs">
+        <Reveal className="story-editorial__heading">
+          <span>ITALIAN VISION. SRI LANKAN SOUL.</span>
+          <h2>A legacy in every thread.</h2>
+        </Reveal>
+        <div className="story-editorial__grid">
+          <Reveal as="figure" className="story-editorial__figure">
           <img
-            src="/images/products/signature_model.png"
-            alt="Model in VESTIGIA Signature T-Shirt"
-            style={{ width: "100%", objectFit: "cover", height: "400px" }}
+            src="/images/products/vestigia_story_1.png"
+            alt="VESTIGIA story campaign photograph one"
+            loading="lazy"
+            decoding="async"
           />
+          <figcaption><span>01 / OUR ORIGIN</span><span>Italy &amp; Sri Lanka</span></figcaption>
+          </Reveal>
+          <Reveal as="figure" className="story-editorial__figure story-editorial__figure--second">
           <img
-            src="/images/products/signature_detail.png"
-            alt="Macro detail of VESTIGIA knit fabric"
-            style={{ width: "100%", objectFit: "cover", height: "400px" }}
+            src="/images/products/vestigia_story_2.png"
+            alt="VESTIGIA story campaign photograph two"
+            loading="lazy"
+            decoding="async"
           />
+          <figcaption><span>02 / OUR JOURNEY</span><span>Every thread leaves a legacy</span></figcaption>
+          </Reveal>
         </div>
       </section>
 

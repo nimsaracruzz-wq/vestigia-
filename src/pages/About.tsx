@@ -231,7 +231,7 @@ export default function About() {
               }}
             >
               <img
-                src="/images/products/signature_detail.png"
+                src="/images/products/vesitiga_macroview.png"
                 alt="Detailed close-up of VESTIGIA 280 GSM heavyweight cotton fabric texture and gold embroidery"
                 loading="lazy"
                 style={{
@@ -371,7 +371,7 @@ export default function About() {
             }}
           >
             <img
-              src="/images/products/Vestigia_Hero.png"
+              src="/images/products/vestigia_hero_desktop.webp"
               alt="VESTIGIA campaign imagery in a minimalist architectural space"
               loading="lazy"
               style={{
@@ -408,13 +408,6 @@ export default function About() {
           background: "#faf9f6",
         }}
       >
-        <div style={{ marginBottom: "12px" }}>
-          <img
-            src="/images/products/vestigia_logo.png"
-            alt="VESTIGIA Emblem"
-            style={{ width: "40px", height: "40px", objectFit: "contain" }}
-          />
-        </div>
         <p
           style={{
             fontFamily: "'Cinzel', 'Georgia', serif",
@@ -438,7 +431,7 @@ export default function About() {
             textTransform: "uppercase",
           }}
         >
-          DESIGNED IN ITALY &bull; MADE IN SRI LANKA &bull; LEAVE YOUR MARK.
+          DESIGNED IN ITALY &bull; MADE IN SRI LANKA &bull; EVERY THREAD LEAVES A LEGACY
         </p>
       </footer>
     </main>

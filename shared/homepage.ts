@@ -49,10 +49,10 @@ export function newSection<T extends SectionType>(type: T, id: string, heading =
 }
 
 export function initialHomepage(productIds: number[] = [], announcement?: { enabled: boolean; text: string }): HomepageConfig {
-  const hero = newSection('hero', 'hero', 'LEAVE YOUR MARK.');
-  Object.assign(hero.settings, { eyebrow: 'THE FIRST RELEASE', body: 'Contemporary clothing shaped by Italian vision and made in Sri Lanka.', alignment: 'center', cta: link('Shop the first release', '/shop'), secondaryCta: link('Discover our story', '/story') });
+  const hero = newSection('hero', 'hero', 'A LEGACY IN EVERY THREAD');
+  Object.assign(hero.settings, { eyebrow: 'THE FIRST RELEASE', body: 'Italian vision. Made in Sri Lanka.', alignment: 'center', cta: link('SHOP THE RELEASE', '/shop'), secondaryCta: link('', '') });
   const arrivals = newSection('product_carousel', 'new-arrivals', 'NEW ARRIVALS');
-  Object.assign(arrivals.settings, { eyebrow: 'LATEST FROM VESTIGIA', source: 'newest', badge: 'NEW', cta: link('View all', '/shop') });
+  Object.assign(arrivals.settings, { eyebrow: 'LATEST FROM VESTIGIA', source: 'newest', badge: 'NEW', cta: link('View all', '/shop'), secondaryCta: link('Discover Our Story', '/story') });
   const manifesto = newSection('manifesto', 'manifesto', 'DESIGNED TO REMAIN.');
   Object.assign(manifesto.settings, { eyebrow: 'THE VESTIGIA PHILOSOPHY', body: 'VESTIGIA creates contemporary clothing inspired by the traces people, places, and moments leave behind. Designed in Italy and made in Sri Lanka, each piece is shaped with restraint, intention, and a focus on lasting identity.', cta: link('Discover our story', '/story') });
   const featured = newSection('product_carousel', 'first-release', 'THE FIRST RELEASE');
@@ -77,8 +77,8 @@ export function initialHomepage(productIds: number[] = [], announcement?: { enab
   const bar = newSection('announcement', 'announcement');
   if (announcement) { bar.enabled = announcement.enabled; bar.settings.messages[0].text = announcement.text || 'THE FIRST RELEASE — AVAILABLE NOW'; }
   return { schemaVersion: 1, sections: [bar, hero, arrivals, manifesto, featured, campaign, wanted, identity, craft, legacy, precision, lookbook, newsletter].map((s, sortOrder) => ({ ...s, sortOrder })),
-    seo: { title: 'VESTIGIA | Luxury Clothing & Premium Essentials', description: 'Contemporary clothing shaped by Italian vision and made in Sri Lanka. Discover the first VESTIGIA release.', image: '/images/products/vestigia-hero-1254.jpg', canonical: 'https://thevestigia.com/', index: true },
-    footer: { description: 'DESIGNED IN ITALY.\nMADE IN SRI LANKA.\nLEAVE YOUR MARK.', copyright: '© 2026 VESTIGIA. ALL RIGHTS RESERVED.', groups: [
+    seo: { title: 'VESTIGIA | Luxury Clothing & Premium Essentials', description: 'EVERY THREAD LEAVES A LEGACY. Contemporary clothing shaped by Italian vision and made in Sri Lanka. Discover the first VESTIGIA release.', image: '/images/products/vestigia-hero-1254.jpg', canonical: 'https://thevestigia.com/', index: true },
+    footer: { description: 'DESIGNED IN ITALY.\nMADE IN SRI LANKA.\nEVERY THREAD LEAVES A LEGACY', copyright: '© 2026 VESTIGIA. ALL RIGHTS RESERVED.', groups: [
       { id: 'shop', title: 'Shop', links: [link('All products', '/shop')] },
       { id: 'about', title: 'About', links: [link('Our story', '/story'), link('About VESTIGIA', '/about'), link('Journal', '/journal')] },
       { id: 'services', title: 'Client services', links: [link('Contact', '/contact'), link('Shipping & delivery', '/shipping-policy'), link('Frequently asked questions', '/faq')] },

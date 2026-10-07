@@ -31,6 +31,8 @@ import CartDrawer from "./components/common/CartDrawer";
 import SearchOverlay from "./components/common/SearchOverlay";
 import QuickShopModal from "./components/common/QuickShopModal";
 import CookieConsent from "./components/common/CookieConsent";
+import Preloader from "./components/common/Preloader";
+import AppErrorBoundary from "./components/common/AppErrorBoundary";
 import { CookieConsentProvider } from "./context/CookieConsentContext";
 
 // Pages
@@ -60,6 +62,7 @@ import { AdminProvider } from "./admin/AdminContext";
 const AdminShell = lazy(() => import("./admin/AdminShell"));
 const Dashboard = lazy(() => import("./admin/pages/Dashboard"));
 const Products = lazy(() => import("./admin/pages/Products"));
+const Inventory = lazy(() => import("./admin/pages/Inventory"));
 const Orders = lazy(() => import("./admin/pages/Orders"));
 const Customers = lazy(() => import("./admin/pages/Customers"));
 const Analytics = lazy(() => import("./admin/pages/Analytics"));
@@ -99,6 +102,7 @@ function MainAppShell() {
   return (
     <>
       <div className="site-shell">
+        <Preloader />
         {!isCheckout && (
           <div className={`storefront-header-region${location.pathname === '/shop' || location.pathname.startsWith('/collections/') ? ' shop-header-region' : ''}`}>
             <Announcement />
@@ -160,6 +164,7 @@ function AdminAppShell() {
         <Route index element={<Dashboard />} />
         <Route path="homepage" element={<HomepageAdmin />} />
         <Route path="products" element={<Products />} />
+        <Route path="inventory" element={<Inventory />} />
         <Route path="pricing" element={<PricingControl />} />
         <Route path="orders" element={<Orders />} />
         <Route path="customers" element={<Customers />} />
@@ -181,6 +186,7 @@ import { CurrencyProvider } from "./context/CurrencyContext";
 
 export default function App() {
   return (
+    <AppErrorBoundary>
     <MotionProvider>
       <AdminProvider>
         <CurrencyProvider>
@@ -204,5 +210,6 @@ export default function App() {
         </CurrencyProvider>
       </AdminProvider>
     </MotionProvider>
+    </AppErrorBoundary>
   );
 }

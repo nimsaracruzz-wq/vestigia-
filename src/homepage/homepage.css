@@ -16,56 +16,73 @@
 @media(max-width:767px){.hp-product-skeleton{grid-template-columns:repeat(4,82%)}.hp-products--grid .hp-carousel-controls,.hp-products--lead .hp-carousel-controls{display:flex}.hp-section{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}}
 @media(prefers-reduced-motion:reduce){.hp-page *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
-/* Mobile campaign copy positions are independent of the image-anchored hotspots. */
+/* Mobile campaign: compact copy stays in the upper-left architectural space. */
 @media (max-width: 767px) {
+  .hp-hero:after {
+    background: radial-gradient(ellipse 330px 210px at 15% 15%, rgba(0,0,0,.18), transparent 85%),
+      linear-gradient(to top, rgba(0,0,0,.22), transparent 18%);
+  }
   .hp-hero > .hp-copy {
     position: absolute;
     inset: 0;
     width: auto;
     max-width: none;
     margin: 0;
-    text-align: center;
+    text-align: left;
     pointer-events: none;
   }
   .hp-hero > .hp-copy > .hp-eyebrow {
     position: absolute;
-    top: 25%;
-    inset-inline: 20px;
+    top: max(90px, 14%);
+    left: 24px;
     margin: 0;
-    font-size: 10px;
-    line-height: 16px;
+    font-size: 8px;
+    letter-spacing: .22em;
+    line-height: 1.5;
   }
   .hp-hero > .hp-copy > h1 {
     position: absolute;
-    top: 31%;
-    inset-inline: 20px;
+    top: calc(max(90px, 14%) + 24px);
+    left: 24px;
+    width: min(58%, 240px);
     margin: 0;
-    font-size: clamp(44px, 11.5vw, 54px);
-    line-height: .92;
-    text-align: center;
-    text-wrap: initial;
+    font-size: clamp(21px, 5.5vw, 27px);
+    line-height: 1.18;
+    letter-spacing: .025em;
+    text-align: left;
+    text-wrap: balance;
     overflow-wrap: normal;
     animation-name: vestigia-fade;
   }
   .hp-hero-heading-break { display: block; }
   .hp-hero > .hp-copy > .hp-body {
     position: absolute;
-    inset-inline: 24px;
-    top: 70%;
-    margin: 0 auto;
-    max-width: 330px;
-    font-size: 13px;
+    left: 24px;
+    top: calc(max(90px, 14%) + 94px);
+    margin: 0;
+    font-size: 10px;
+    font-style: italic;
+    letter-spacing: .02em;
     line-height: 1.5;
+    opacity: .85;
   }
   .hp-hero > .hp-copy > .hp-actions {
     position: absolute;
     inset-inline: 24px;
-    top: 80%;
-    display: grid;
-    justify-items: center;
+    bottom: max(32px, env(safe-area-inset-bottom));
+    display: flex;
     justify-content: center;
-    gap: 8px;
     pointer-events: auto;
   }
-  .hp-hero .hp-actions .hp-link { min-height: 44px; padding: 10px 16px; }
+  .hp-hero .hp-actions .hp-link {
+    min-height: 44px;
+    padding: 12px 24px;
+    font-size: 9px;
+    letter-spacing: .2em;
+    background: rgba(0,0,0,.06);
+    border-color: rgba(250,248,243,.65);
+  }
 }
+
+/* Keep the longer brand slogan clear within the hero composition. */
+.hp-hero-slogan { display: block; font-size: .72em; line-height: 1.12; }

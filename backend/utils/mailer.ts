@@ -420,7 +420,7 @@ function buildEmailBase(innerContent: string, preheader: string): string {
       <!-- Header -->
       <div class="email-header">
         <div class="brand-name">Vestigia</div>
-        <div class="brand-tagline">Refined Apparel</div>
+        <div class="brand-tagline">EVERY THREAD LEAVES A LEGACY</div>
       </div>
 
       <!-- Inner Content -->

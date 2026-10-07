@@ -1,5 +1,6 @@
 import "../admin.css";
 import { Outlet, NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { PageTransition } from "../animation/PageTransition";
 import {
   Activity,
   Aperture,
@@ -55,6 +56,7 @@ export default function AdminShell() {
   const storeNavItems = [
     { name: "Homepage", path: "/admin/homepage", icon: <Home size={22} /> },
     { name: "Products", path: "/admin/products", icon: <ShoppingCart size={22} /> },
+    { name: "Inventory", path: "/admin/inventory", icon: <ShoppingCart size={22} /> },
     { name: "Pricing Control", path: "/admin/pricing", icon: <ShoppingCart size={22} /> },
     { name: "Newsletter", path: "/admin/newsletter", icon: <Mail size={22} /> },
     { name: "Journal", path: "/admin/journal", icon: <Newspaper size={22} /> },
@@ -201,7 +203,7 @@ export default function AdminShell() {
       {/* Main Content Area */}
       <main className="admin-main">
         <div className="admin-content-wrapper">
-          <Outlet />
+          <PageTransition><Outlet /></PageTransition>
         </div>
       </main>
 

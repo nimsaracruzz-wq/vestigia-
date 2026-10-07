@@ -11,12 +11,15 @@
     "preview": "vite preview",
     "seo:audit": "node scripts/seo-audit.mjs",
     "check:budgets": "node scripts/performance-budget.mjs",
-    "test:seo": "npm --prefix backend run build && node --test backend/dist/backend/tests/seo.test.js"
+    "test:seo": "npm --prefix backend run build && node --test backend/dist/backend/tests/seo.test.js",
+    "test:security": "npm --prefix backend run build && node --test backend/dist/backend/tests/requestSafety.test.js"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.7.0",
     "@stripe/stripe-js": "^9.9.0",
     "framer-motion": "^12.42.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

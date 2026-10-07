@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { API_BASE_URL } from "../config/api";
+import { apiErrorMessage } from "../utils/apiError";
 
 type UserProfile = {
   firstName: string;
@@ -49,7 +50,7 @@ interface UserContextType {
   removeAddress: (id: string) => void;
   setDefaultAddress: (id: string) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  registerUser: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string }>;
+  registerUser: (details: { firstName: string; lastName: string; email: string; password: string; confirmPassword: string; country: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
   forgotPassword: (email: string) => Promise<{ success: boolean; devLink?: string; error?: string }>;
   resetPassword: (token: string, password: string) => Promise<{ success: boolean; error?: string }>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
@@ -92,12 +93,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
       headers["Authorization"] = `Bearer ${token}`;
     }
     const response = await fetch(`${API_BASE_URL}${path}`, {
+      signal: !options.method || options.method === 'GET' ? AbortSignal.timeout(15000) : undefined,
       ...options,
       headers,
     });
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      throw new Error(data.error || `API Request failed: ${response.status}`);
+      const error = new Error(apiErrorMessage(response.status, data)) as Error & { status: number };
+      error.status = response.status;
+      throw error;
     }
     return response.json();
   };
@@ -148,7 +152,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       city: defaultAddr?.city || "",
       state: defaultAddr?.state || "",
       zip: defaultAddr?.zip || "",
-      country: defaultAddr?.country || "United States",
+      country: defaultAddr?.country || cust.country || "",
       addresses,
     };
   };
@@ -166,9 +170,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setUser(mapCustomerToProfile(data));
       } catch (err: any) {
         console.error("Failed to fetch customer profile:", err.message);
-        // If token invalid/expired, log out
-        setToken(null);
-        setUser(null);
+        // A temporary network/backend failure must not erase a valid login.
+        if (err.status === 401 || err.status === 403) {
+          setToken(null);
+          setUser(null);
+        } else {
+          setError("Your account could not be loaded. Please check your connection and refresh.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -192,15 +200,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const registerUser = async (name: string, email: string, password: string, phone?: string) => {
+  const registerUser: UserContextType["registerUser"] = async (details) => {
     setError(null);
     try {
       const data = await apiRequest("/customers/register", {
         method: "POST",
-        body: JSON.stringify({ name, email, password, phone }),
+        body: JSON.stringify(details),
       });
-      setToken(data.token);
-      setUser(mapCustomerToProfile(data.user));
+      if (data.token) {
+        setToken(data.token);
+        setUser(mapCustomerToProfile(data.user));
+      }
       return { success: true };
     } catch (err: any) {
       setError(err.message);

@@ -1,0 +1,7 @@
+.app-recovery { min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 40px 24px; box-sizing: border-box; background: #fbfaf8; color: #171412; text-align: center; }
+.app-recovery-brand { font: 24px Georgia, serif; letter-spacing: .18em; }
+.app-recovery h1 { margin: 20px 0 0; font: 400 clamp(28px,5vw,42px)/1.2 Georgia,serif; }
+.app-recovery p { max-width: 400px; color: #756b60; line-height: 1.7; margin: 0; }
+.app-recovery button { min-height: 48px; padding: 14px 28px; border: 1px solid #171412; background: #171412; color: #fbfaf8; cursor: pointer; font: inherit; }
+.app-recovery a { color: #75603c; min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 4px; }
+.app-recovery :focus-visible { outline: 2px solid #927644; outline-offset: 4px; }

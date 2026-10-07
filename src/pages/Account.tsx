@@ -1,3 +1,6 @@
+import OrderDocumentDownload from "../components/common/OrderDocumentDownload";
+import PasswordStrengthMeter from "../components/common/PasswordStrengthMeter";
+import { businessContact } from "../../shared/businessContact";
 import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import { RevealOverlay, RevealModal, RevealGroup } from "../animation/Reveal";
 import { moneyLabel, formatMajor } from "../utils/money";
@@ -18,7 +21,7 @@ import ProductImage from "../components/common/ProductImage";
 import { getProductImage, resolveProductImageUrl, PRODUCT_IMAGE_PLACEHOLDER } from "../utils/productMedia";
 import {
   COUNTRY_PHONE_OPTIONS,
-  detectVisitorCountry,
+  detectVisitorLocation,
   formatPhoneNumber,
   DEFAULT_COUNTRY,
   type CountryPhoneOption,
@@ -314,6 +317,7 @@ function OrderInvoiceModal({
         <div className="no-print invoice-modal-header">
           <h3>Official Order Invoice</h3>
           <div style={{ display: "flex", gap: "10px" }}>
+            <OrderDocumentDownload orders={[order]} kind="invoice" className="admin-btn primary" />
             <button className="admin-btn primary" onClick={handlePrint}>
               <Printer size={15} /> Print / Save PDF
             </button>
@@ -331,7 +335,6 @@ function OrderInvoiceModal({
               <div>
                 <h1 className="brand-logo-title">VESTIGIA</h1>
                 <p className="brand-sub">ATELIER IMPULSE — HIGH LUXURY APPAREL</p>
-                <p className="tax-reg">VAT / TAX ID: REG-882947192-EU</p>
               </div>
               <div className="inv-meta-right">
                 <h2 className="inv-title">TAX INVOICE</h2>
@@ -348,9 +351,10 @@ function OrderInvoiceModal({
               <div className="inv-address-col">
                 <h4>Issued By:</h4>
                 <p><strong>VESTIGIA Atelier Impulse</strong></p>
-                <p>75001 Rue Saint-Honoré</p>
-                <p>Paris, France</p>
-                <p>concierge@vestigia-official.com</p>
+                <p><strong>Head Office</strong><br />{businessContact.street}<br />{businessContact.locality}</p>
+                <p><strong>Email Concierge</strong><br /><a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
+                <p><strong>Direct Advisory Line</strong><br /><a href={businessContact.phoneHref}>{businessContact.phone}</a></p>
+                <p><strong>Support Hours</strong><br />{businessContact.weekdayHours}<br />{businessContact.saturdayHours}</p>
               </div>
               <div className="inv-address-col">
                 <h4>Billed & Shipped To:</h4>
@@ -398,7 +402,7 @@ function OrderInvoiceModal({
             <div className="invoice-footer-summary">
               <div className="inv-notes">
                 <p><strong>Payment Method:</strong> {order.paymentMethod || "Credit Card (Stripe)"}</p>
-                <p className="inv-thankyou">Thank you for choosing VESTIGIA. For customer support or returns, visit vestigia.com/contact.</p>
+                <p className="inv-thankyou">Thank you for choosing VESTIGIA. For customer support or returns, visit thevestigia.com/contact.</p>
               </div>
               <div className="inv-totals-box">
                 <div className="tot-row"><span>Subtotal:</span><span>{money(subtotal)}</span></div>
@@ -444,19 +448,27 @@ export default function Account() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
 
-  const [registerName, setRegisterName] = useState("");
+  const [registerFirstName, setRegisterFirstName] = useState("");
+  const [registerLastName, setRegisterLastName] = useState("");
+  const [registerAccountCountry, setRegisterAccountCountry] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPhone, setRegisterPhone] = useState("");
   const [registerCountry, setRegisterCountry] = useState<CountryPhoneOption>(DEFAULT_COUNTRY);
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false);
   const [registerError, setRegisterError] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState("");
 
   useEffect(() => {
     let active = true;
-    void detectVisitorCountry().then((c) => {
-      if (active) setRegisterCountry(c);
+    void detectVisitorLocation().then((location) => {
+      if (!active || !location) return;
+      const country = COUNTRIES.find(c => c === location.country);
+      if (country) setRegisterAccountCountry(current => current || country);
+      const phoneCountry = COUNTRY_PHONE_OPTIONS.find(c => c.iso === location.iso);
+      if (phoneCountry) setRegisterCountry(phoneCountry);
     });
     return () => { active = false; };
   }, []);
@@ -579,16 +591,33 @@ export default function Account() {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError("");
-    if (!registerName || !registerEmail || !registerPassword) { setRegisterError("Full name, email, and password are required."); return; }
+    setRegisterSuccess("");
+    if (!registerFirstName.trim() || !registerLastName.trim() || !registerEmail.trim() || !registerPassword || !registerAccountCountry) { setRegisterError("First name, last name, email, password and country are required."); return; }
     if (registerPassword !== registerConfirmPassword) { setRegisterError("Passwords do not match."); return; }
+    if (registerPassword.length < 12 || registerPassword.length > 128) { setRegisterError("Password must be between 12 and 128 characters."); return; }
     setFormLoading(true);
     const fullPhone = registerPhone.trim()
       ? `${registerCountry.dialCode} ${registerPhone.trim()}`
       : "";
-    const result = await registerUser(registerName, registerEmail, registerPassword, fullPhone);
+    const result = await registerUser({ firstName: registerFirstName.trim(), lastName: registerLastName.trim(), email: registerEmail.trim(), password: registerPassword, confirmPassword: registerConfirmPassword, country: registerAccountCountry, phone: fullPhone });
     setFormLoading(false);
     if (!result.success) { setRegisterError(result.error || "Registration failed."); }
-    else { setRegisterName(""); setRegisterEmail(""); setRegisterPhone(""); setRegisterPassword(""); setRegisterConfirmPassword(""); }
+    else {
+      setRegisterSuccess("Your account has been created. Please check your email to verify your account, then sign in.");
+      setLoginEmail(registerEmail.trim());
+      setLoginPassword("");
+      setLoginError("");
+      setShowLoginPassword(false);
+      setRegisterFirstName("");
+      setRegisterLastName("");
+      setRegisterEmail("");
+      setRegisterPhone("");
+      setRegisterPassword("");
+      setRegisterConfirmPassword("");
+      setShowRegisterPassword(false);
+      setShowRegisterConfirmPassword(false);
+      setAuthScreen("login");
+    }
   };
 
   const handleForgotSubmit = async (e: React.FormEvent) => {
@@ -699,12 +728,13 @@ export default function Account() {
         <Reveal className="auth-card-container">
           <AnimatePresence mode="wait">
             {authScreen === "login" && (
-              <Reveal trigger="mount" variant="fade" key="login">
+              <Reveal trigger="mount" variant="fade" duration={0.42} key="login">
                 <div className="auth-card-header">
                   <h2>Welcome to VESTIGIA</h2>
                   <p>Access your orders and account settings.</p>
                 </div>
                 <form onSubmit={handleLoginSubmit} className="auth-card-form">
+                  {registerSuccess && <div className="auth-registration-notice" role="status"><CheckCircle size={20} aria-hidden="true" /><div><strong>Account created</strong><p>Check your email to verify your account, then sign in.</p></div></div>}
                   {loginError && <div className="auth-error-alert" role="alert">{loginError}</div>}
                   <div className="form-input-box full-width">
                     <label htmlFor="login-email">Email Address</label>
@@ -732,13 +762,13 @@ export default function Account() {
                 </form>
                 <div className="auth-card-footer">
                   <span>Don't have an account?</span>
-                  <button onClick={() => setAuthScreen("register")} className="auth-toggle-link">Create one</button>
+                  <button onClick={() => { setRegisterSuccess(""); setAuthScreen("register"); }} className="auth-toggle-link">Create one</button>
                 </div>
               </Reveal>
             )}
 
             {authScreen === "register" && (
-              <Reveal trigger="mount" variant="fade" key="register">
+              <Reveal trigger="mount" variant="fade" duration={0.42} key="register">
                 <div className="auth-card-header">
                   <h2>Create Account</h2>
                   <p>Register to unlock premium member benefits.</p>
@@ -746,8 +776,16 @@ export default function Account() {
                 <form onSubmit={handleRegisterSubmit} className="auth-card-form">
                   {registerError && <div className="auth-error-alert" role="alert">{registerError}</div>}
                   <div className="form-input-box full-width">
-                    <label htmlFor="reg-name">Full Name</label>
-                    <div className="input-with-icon"><User size={16} /><input id="reg-name" type="text" value={registerName} onChange={(e) => setRegisterName(e.target.value)} placeholder="John Doe" required /></div>
+                    <label htmlFor="reg-first-name">First Name</label>
+                    <div className="input-with-icon"><User size={16} /><input id="reg-first-name" type="text" autoComplete="given-name" value={registerFirstName} onChange={(e) => setRegisterFirstName(e.target.value)} placeholder="John" maxLength={80} required /></div>
+                  </div>
+                  <div className="form-input-box full-width">
+                    <label htmlFor="reg-last-name">Last Name</label>
+                    <div className="input-with-icon"><User size={16} /><input id="reg-last-name" type="text" autoComplete="family-name" value={registerLastName} onChange={(e) => setRegisterLastName(e.target.value)} placeholder="Doe" maxLength={80} required /></div>
+                  </div>
+                  <div className="form-input-box full-width">
+                    <label htmlFor="reg-country">Country</label>
+                    <div className="input-with-icon"><MapPin size={16} /><select id="reg-country" autoComplete="country-name" value={registerAccountCountry} onChange={(e) => setRegisterAccountCountry(e.target.value)} required><option value="">Select your country</option>{COUNTRIES.map(country => <option key={country} value={country}>{country}</option>)}</select></div>
                   </div>
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-email">Email Address</label>
@@ -802,15 +840,22 @@ export default function Account() {
                     <label htmlFor="reg-pass">Password</label>
                     <div className="input-with-icon">
                       <Lock size={16} />
-                      <input id="reg-pass" type={showRegisterPassword ? "text" : "password"} value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Create strong password" required />
+                      <input id="reg-pass" type={showRegisterPassword ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={128} aria-describedby="reg-pass-help" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Create strong password" required />
                       <button type="button" onClick={() => setShowRegisterPassword(!showRegisterPassword)} className="password-toggle-btn" aria-label="Toggle password visibility">
                         {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    <PasswordStrengthMeter password={registerPassword} personalValues={[registerFirstName, registerLastName, registerEmail.split('@')[0]]} />
                   </div>
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-pass-conf">Confirm Password</label>
-                    <div className="input-with-icon"><Lock size={16} /><input id="reg-pass-conf" type="password" value={registerConfirmPassword} onChange={(e) => setRegisterConfirmPassword(e.target.value)} placeholder="Repeat password" required /></div>
+                    <div className="input-with-icon">
+                      <Lock size={16} />
+                      <input id="reg-pass-conf" type={showRegisterConfirmPassword ? "text" : "password"} autoComplete="new-password" value={registerConfirmPassword} onChange={(e) => setRegisterConfirmPassword(e.target.value)} placeholder="Repeat password" required />
+                      <button type="button" onClick={() => setShowRegisterConfirmPassword(value => !value)} className="password-toggle-btn" aria-label={showRegisterConfirmPassword ? "Hide confirmation password" : "Show confirmation password"} aria-pressed={showRegisterConfirmPassword} aria-controls="reg-pass-conf">
+                        {showRegisterConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
                   <button type="submit" className="save-profile-btn" disabled={formLoading}>{formLoading ? "Creating Account…" : "Create Account"}</button>
                 </form>
@@ -822,7 +867,7 @@ export default function Account() {
             )}
 
             {authScreen === "forgot" && (
-              <Reveal trigger="mount" variant="fade" key="forgot">
+              <Reveal trigger="mount" variant="fade" duration={0.42} key="forgot">
                 <div className="auth-card-header">
                   <h2>Forgot Password</h2>
                   <p>Provide your email to receive recovery instructions.</p>

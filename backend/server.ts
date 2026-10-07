@@ -1,3 +1,6 @@
+import { saveInventory } from './utils/inventoryManagement.js';
+import { customerClaims } from './utils/customerClaims.js';
+import { createRateLimiter, requestSafety, safeErrorHandler, validateRequestShape, PublicError } from './utils/requestSafety.js';
 import { serializeProduct } from './utils/publicProduct.js';
 import { slug as seoSlug, productWarnings } from '../shared/seo/product.js';
 import { merchantFeed } from './utils/merchantFeed.js';
@@ -58,7 +61,8 @@ const prisma = new PrismaClient({adapter:new PrismaBetterSqlite3({url:process.en
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 1);
+app.set('trust proxy', process.env.TRUST_PROXY === '1' ? 1 : process.env.TRUST_PROXY || 'loopback');
+app.use(requestSafety);
 
 // ─── HTTP Security Headers ───────────────────────────────────────────────────
 app.use((_req, res, next) => {
@@ -117,7 +121,7 @@ type SizeChartPayload = {
 
 const DEFAULT_SETTINGS = {
   storeName: 'Vestigia',
-  tagline: 'Refined apparel for enduring style.',
+  tagline: 'EVERY THREAD LEAVES A LEGACY',
   currency: 'EUR',
   announcementText: 'Complimentary shipping on orders over €150',
   announcementEnabled: true,
@@ -144,37 +148,6 @@ const BCRYPT_ROUNDS = 12;
 const MAX_CART_ITEMS = 50;
 const MAX_ITEM_QUANTITY = 20;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-type RateLimitOptions = {
-  windowMs: number;
-  max: number;
-  keyPrefix: string;
-};
-
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
-
-const createRateLimiter = ({ windowMs, max, keyPrefix }: RateLimitOptions) => (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-) => {
-  const now = Date.now();
-  const key = `${keyPrefix}:${req.ip}:${req.method}:${req.path}`;
-  const current = rateLimitStore.get(key);
-
-  if (!current || current.resetAt <= now) {
-    rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
-    return next();
-  }
-
-  if (current.count >= max) {
-    res.setHeader('Retry-After', String(Math.ceil((current.resetAt - now) / 1000)));
-    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
-  }
-
-  current.count += 1;
-  next();
-};
 
 const authRateLimit = createRateLimiter({ keyPrefix: 'auth', windowMs: 15 * 60 * 1000, max: 20 });
 const checkoutRateLimit = createRateLimiter({ keyPrefix: 'checkout', windowMs: 5 * 60 * 1000, max: 60 });
@@ -346,7 +319,7 @@ app.use(cors({
       callback(null, true);
     } else {
       console.warn(`[CORS] Blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'), false);
+      callback(new PublicError(403, 'ORIGIN_DENIED', 'This request origin is not allowed.'), false);
     }
   },
   credentials: true,
@@ -373,7 +346,9 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '
   }
 });
 
+app.use('/api', createRateLimiter({ keyPrefix: 'api', windowMs: 60000, max: 600 }));
 app.use(express.json({ limit: '64kb' }));
+app.use(validateRequestShape);
 app.use('/uploads', express.static(uploadDir, {
   fallthrough: false,
   setHeaders: (res) => {
@@ -733,9 +708,8 @@ const getProductPayload = (body: any, file?: Express.Multer.File) => ({
 });
 
 const syncInventory = async (productId: number, inventory: Record<string, number> | undefined) => {
-  await prisma.inventory.deleteMany({ where: { productId } });
-
   if (!inventory) return;
+  await prisma.inventory.deleteMany({ where: { productId } });
 
   const entries = Object.entries(inventory).map(([key, stock]) => {
     const [color, size] = key.split('_');
@@ -1123,23 +1097,21 @@ const authenticateToken = async (req: express.Request, res: express.Response, ne
       return;
     }
 
-    jwt.verify(token, JWT_SECRET, async (err: any, decoded: any) => {
-      if (err || !decoded?.id) {
-        res.status(403).json({ error: 'Invalid or expired token' });
-        return;
-      }
-      const customer = await prisma.customer.findUnique({
-        where: { id: Number(decoded.id) },
-        include: { savedAddresses: true },
-      });
-      if (!customer || !isSafeAccountStatus(customer.accountStatus)) {
-        res.status(403).json({ error: 'Account access is restricted.' });
-        return;
-      }
-      (req as any).user = { id: customer.id, email: customer.email };
-      (req as any).customer = customer;
-      next();
+    const decoded = customerClaims(token, JWT_SECRET);
+    if (!decoded) {
+      res.status(403).json({ error: 'Invalid or expired customer token' });
+      return;
+    }
+    const customer = await prisma.customer.findUnique({
+      where: { id: decoded.id }, include: { savedAddresses: true },
     });
+    if (!customer || !isSafeAccountStatus(customer.accountStatus)) {
+      res.status(403).json({ error: 'Account access is restricted.' });
+      return;
+    }
+    (req as any).user = { id: customer.id, email: customer.email };
+    (req as any).customer = customer;
+    next();
   } catch (error) {
     console.error('Customer authentication failed:', error);
     res.status(500).json({ error: 'Authentication failed' });
@@ -1155,7 +1127,7 @@ const authenticateAdmin = (req: express.Request, res: express.Response, next: ex
     return;
   }
 
-  jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
+  jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }, (err: any, decoded: any) => {
     if (err || !decoded || decoded.role !== 'admin') {
       res.status(403).json({ error: 'Access denied: Admin privileges required' });
       return;
@@ -1363,7 +1335,13 @@ app.post('/api/customers/register', authRateLimit, async (req, res) => {
       res.status(400).json({ error: 'Password confirmation does not match.' });
       return;
     }
-    const validPassword = validatePassword(password);
+    let validPassword: string;
+    try {
+      validPassword = validatePassword(password);
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid password.' });
+      return;
+    }
 
     const existing = await prisma.customer.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
@@ -2203,6 +2181,13 @@ app.delete('/api/products/:id', authenticateAdmin, adminWriteRateLimit, async (r
     console.error("Failed to delete product:", error);
     res.status(500).json({ error: 'Failed to delete product' });
   }
+});
+
+app.put('/api/products/:id/inventory/bulk', authenticateAdmin, adminWriteRateLimit, async (req, res) => {
+  const productId = parseRequiredInt(req.params.id, 'product id');
+  const product = await saveInventory(prisma, productId, req.body?.inventory, req.body?.expectedInventory);
+  await logSecurityEvent(req, 'INVENTORY_UPDATED', { actorType: 'admin', metadata: { productId } });
+  res.json(serializeProduct(product));
 });
 
 app.put('/api/products/:id/inventory', authenticateAdmin, adminWriteRateLimit, async (req, res) => {
@@ -4760,6 +4745,7 @@ installPricingRoutes(app, prisma, authenticateAdmin, stripe, allowMockPayments);
 
 installStorefront(app,publishedStorefront);
 app.use('/api',(_req,res)=>res.status(404).json({error:'API route not found'}));
+app.use(safeErrorHandler);
 
 async function startServer() {
   await seedDatabase();

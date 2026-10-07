@@ -49,7 +49,7 @@ export default function EmptyBag({ variant = "page", onNavigate }: EmptyBagProps
             />
             <div className="empty-bag__caption">
               <span>The first release</span>
-              <strong>Leave your mark.</strong>
+              <strong>EVERY THREAD LEAVES A LEGACY</strong>
               <ArrowRight size={24} aria-hidden="true" />
             </div>
           </Link>

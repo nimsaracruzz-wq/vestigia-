@@ -1,14 +1,17 @@
+import OrderDocumentDownload from "../../components/common/OrderDocumentDownload";
+import { businessContact, documentContactHtml } from "../../../shared/businessContact";
 import { Reveal, RevealOverlay, RevealModal, RevealGroup } from "../../animation/Reveal";
 import RefundControl from "../components/RefundControl";
 import { formatMajor, moneyLabel, salesByCurrency } from "../../utils/money";
 import { useState, useMemo, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAdmin, type Order, type OrderStatus } from "../AdminContext";
 import {
   Search, Eye, Filter, Download, ChevronDown, ChevronUp,
   Package, Clock, CheckCircle, Truck, XCircle, RotateCcw, RefreshCw,
   AlertCircle, X, Bell, ShoppingBag, TrendingUp,
   Calendar, DollarSign, Users, Printer, Mail, MessageSquare, Phone,
-  FileText, Copy, Trash2, Check, ChevronLeft, ChevronRight,
+  FileText, Copy, Check, ChevronLeft, ChevronRight,
   MapPin, Star, Save, Edit3, Gift,
 } from "lucide-react";
 
@@ -324,7 +327,7 @@ function printInvoice(order: Order) {
     <div class="addr-block">
       <span class="addr-label">From</span>
       <div class="addr-name">VESTIGIA Ltd.</div>
-      <div class="addr-line">Colombo 07, Sri Lanka<br/>support@vestigia.com<br/>+94 11 000 0000</div>
+      <div class="addr-line">${documentContactHtml()}</div>
     </div>
     <div class="addr-block">
       <span class="addr-label">Bill To</span>
@@ -393,9 +396,9 @@ function printInvoice(order: Order) {
   <!-- Footer -->
   <div class="footer">
     <div class="footer-left">
-      VESTIGIA Ltd. &middot; Colombo 07, Sri Lanka<br/>
-      support@vestigia.com &middot; www.vestigia.com<br/>
-      VAT Reg: LK 000-000-0000
+      VESTIGIA &middot; ${businessContact.street}<br/>${businessContact.locality}<br/>
+      ${businessContact.email} &middot; ${businessContact.website}<br/>
+
     </div>
     <div class="footer-right">
       Thank you for your order.<br/>
@@ -776,13 +779,13 @@ function printPackingSlip(order: Order) {
 
   <!-- Customer Guarantee & Return Note -->
   <div class="slip-note-box">
-    <strong>Complimentary Returns &amp; Assistance:</strong> If you wish to request an exchange or complimentary return, please contact our concierge within 14 days of receipt at <strong>support@vestigia.com</strong> with your Order Reference (${order.id}). Garments must be unworn in original brand packaging.
+    <strong>Complimentary Returns &amp; Assistance:</strong> If you wish to request an exchange or complimentary return, please contact our concierge within 14 days of receipt at <strong>${businessContact.email}</strong> with your Order Reference (${order.id}). Garments must be unworn in original brand packaging.
   </div>
 
   <!-- Footer Motto -->
   <div class="slip-footer">
-    <div>VESTIGIA &bull; Milan, Italy &bull; Colombo, Sri Lanka</div>
-    <div class="slip-motto">DESIGNED IN ITALY. MADE IN SRI LANKA. LEAVE YOUR MARK.</div>
+    <div style="font-size:10px;line-height:1.6;color:#555;">${documentContactHtml()}</div>
+    <div class="slip-motto">DESIGNED IN ITALY. MADE IN SRI LANKA. EVERY THREAD LEAVES A LEGACY</div>
   </div>
 </div>
 </body>
@@ -821,13 +824,12 @@ function exportOrdersCSV(orders: Order[]) {
 
 // ─── Order Detail View ────────────────────────────────────────────────────────
 
-function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOrderShipping, onDelete, onDuplicate, onRefund }: {
+function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOrderShipping, onDuplicate, onRefund }: {
   order: Order;
   onBack: () => void;
   onStatusChange: (o: Order) => void;
   updateOrderNotes: (id: string, notes: string) => void;
   updateOrderShipping: (id: string, data: { trackingNumber?: string; courier?: string; phone?: string }) => void;
-  onDelete: (o: Order) => void;
   onDuplicate: (o: Order) => void;
   onRefund: (o: Order) => void;
 }) {
@@ -887,12 +889,11 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
           <button onClick={() => printPackingSlip(order)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontSize: 13 }}>
             <FileText size={14} /> Packing Slip
           </button>
+          <OrderDocumentDownload orders={[order]} kind="invoice" /><OrderDocumentDownload orders={[order]} kind="packing-slip" />
           <button onClick={() => onDuplicate(order)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", background: "#fff", color: "#333", border: "1px solid #ddd", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontSize: 13 }}>
             <Copy size={14} /> Duplicate
           </button>
-          <button onClick={() => onDelete(order)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", background: "#fff", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontSize: 13 }}>
-            <Trash2 size={14} /> Delete
-          </button>
+
         </div>
       </div>
 
@@ -1076,7 +1077,6 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
                   { icon: <Mail size={13} />, label: "Email Customer", action: () => window.location.href = `mailto:${order.email}?subject=Regarding Order ${order.id}` },
                   { icon: <XCircle size={13} />, label: order.status === "cancelled" ? "Cancelled" : "Cancel Order", danger: order.status !== "cancelled" && order.status !== "refunded", disabled: order.status === "cancelled" || order.status === "refunded", action: () => onStatusChange({ ...order, status: "cancelled" as OrderStatus }) },
                   { icon: <RotateCcw size={13} />, label: order.status === "refunded" ? "Already Refunded" : "Issue Refund", danger: order.status !== "refunded", disabled: order.status === "refunded", action: () => onRefund(order) },
-                  { icon: <Trash2 size={13} />, label: "Delete Order", danger: true, action: () => onDelete(order) },
                 ].map((a, i) => (
                   <button key={i} onClick={a.action} disabled={a.disabled} style={{
                     display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
@@ -1229,7 +1229,8 @@ function OrderDetail({ order, onBack, onStatusChange, updateOrderNotes, updateOr
 // ─── Main Orders Page ─────────────────────────────────────────────────────────
 
 export default function Orders() {
-  const { orders, updateOrderStatus, updateOrderNotes, updateOrderShipping, deleteOrder, duplicateOrder, adminDataError, refreshAdminData } = useAdmin();
+  const navigate = useNavigate();
+  const { orders, updateOrderStatus, updateOrderNotes, updateOrderShipping, duplicateOrder, adminDataError, refreshAdminData } = useAdmin();
 
   const [view, setView] = useState<ViewMode>("list");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -1318,21 +1319,6 @@ export default function Orders() {
     showToast(`Exported ${selectedOrders.length > 0 ? selectedOrders.length : filtered.length} orders to CSV`);
   };
 
-  const handleBulkDelete = () => {
-    setConfirmModal({
-      title: "Delete Selected Orders",
-      message: `Delete ${selectedRows.size} order(s)? This cannot be undone.`,
-      danger: true,
-      confirmLabel: "Delete",
-      action: () => {
-        selectedRows.forEach(id => deleteOrder(id));
-        setSelectedRows(new Set());
-        setConfirmModal(null);
-        showToast("Orders deleted");
-      },
-    });
-  };
-
   const handleBulkPrint = () => {
     selectedOrders.forEach(o => printInvoice(o));
     showToast(`Printing ${selectedOrders.length} invoice(s)`);
@@ -1345,21 +1331,6 @@ export default function Orders() {
   };
 
   // ── Order actions ─────────────────────────────────────────────────────────
-
-  const handleDelete = (order: Order) => {
-    setConfirmModal({
-      title: "Delete Order",
-      message: `Delete order ${order.id} for ${order.customer}? This cannot be undone.`,
-      danger: true,
-      confirmLabel: "Delete",
-      action: () => {
-        deleteOrder(order.id);
-        if (view === "detail") { setView("list"); setSelectedOrder(null); }
-        setConfirmModal(null);
-        showToast(`Order ${order.id} deleted`);
-      },
-    });
-  };
 
   const handleDuplicate = async (order: Order) => {
     showToast("Duplicating order...");
@@ -1414,7 +1385,6 @@ export default function Orders() {
           onStatusChange={setStatusModalOrder}
           updateOrderNotes={updateOrderNotes}
           updateOrderShipping={updateOrderShipping}
-          onDelete={handleDelete}
           onDuplicate={handleDuplicate}
           onRefund={handleIssueRefund}
         />
@@ -1453,7 +1423,7 @@ export default function Orders() {
           <button onClick={() => { void refreshAdminData(); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #e5e5e5", borderRadius: 8, background: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 13, color: "#555" }}>
             <RefreshCw size={14} /> Refresh
           </button>
-          <button onClick={() => window.location.href = "/admin/notifications"} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #f59e0b", borderRadius: 8, background: "#fffbeb", cursor: "pointer", fontWeight: 600, fontSize: 13, color: "#b45309" }}>
+          <button onClick={() => navigate("/admin/notifications")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #f59e0b", borderRadius: 8, background: "#fffbeb", cursor: "pointer", fontWeight: 600, fontSize: 13, color: "#b45309" }}>
             <Bell size={14} /> Order Email Alerts
           </button>
           <button onClick={() => exportOrdersCSV(filtered)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", border: "1px solid #e5e5e5", borderRadius: 8, background: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 13, color: "#555" }}>
@@ -1558,9 +1528,8 @@ export default function Orders() {
                   {a.icon}{a.label}
                 </button>
               ))}
-              <button onClick={handleBulkDelete} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", border: "1px solid rgba(239,68,68,0.5)", borderRadius: 7, background: "rgba(239,68,68,0.15)", color: "#fca5a5", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>
-                <Trash2 size={13} /> Delete
-              </button>
+              <OrderDocumentDownload orders={selectedOrders} kind="invoice" label="Download Invoices" /><OrderDocumentDownload orders={selectedOrders} kind="packing-slip" label="Download Packing Slips" />
+
             </div>
           </div>
         )}
@@ -1633,9 +1602,7 @@ export default function Orders() {
                       <button onClick={() => printInvoice(order)} title="Print Invoice" style={{ width: 30, height: 30, border: "1px solid #e5e5e5", borderRadius: 7, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#555" }}>
                         <Printer size={13} />
                       </button>
-                      <button onClick={() => handleDelete(order)} title="Delete" style={{ width: 30, height: 30, border: "1px solid #fecaca", borderRadius: 7, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#dc2626" }}>
-                        <Trash2 size={13} />
-                      </button>
+
                     </div>
                   </td>
                 </tr>

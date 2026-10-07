@@ -34,38 +34,25 @@ export const DEFAULT_COUNTRY = COUNTRY_PHONE_OPTIONS[0]; // LK
 /**
  * Detect visitor country from IP address
  */
+export async function detectVisitorLocation(): Promise<{ iso: string; country: string } | null> {
+  for (const url of ['https://ipapi.co/json/', 'https://ipwho.is/']) {
+    try {
+      const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (data.error || data.success === false) continue;
+      const iso = String(data.country_code || '').toUpperCase();
+      if (!/^[A-Z]{2}$/.test(iso)) continue;
+      const country = new Intl.DisplayNames(['en'], { type: 'region' }).of(iso);
+      if (country && country !== iso) return { iso, country };
+    } catch {}
+  }
+  return null;
+}
+
 export async function detectVisitorCountry(): Promise<CountryPhoneOption> {
-  try {
-    // Try primary fast IP geolocation endpoint (ipapi.co)
-    const res = await fetch("https://ipapi.co/json/", { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const countryCode = data.country_code || data.country;
-      if (countryCode) {
-        const found = COUNTRY_PHONE_OPTIONS.find(
-          (c) => c.iso.toUpperCase() === countryCode.toUpperCase()
-        );
-        if (found) return found;
-      }
-    }
-  } catch {}
-
-  try {
-    // Fallback IP geolocation endpoint (ipwho.is)
-    const res2 = await fetch("https://ipwho.is/", { cache: "no-store" });
-    if (res2.ok) {
-      const data2 = await res2.json();
-      const countryCode2 = data2.country_code;
-      if (countryCode2) {
-        const found2 = COUNTRY_PHONE_OPTIONS.find(
-          (c) => c.iso.toUpperCase() === countryCode2.toUpperCase()
-        );
-        if (found2) return found2;
-      }
-    }
-  } catch {}
-
-  return DEFAULT_COUNTRY;
+  const location = await detectVisitorLocation();
+  return COUNTRY_PHONE_OPTIONS.find(c => c.iso === location?.iso) || DEFAULT_COUNTRY;
 }
 
 /**

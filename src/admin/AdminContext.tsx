@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { readPublicBootstrap } from '../homepage/bootstrap';
 import { API_BASE_URL } from "../config/api";
+import { apiErrorMessage } from "../utils/apiError";
 import {
   products as initialProducts,
   journalArticles as initialJournal,
@@ -91,7 +92,7 @@ export type StoreSettings = {
 
 const DEFAULT_SETTINGS: StoreSettings = {
   storeName: "VESTIGIA",
-  tagline: "Designed in Italy. Made in Sri Lanka. Leave your mark.",
+  tagline: "Designed in Italy. Made in Sri Lanka. EVERY THREAD LEAVES A LEGACY",
   currency: "USD",
   announcementText: "DESIGNED IN ITALY · MADE IN SRI LANKA",
   announcementEnabled: true,
@@ -113,11 +114,10 @@ interface AdminContextType {
   addProduct: (p: Omit<Product, "id">) => Promise<void>;
   updateProduct: (p: Product) => Promise<void>;
   deleteProduct: (id: number) => void;
-  updateProductInventory: (id: number, inventory: Record<string, number>) => void;
+  updateProductInventory: (id: number, inventory: Record<string, number>, expectedInventory: Record<string, number>) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<Order | null>;
   updateOrderNotes: (orderId: string, notes: string) => void;
   updateOrderShipping: (orderId: string, data: { trackingNumber?: string; courier?: string; phone?: string }) => void;
-  deleteOrder: (orderId: string) => void;
   duplicateOrder: (orderId: string) => Promise<Order | null>;
   addPromoCode: (p: Omit<PromoCode, "id" | "uses">) => void;
   togglePromoCode: (id: number) => void;
@@ -162,6 +162,7 @@ async function apiRequest(path: string, options: RequestInit = {}) {
   const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    signal: !options.method || options.method === "GET" ? AbortSignal.timeout(8000) : undefined,
     headers: isFormData
       ? { "Bypass-Tunnel-Reminder": "true", ...authHeaders, ...(options.headers ?? {}) }
       : {
@@ -175,7 +176,7 @@ async function apiRequest(path: string, options: RequestInit = {}) {
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    const error = new Error(data?.error || `API request failed: ${response.status}`) as Error & { status?: number };
+    const error = new Error(apiErrorMessage(response.status, data || {})) as Error & { status?: number };
     error.status = response.status;
     throw error;
   }
@@ -291,17 +292,24 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let disposed = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const sync = async () => {
       // Sync public data in parallel so settings/announcement load without blocking
       const [productsRes, settingsRes, promosRes, journalRes] = await Promise.allSettled([
-        apiRequest(isAuthenticated ? "/admin/products" : "/products"),
+        apiRequest(isAuthenticated && window.location.pathname.startsWith("/admin") ? "/admin/products" : "/products"),
         apiRequest("/settings"),
         apiRequest("/promos"),
         apiRequest("/journal"),
       ]);
 
+      if (disposed) return;
+
       if (productsRes.status === "fulfilled" && Array.isArray(productsRes.value)) {
         setProducts(productsRes.value as Product[]);
+        setIsSynced(true);
+      } else {
+        retryTimer = setTimeout(() => { void sync(); }, 3000);
       }
 
       if (settingsRes.status === "fulfilled" && settingsRes.value) {
@@ -321,10 +329,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         await refreshOrdersAndCustomers();
       }
 
-      setIsSynced(true);
     };
 
     void sync();
+    return () => { disposed = true; clearTimeout(retryTimer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
@@ -357,15 +365,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       });
   };
 
-  const updateProductInventory = (id: number, inventory: Record<string, number>) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, inventory } : p));
-    const product = products.find((item) => item.id === id);
-    if (product) {
-      void apiRequest(`/products/${id}`, {
-        method: "PUT",
-        body: buildProductFormData({ ...product, inventory }),
-      }).catch(() => undefined);
-    }
+  const updateProductInventory = async (id: number, inventory: Record<string, number>, expectedInventory: Record<string, number>) => {
+    const updated = await apiRequest(`/products/${id}/inventory/bulk`, {
+      method: "PUT", body: JSON.stringify({ inventory, expectedInventory }),
+    });
+    setProducts(prev => prev.map(p => p.id === id ? updated as Product : p));
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus): Promise<Order | null> => {
@@ -399,11 +403,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       method: "PUT",
       body: JSON.stringify(data),
     }).catch(() => undefined);
-  };
-
-  const deleteOrder = (orderId: string) => {
-    setOrders(prev => prev.filter(o => o.id !== orderId));
-    void apiRequest(`/orders/${orderId}`, { method: "DELETE" }).catch(() => undefined);
   };
 
   const duplicateOrder = async (orderId: string): Promise<Order | null> => {
@@ -520,7 +519,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     <AdminContext.Provider value={{
       products, orders, customers, promoCodes, settings, journal,
       addProduct, updateProduct, deleteProduct, updateProductInventory,
-      updateOrderStatus, updateOrderNotes, updateOrderShipping, deleteOrder, duplicateOrder,
+      updateOrderStatus, updateOrderNotes, updateOrderShipping, duplicateOrder,
       addPromoCode, togglePromoCode, deletePromoCode,
       updateSettings,
       addJournalArticle, updateJournalArticle, deleteJournalArticle,

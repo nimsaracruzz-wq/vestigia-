@@ -1,4 +1,5 @@
 import { minor, toMajor, roundedRatio } from "../../shared/money";
+import { variantQuantityLimit } from "../../shared/stock";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { type Product } from "../data";
 import { useAdmin } from "../admin/AdminContext";
@@ -133,6 +134,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }));
 
   const addToCart = (product: Product, size: string, color: string, qty = 1) => {
+    const liveProduct = products.find(p => p.id === product.id);
+    const limit = variantQuantityLimit(liveProduct?.inventory, color, size);
+    if (!isSynced || !Number.isSafeInteger(qty) || qty < 1 || limit === 0) return;
     const row=product.prices?.[currency];
     if(!row || !Number.isSafeInteger(row.priceMinor) || !row.priceListId) { window.alert('This product is not available in the selected market.'); return; }
     setCart((prev) => {
@@ -147,12 +151,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const newCart = [...prev];
         newCart[existingIndex] = {
           ...newCart[existingIndex],
-          quantity: newCart[existingIndex].quantity + qty,
+          quantity: Math.min(limit, newCart[existingIndex].quantity + qty),
         };
         return newCart;
       }
 
-      return [...prev, { product, quantity: qty, selectedSize: size, selectedColor: color, unitPriceMinor: row.priceMinor, currency, market, priceListId, priceVersion: row.priceVersion, addedAt: new Date().toISOString() }];
+      return [...prev, { product, quantity: Math.min(limit, qty), selectedSize: size, selectedColor: color, unitPriceMinor: row.priceMinor, currency, market, priceListId, priceVersion: row.priceVersion, addedAt: new Date().toISOString() }];
     });
   };
 
@@ -170,6 +174,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const updateQuantity = (productId: number, size: string, color: string, change: number) => {
+    if (!Number.isSafeInteger(change)) return;
     setCart((prev) => {
       return prev
         .map((item) => {
@@ -179,6 +184,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
             item.selectedColor === color
           ) {
             const nextQty = item.quantity + change;
+            const limit = variantQuantityLimit(products.find(p => p.id === productId)?.inventory, color, size);
+            if (change > 0 && (!isSynced || nextQty > limit)) return item;
             return { ...item, quantity: nextQty };
           }
           return item;

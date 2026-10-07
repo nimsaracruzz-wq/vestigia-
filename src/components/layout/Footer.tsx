@@ -60,7 +60,7 @@ export default function Footer() {
           </Reveal>
         )}
       </RevealGroup>
-      <FooterNavigation description={"DESIGNED IN ITALY.\nMADE IN SRI LANKA.\nLEAVE YOUR MARK."} groups={footerGroups} socials={socialLinks} copyright="© 2026 VESTIGIA. ALL RIGHTS RESERVED." adminLink />
+      <FooterNavigation description={"DESIGNED IN ITALY.\nMADE IN SRI LANKA.\nEVERY THREAD LEAVES A LEGACY"} groups={footerGroups} socials={socialLinks} copyright="© 2026 VESTIGIA. ALL RIGHTS RESERVED." adminLink />
     </>
   );
 }

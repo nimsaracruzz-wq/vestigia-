@@ -13,7 +13,7 @@ import { useCurrency } from "../context/CurrencyContext";
 import { useUser, type Address } from "../context/UserContext";
 import { useAdmin } from "../admin/AdminContext";
 import { API_BASE_URL } from "../config/api";
-import { formatPhoneNumber } from "../utils/phoneUtils";
+import { COUNTRY_PHONE_OPTIONS, detectVisitorLocation, formatPhoneNumber } from "../utils/phoneUtils";
 import ProductImage from "../components/common/ProductImage";
 import EmptyBag from "../components/common/EmptyBag";
 import { getProductPrice } from "../utils/productMedia";
@@ -197,21 +197,7 @@ function CheckoutContent() {
     promoCode: ""
   });
 
-  const PHONE_COUNTRY_OPTIONS: PhoneCountryOption[] = [
-    { country: "United States", iso: "US", dialCode: "+1", flag: "🇺🇸" },
-    { country: "Canada", iso: "CA", dialCode: "+1", flag: "🇨🇦" },
-    { country: "United Kingdom", iso: "GB", dialCode: "+44", flag: "🇬🇧" },
-    { country: "Australia", iso: "AU", dialCode: "+61", flag: "🇦🇺" },
-    { country: "New Zealand", iso: "NZ", dialCode: "+64", flag: "🇳🇿" },
-    { country: "Japan", iso: "JP", dialCode: "+81", flag: "🇯🇵" },
-    { country: "France", iso: "FR", dialCode: "+33", flag: "🇫🇷" },
-    { country: "Germany", iso: "DE", dialCode: "+49", flag: "🇩🇪" },
-    { country: "Spain", iso: "ES", dialCode: "+34", flag: "🇪🇸" },
-    { country: "Italy", iso: "IT", dialCode: "+39", flag: "🇮🇹" },
-    { country: "India", iso: "IN", dialCode: "+91", flag: "🇮🇳" },
-    { country: "Brazil", iso: "BR", dialCode: "+55", flag: "🇧🇷" },
-    { country: "South Africa", iso: "ZA", dialCode: "+27", flag: "🇿🇦" },
-  ];
+  const PHONE_COUNTRY_OPTIONS: PhoneCountryOption[] = COUNTRY_PHONE_OPTIONS;
 
   const getCountryOption = (iso: string) => PHONE_COUNTRY_OPTIONS.find((option) => option.iso === iso);
   const getCountryOptionByCountry = (country: string) => PHONE_COUNTRY_OPTIONS.find((option) => option.country === country);
@@ -232,6 +218,9 @@ function CheckoutContent() {
     phoneDialCode: "+1",
     shippingMethod: "standard",
   });
+  const countryEdited = useRef(false);
+  const phoneEdited = useRef(false);
+  const billingCountryEdited = useRef(false);
   const [selectedAddressId, setSelectedAddressId] = useState("");
 
   const [shippingErrors, setShippingErrors] = useState<Partial<ShippingDetails>>({});
@@ -297,36 +286,25 @@ function CheckoutContent() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (user) return;
+    const savedAddress = user?.addresses?.find(address => address.isDefault || address.isDefaultShipping) || user?.addresses?.[0];
+    if (savedAddress?.country && savedAddress.line1) return;
 
-    const detectPhoneCountry = async () => {
-      try {
-        const res = await fetch("https://ipwho.is/");
-        if (!res.ok) return;
-
-        const data = await res.json();
-        if (!data.success) return;
-
-        const iso = data.country_code;
-        const option = getCountryOption(iso);
-        const detectedCountry = COUNTRIES.find((country) => country.toLowerCase() === String(data.country || "").toLowerCase());
-        if (option || detectedCountry) {
-          setShippingForm((prev) => ({
-            ...prev,
-            country: detectedCountry && (!prev.country || prev.country === "United States") ? detectedCountry : prev.country || "United States",
-            phoneCountry: option?.iso ?? prev.phoneCountry,
-            phoneDialCode: option?.dialCode ?? prev.phoneDialCode,
-          }));
-          if (detectedCountry) {
-            setBillingForm((prev) => ({ ...prev, country: detectedCountry }));
-          }
-        }
-      } catch (error) {
-        console.error("Country detection failed:", error);
+    let active = true;
+    void detectVisitorLocation().then(location => {
+      if (!active || !location) return;
+      const option = getCountryOption(location.iso);
+      const detectedCountry = COUNTRIES.find(country => country === location.country);
+      setShippingForm(prev => ({
+        ...prev,
+        country: !countryEdited.current && detectedCountry ? detectedCountry : prev.country,
+        phoneCountry: !phoneEdited.current && option ? option.iso : prev.phoneCountry,
+        phoneDialCode: !phoneEdited.current && option ? option.dialCode : prev.phoneDialCode,
+      }));
+      if (detectedCountry && !billingCountryEdited.current) {
+        setBillingForm(prev => ({ ...prev, country: detectedCountry }));
       }
-    };
-
-    detectPhoneCountry();
+    });
+    return () => { active = false; };
   }, [user]);
 
   // Payment form fields
@@ -993,6 +971,8 @@ function CheckoutContent() {
                       className={shippingErrors.country ? "input-error" : ""}
                       value={shippingForm.country}
                       onChange={(e) => {
+                        countryEdited.current = true;
+                        phoneEdited.current = true;
                         const selectedPhoneCountry = getCountryOptionByCountry(e.target.value);
                         setShippingForm({
                           ...shippingForm,
@@ -1017,20 +997,21 @@ function CheckoutContent() {
                       <div className="phone-prefix-select">
                         <select
                           id="chk-phone-code"
-                          value={shippingForm.phoneDialCode}
+                          value={shippingForm.phoneCountry}
                           onChange={(e) => {
+                            phoneEdited.current = true;
                             const selected = PHONE_COUNTRY_OPTIONS.find(
-                              (option) => option.dialCode === e.target.value,
+                              (option) => option.iso === e.target.value,
                             );
                             setShippingForm({
                               ...shippingForm,
-                              phoneDialCode: e.target.value,
+                              phoneDialCode: selected?.dialCode ?? shippingForm.phoneDialCode,
                               phoneCountry: selected?.iso ?? shippingForm.phoneCountry,
                             });
                           }}
                         >
                           {PHONE_COUNTRY_OPTIONS.map((option) => (
-                            <option key={option.iso} value={option.dialCode}>
+                            <option key={option.iso} value={option.iso}>
                               {option.flag} {option.dialCode}
                             </option>
                           ))}
@@ -1137,7 +1118,7 @@ function CheckoutContent() {
                             type="text"
                             placeholder="Country"
                             value={billingForm.country}
-                            onChange={(e) => setBillingForm({ ...billingForm, country: e.target.value })}
+                            onChange={(e) => { billingCountryEdited.current = true; setBillingForm({ ...billingForm, country: e.target.value }); }}
                             style={{ padding: "0.65rem", border: "1px solid #e5e7eb", borderRadius: "6px" }}
                           />
                         </div>

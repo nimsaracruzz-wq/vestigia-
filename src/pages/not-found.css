@@ -1,0 +1,33 @@
+.vestigia-not-found {
+  background: #fbfaf8;
+  color: #171412;
+  min-height: 82svh;
+  padding: 150px 24px 80px;
+  display: grid;
+  place-items: center;
+}
+.not-found-content { width: 100%; max-width: 720px; text-align: center; }
+.not-found-eyebrow { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: #756b60; }
+.not-found-art { position: relative; display: grid; place-items: center; height: 230px; margin: 28px 0 20px; }
+.not-found-art > span { font: 400 clamp(140px, 24vw, 230px)/1 Georgia, serif; letter-spacing: -.06em; color: #eae5dc; }
+.not-found-art img { position: absolute; width: 125px; height: 125px; object-fit: contain; filter: drop-shadow(0 8px 18px #17141212); }
+.not-found-content h1 { margin: 0 0 18px; font: 400 clamp(32px, 5vw, 48px)/1.15 Georgia, serif; letter-spacing: -.025em; }
+.not-found-content > p { max-width: 420px; margin: 0 auto; font-size: 14px; line-height: 1.85; color: #756b60; }
+.not-found-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 16px 28px; margin: 32px 0 48px; }
+.not-found-actions a { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; text-decoration: none; }
+.not-found-shop { background: #171412; color: #fbfaf8; padding: 15px 24px; border: 1px solid #171412; transition: background .2s, border-color .2s; }
+.not-found-shop:hover { background: #594b36; border-color: #594b36; }
+.not-found-home { color: #171412; padding: 12px 0; }
+.not-found-home:hover { color: #927644; }
+.not-found-assistance { border-top: 1px solid #ddd5cc; padding-top: 24px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; line-height: 1.6; color: #756b60; }
+.not-found-assistance a { display: inline-flex; align-items: center; gap: 6px; color: #171412; text-underline-offset: 4px; min-height: 44px; }
+.vestigia-not-found a:focus-visible { outline: 2px solid #927644; outline-offset: 5px; }
+@media (max-width: 600px) {
+  .vestigia-not-found { padding: 120px 20px 56px; min-height: 75svh; }
+  .not-found-art { height: 180px; margin: 24px 0; }
+  .not-found-art img { width: 100px; height: 100px; }
+  .not-found-actions { flex-direction: column; gap: 8px; margin-bottom: 32px; }
+  .not-found-shop { width: 100%; max-width: 320px; box-sizing: border-box; }
+  .not-found-assistance { flex-direction: column; gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .not-found-shop { transition: none; } }
