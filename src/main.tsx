@@ -5,6 +5,7 @@ import { readPublicBootstrap } from './homepage/bootstrap';
 import App from "./App";
 import "./styles.css";
 import "./responsive.css";
+import "./account-responsive.css";
 
 const bootstrap=readPublicBootstrap();
 function StorefrontEntry(){

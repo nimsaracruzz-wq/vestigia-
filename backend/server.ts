@@ -1819,7 +1819,8 @@ app.post('/api/customers/forgot-password', authRateLimit, async (req, res) => {
       });
     });
 
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${encodeURIComponent(token)}`;
+    const resetBaseUrl = String(process.env.FRONTEND_URL || publicSiteUrl()).trim().replace(/\/+$/, '');
+    const resetLink = `${resetBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
     try {
       await sendPasswordResetEmail(normalizedEmail, resetLink);
     } catch (mailError) {
@@ -1857,7 +1858,10 @@ app.post('/api/customers/reset-password', authRateLimit, async (req, res) => {
       return;
     }
 
-    const hashedPassword = await bcrypt.hash(validatePassword(password), BCRYPT_ROUNDS);
+    let validPassword: string;
+    try { validPassword = validatePassword(password); }
+    catch { return res.status(400).json({ error: 'Password must be between 12 and 128 characters.' }); }
+    const hashedPassword = await bcrypt.hash(validPassword, BCRYPT_ROUNDS);
     await prisma.$transaction([
       prisma.customer.update({
         where: { id: resetToken.customerId },

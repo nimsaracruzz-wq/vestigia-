@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export function useGallery(images: string[], initialIndex = 0) {
   const [activeIndex, setActiveIndex] = useState(initialIndex);
@@ -6,6 +6,8 @@ export function useGallery(images: string[], initialIndex = 0) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const total = images ? images.length : 0;
+  const imageKey = images?.join('|') || '';
+  useEffect(() => { setActiveIndex(0); setDirection(0); setIsFullscreen(false); }, [imageKey]);
 
   const goToNext = useCallback(() => {
     if (total <= 1) return;
@@ -21,11 +23,11 @@ export function useGallery(images: string[], initialIndex = 0) {
 
   const selectImage = useCallback(
     (index: number) => {
-      if (index === activeIndex) return;
+      if (index === activeIndex || index < 0 || index >= total) return;
       setDirection(index > activeIndex ? 1 : -1);
       setActiveIndex(index);
     },
-    [activeIndex]
+    [activeIndex, total]
   );
 
   const openFullscreen = useCallback(() => {

@@ -1,11 +1,16 @@
+import AuthFieldMessage from '../components/common/AuthFieldMessage';
+import { validateAuthFields, type AuthFieldErrors } from '../utils/authValidation';
+import './auth-polish.css';
+import { buildReorderPlan } from '../../shared/reorder';
+import { orderAmountMinor, orderLineSubtotalMinor } from '../../shared/orderAmounts';
 import OrderDocumentDownload from "../components/common/OrderDocumentDownload";
 import PasswordStrengthMeter from "../components/common/PasswordStrengthMeter";
 import { businessContact } from "../../shared/businessContact";
 import { SectionReveal as Reveal } from '../animation/SectionReveal';
 import { RevealOverlay, RevealModal, RevealGroup } from "../animation/Reveal";
-import { moneyLabel, formatMajor } from "../utils/money";
-import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { moneyLabel } from "../utils/money";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams, useLocation, useNavigate, Link } from "react-router-dom";
 import {
   User, ShoppingBag, Heart, MapPin, Trash2, Plus, Eye, EyeOff,
   Lock, Mail, Info, LogOut, Package, RotateCcw, FileText,
@@ -162,10 +167,10 @@ function OrderDetailsModal({
   if (!order) return null;
 
   const items = order.items ?? [];
-  const subtotal = order.subtotal;
-  const shipping = order.shipping;
-  const tax = order.tax;
-  const total = order.total;
+  const subtotal = orderAmountMinor(order, 'subtotal', order.currency);
+  const shipping = orderAmountMinor(order, 'shipping', order.currency);
+  const tax = orderAmountMinor(order, 'tax', order.currency);
+  const total = orderAmountMinor(order, 'total', order.currency);
 
   return (
     <RevealOverlay className="modal-backdrop-overlay" onClick={onClose}>
@@ -255,8 +260,8 @@ function OrderDetailsModal({
                       </p>
                     </div>
                     <div className="modal-item-pricing">
-                      <span className="unit-p">{moneyLabel(item.unitPriceMinor, order.currency)} each</span>
-                      <strong className="total-p">{money((item.price || 0) * (item.quantity || 1))}</strong>
+                      <span className="unit-p">{moneyLabel(orderAmountMinor(item, 'unitPrice', order.currency), order.currency)} each</span>
+                      <strong className="total-p">{money(orderLineSubtotalMinor(item, order.currency))}</strong>
                     </div>
                   </div>
                 );
@@ -299,10 +304,10 @@ function OrderInvoiceModal({
   if (!order) return null;
 
   const items = order.items ?? [];
-  const subtotal = order.subtotal;
-  const shipping = order.shipping;
-  const tax = order.tax;
-  const total = order.total;
+  const subtotal = orderAmountMinor(order, 'subtotal', order.currency);
+  const shipping = orderAmountMinor(order, 'shipping', order.currency);
+  const tax = orderAmountMinor(order, 'tax', order.currency);
+  const total = orderAmountMinor(order, 'total', order.currency);
 
   const handlePrint = () => {
     window.print();
@@ -367,6 +372,7 @@ function OrderInvoiceModal({
             </div>
 
             {/* Items table */}
+            <div className="account-invoice-table-scroll" role="region" aria-label="Invoice items" tabIndex={0}>
             <table className="invoice-table">
               <thead>
                 <tr>
@@ -391,12 +397,13 @@ function OrderInvoiceModal({
                         .join(" / ") || "Standard"}
                     </td>
                     <td style={{ textAlign: "center" }}>{item.quantity || 1}</td>
-                    <td style={{ textAlign: "right" }}>{moneyLabel(item.unitPriceMinor, order.currency)}</td>
-                    <td style={{ textAlign: "right" }}>{money((item.price || 0) * (item.quantity || 1))}</td>
+                    <td style={{ textAlign: "right" }}>{moneyLabel(orderAmountMinor(item, 'unitPrice', order.currency), order.currency)}</td>
+                    <td style={{ textAlign: "right" }}>{money(orderLineSubtotalMinor(item, order.currency))}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
 
             {/* Summary */}
             <div className="invoice-footer-summary">
@@ -421,15 +428,17 @@ function OrderInvoiceModal({
 
 export default function Account() {
   const { formatPrice: money, currency } = useCurrency();
-  const { products: adminProducts } = useAdmin();
+  const { products: adminProducts, isSynced } = useAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab") as Tab;
   const tokenParam = searchParams.get("token");
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<Tab>(tabParam || "orders");
   const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
 
-  const { wishlist, toggleWishlist, addToCart, openCart } = useCart();
+  const { cart, wishlist, toggleWishlist, addToCart, openCart } = useCart();
   const {
     user, isAuthenticated, isLoading: authLoading,
     login, registerUser, forgotPassword, resetPassword,
@@ -490,6 +499,46 @@ export default function Account() {
   const [changePwdError, setChangePwdError] = useState("");
 
   const [formLoading, setFormLoading] = useState(false);
+  const [authFieldErrors, setAuthFieldErrors] = useState<AuthFieldErrors>({});
+  const authSubmission = useRef(false);
+  useEffect(() => { setAuthFieldErrors({}); }, [authScreen]);
+  useEffect(() => {
+    const id = authScreen === 'login' && loginError ? 'login-submit-error' : authScreen === 'register' && registerError ? 'register-submit-error' : authScreen === 'forgot' && forgotError ? 'forgot-submit-error' : '';
+    if (id) document.getElementById(id)?.focus();
+  }, [authScreen, loginError, registerError, forgotError]);
+  const currentAuthErrors = () => validateAuthFields(authScreen, {
+    email: authScreen === 'login' ? loginEmail : authScreen === 'forgot' ? forgotEmail : registerEmail,
+    password: authScreen === 'login' ? loginPassword : registerPassword,
+    firstName: registerFirstName, lastName: registerLastName, country: registerAccountCountry,
+    phone: registerPhone.trim() ? registerCountry.dialCode + ' ' + registerPhone.trim() : '', confirmPassword: registerConfirmPassword,
+  });
+  const authInputProps = (id: string, help?: string) => ({
+    disabled: formLoading,
+    'aria-invalid': !!authFieldErrors[id],
+    'aria-describedby': [help, authFieldErrors[id] ? id + '-error' : undefined].filter(Boolean).join(' ') || undefined,
+  });
+  const onAuthBlur = (event: React.FocusEvent<HTMLFormElement>) => {
+    if (!(event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement)) return;
+    const id = event.target.id;
+    if (id) setAuthFieldErrors(previous => ({ ...previous, [id]: currentAuthErrors()[id] || '' }));
+  };
+  const onAuthChange = (event: React.FormEvent<HTMLFormElement>) => {
+    const id = (event.target as HTMLInputElement).id;
+    if (id) setAuthFieldErrors(previous => ({ ...previous, [id]: '', ...(id === 'reg-pass' ? { 'reg-pass-conf': '' } : {}) }));
+    if (authScreen === 'login') setLoginError('');
+    if (authScreen === 'register') setRegisterError('');
+    if (authScreen === 'forgot') { setForgotError(''); setForgotMessage(''); setForgotDevLink(''); }
+  };
+  const beginAuthSubmission = () => {
+    if (authSubmission.current || formLoading) return false;
+    const errors = currentAuthErrors();
+    setAuthFieldErrors(errors);
+    const first = Array.from(document.querySelectorAll<HTMLInputElement | HTMLSelectElement>('.auth-card--polished input, .auth-card--polished select')).find(field => errors[field.id])?.id || Object.keys(errors)[0];
+    if (first) { document.getElementById(first)?.focus(); return false; }
+    authSubmission.current = true; setFormLoading(true); return true;
+  };
+  const finishAuthSubmission = () => { authSubmission.current = false; setFormLoading(false); };
+  const [reorderNotice, setReorderNotice] = useState('');
   const [reorderSuccess, setReorderSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -523,11 +572,6 @@ export default function Account() {
     setSearchParams(searchParams);
   };
 
-  const getProductImageByName = (name: string) => {
-    const matched = products.find((p) => p.name.toLowerCase() === name.toLowerCase());
-    return matched ? getProductImage(matched) : "";
-  };
-
   const handleMoveToCart = (product: Product) => {
     const size = product.sizes[0] || "OS";
     const color = product.colors[0] || "";
@@ -536,41 +580,16 @@ export default function Account() {
   };
 
   const handleReorder = (order: any) => {
-    if (!order || !order.items || order.items.length === 0) return;
-    let addedCount = 0;
-    (order.items ?? []).forEach((item: any) => {
-      const matchedProduct = products.find(
-        (p) => p.id === item.productId || p.name.toLowerCase() === (item.productName || "").toLowerCase()
-      );
-
-      const targetProduct: Product = matchedProduct || {
-        id: Number(item.productId) || Math.floor(Math.random() * 100000) + 9000,
-        name: item.productName || "Apparel Item",
-        price: item.price || 0,
-        category: "Clothing",
-        image: item.image || getProductImageByName(item.productName) || PRODUCT_IMAGE_PLACEHOLDER,
-        productImage: item.image || getProductImageByName(item.productName) || PRODUCT_IMAGE_PLACEHOLDER,
-        images: [item.image || getProductImageByName(item.productName) || PRODUCT_IMAGE_PLACEHOLDER],
-        alt: item.productName || "Item",
-        sizes: [item.size || "M"],
-        colors: [item.color || "#000000"],
-        description: "",
-        details: [],
-        care: [],
-        rating: 5,
-        reviews: [],
-      };
-
-      const size = item.size || targetProduct.sizes[0] || "M";
-      const color = item.color || targetProduct.colors[0] || "";
-      const qty = item.quantity || 1;
-
-      addToCart(targetProduct, size, color, qty);
-      addedCount += qty;
-    });
-
-    if (addedCount > 0) {
+    setReorderSuccess(null); setReorderNotice('');
+    if (!isSynced) { setReorderNotice('Products are still loading. Please try again shortly.'); return; }
+    if (!order?.items?.length) { setReorderNotice('This order has no items to reorder.'); return; }
+    const plan = buildReorderPlan(order.items, adminProducts, cart, currency);
+    for (const line of plan.lines) addToCart(line.product, line.size, line.color, line.quantity);
+    const count = plan.lines.reduce((sum, line) => sum + line.quantity, 0);
+    setReorderNotice([count ? `Added ${count} ${count === 1 ? 'item' : 'items'} to your bag at current ${currency} prices.` : 'No items were added to your bag.', ...plan.issues].join(' '));
+    if (count > 0) {
       setReorderSuccess(order.id);
+      setSelectedOrderDetail(null);
       openCart();
       setTimeout(() => setReorderSuccess(null), 3000);
     }
@@ -579,59 +598,62 @@ export default function Account() {
   // ── Auth handlers ──────────────────────────────────────────────────────────
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginError("");
-    if (!loginEmail || !loginPassword) { setLoginError("Please enter your email and password."); return; }
-    setFormLoading(true);
-    const result = await login(loginEmail, loginPassword);
-    setFormLoading(false);
-    if (!result.success) { setLoginError(result.error || "Login failed."); }
-    else { setLoginEmail(""); setLoginPassword(""); }
+    if (authSubmission.current) return;
+    setLoginError('');
+    if (!beginAuthSubmission()) return;
+    try {
+      const result = await login(loginEmail.trim(), loginPassword);
+      if (!result.success) setLoginError(result.error || 'Unable to sign in. Please try again.');
+      else { setLoginEmail(''); setLoginPassword(''); }
+    } catch { setLoginError('Unable to sign in. Please try again.'); }
+    finally { finishAuthSubmission(); }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setRegisterError("");
-    setRegisterSuccess("");
-    if (!registerFirstName.trim() || !registerLastName.trim() || !registerEmail.trim() || !registerPassword || !registerAccountCountry) { setRegisterError("First name, last name, email, password and country are required."); return; }
-    if (registerPassword !== registerConfirmPassword) { setRegisterError("Passwords do not match."); return; }
-    if (registerPassword.length < 12 || registerPassword.length > 128) { setRegisterError("Password must be between 12 and 128 characters."); return; }
-    setFormLoading(true);
-    const fullPhone = registerPhone.trim()
-      ? `${registerCountry.dialCode} ${registerPhone.trim()}`
-      : "";
-    const result = await registerUser({ firstName: registerFirstName.trim(), lastName: registerLastName.trim(), email: registerEmail.trim(), password: registerPassword, confirmPassword: registerConfirmPassword, country: registerAccountCountry, phone: fullPhone });
-    setFormLoading(false);
-    if (!result.success) { setRegisterError(result.error || "Registration failed."); }
-    else {
-      setRegisterSuccess("Your account has been created. Please check your email to verify your account, then sign in.");
-      setLoginEmail(registerEmail.trim());
-      setLoginPassword("");
-      setLoginError("");
-      setShowLoginPassword(false);
-      setRegisterFirstName("");
-      setRegisterLastName("");
-      setRegisterEmail("");
-      setRegisterPhone("");
-      setRegisterPassword("");
-      setRegisterConfirmPassword("");
-      setShowRegisterPassword(false);
-      setShowRegisterConfirmPassword(false);
-      setAuthScreen("login");
-    }
+    if (authSubmission.current) return;
+    setRegisterError(''); setRegisterSuccess('');
+    if (!beginAuthSubmission()) return;
+    try {
+      const fullPhone = registerPhone.trim()
+        ? `${registerCountry.dialCode} ${registerPhone.trim()}`
+        : "";
+      const result = await registerUser({ firstName: registerFirstName.trim(), lastName: registerLastName.trim(), email: registerEmail.trim(), password: registerPassword, confirmPassword: registerConfirmPassword, country: registerAccountCountry, phone: fullPhone });
+      if (!result.success) { setRegisterError(result.error || "Registration failed."); }
+      else {
+        setRegisterSuccess("Your account has been created. Please check your email to verify your account, then sign in.");
+        setLoginEmail(registerEmail.trim());
+        setLoginPassword("");
+        setLoginError("");
+        setShowLoginPassword(false);
+        setRegisterFirstName("");
+        setRegisterLastName("");
+        setRegisterEmail("");
+        setRegisterPhone("");
+        setRegisterPassword("");
+        setRegisterConfirmPassword("");
+        setShowRegisterPassword(false);
+        setShowRegisterConfirmPassword(false);
+        setAuthScreen("login");
+      }
+    } catch { setRegisterError('Unable to create your account. Please try again.'); }
+    finally { finishAuthSubmission(); }
   };
 
   const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setForgotError(""); setForgotMessage(""); setForgotDevLink("");
-    if (!forgotEmail) { setForgotError("Email address is required."); return; }
-    setFormLoading(true);
-    const result = await forgotPassword(forgotEmail);
-    setFormLoading(false);
-    if (!result.success) { setForgotError(result.error || "An error occurred."); }
-    else {
-      setForgotMessage("If this email exists, recovery instructions have been sent.");
-      if (result.devLink) setForgotDevLink(result.devLink);
-    }
+    if (authSubmission.current) return;
+    setForgotError(''); setForgotMessage(''); setForgotDevLink('');
+    if (!beginAuthSubmission()) return;
+    try {
+      const result = await forgotPassword(forgotEmail.trim());
+      if (!result.success) setForgotError(result.error || 'Unable to send recovery instructions. Please try again.');
+      else {
+        setForgotMessage('If an account is associated with this email address, password reset instructions have been sent. Please check your inbox.');
+        if (result.devLink) setForgotDevLink(result.devLink);
+      }
+    } catch { setForgotError('Unable to send recovery instructions. Please try again.'); }
+    finally { finishAuthSubmission(); }
   };
 
   const handleResetSubmit = async (e: React.FormEvent) => {
@@ -639,6 +661,7 @@ export default function Account() {
     setResetError(""); setResetMessage("");
     if (!tokenParam) { setResetError("Reset token is missing from the URL."); return; }
     if (!resetNewPassword) { setResetError("Please enter a new password."); return; }
+    if (resetNewPassword.length < 12 || resetNewPassword.length > 128) { setResetError("Use a password between 12 and 128 characters."); return; }
     if (resetNewPassword !== resetConfirmPassword) { setResetError("Passwords do not match."); return; }
     setFormLoading(true);
     const result = await resetPassword(tokenParam, resetNewPassword);
@@ -647,8 +670,8 @@ export default function Account() {
     else {
       setResetMessage("Your password has been reset. Redirecting…");
       setTimeout(() => {
-        searchParams.delete("token");
-        setSearchParams(searchParams);
+        logout();
+        navigate("/account", { replace: true });
         setAuthScreen("login");
         setResetNewPassword(""); setResetConfirmPassword(""); setResetMessage("");
       }, 3000);
@@ -682,7 +705,7 @@ export default function Account() {
   }
 
   // ── Reset Password view ────────────────────────────────────────────────────
-  if (tokenParam && !isAuthenticated) {
+  if (tokenParam || location.pathname === "/reset-password") {
     return (
       <div className="account-page-container auth-page">
         <Reveal className="auth-card-container">
@@ -691,13 +714,14 @@ export default function Account() {
             <p>Enter your new password below.</p>
           </div>
           <form onSubmit={handleResetSubmit} className="auth-card-form">
+            {!tokenParam && <div className="auth-error-alert" role="alert">This reset link is incomplete. Please request a new password reset email.</div>}
             {resetError && <div className="auth-error-alert" role="alert">{resetError}</div>}
             {resetMessage && <div className="auth-success-alert" role="status">{resetMessage}</div>}
             <div className="form-input-box full-width">
               <label htmlFor="rst-pwd">New Password</label>
               <div className="input-with-icon">
                 <Lock size={16} />
-                <input id="rst-pwd" type="password" value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)} placeholder="Minimum 6 characters" required />
+                <input id="rst-pwd" type="password" autoComplete="new-password" minLength={12} maxLength={128} value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)} placeholder="12–128 characters" required />
               </div>
             </div>
             <div className="form-input-box full-width">
@@ -707,14 +731,15 @@ export default function Account() {
                 <input id="rst-pwd-conf" type="password" value={resetConfirmPassword} onChange={(e) => setResetConfirmPassword(e.target.value)} placeholder="Repeat your password" required />
               </div>
             </div>
-            <button type="submit" className="save-profile-btn" disabled={formLoading}>
+            <button type="submit" className="save-profile-btn" disabled={formLoading || !tokenParam || !!resetMessage}>
               {formLoading ? "Saving…" : "Reset Password"}
             </button>
           </form>
           <div className="auth-card-footer">
-            <button onClick={() => { searchParams.delete("token"); setSearchParams(searchParams); setAuthScreen("login"); }} className="auth-toggle-link">
+            <button onClick={() => { navigate("/account", { replace: true }); setAuthScreen("login"); }} className="auth-toggle-link">
               Back to Login
             </button>
+            <Link to="/account" onClick={() => setAuthScreen("forgot")} className="auth-toggle-link">Request a new reset link</Link>
           </div>
         </Reveal>
       </div>
@@ -725,7 +750,8 @@ export default function Account() {
   if (!isAuthenticated) {
     return (
       <div className="account-page-container auth-page">
-        <Reveal className="auth-card-container">
+        <Reveal className="auth-card-container auth-card--polished">
+          <p className="sr-only" role="status" aria-live="polite">{formLoading ? "Please wait while we process your request." : ""}</p>
           <AnimatePresence mode="wait">
             {authScreen === "login" && (
               <Reveal trigger="mount" variant="fade" duration={0.42} key="login">
@@ -733,28 +759,30 @@ export default function Account() {
                   <h2>Welcome to VESTIGIA</h2>
                   <p>Access your orders and account settings.</p>
                 </div>
-                <form onSubmit={handleLoginSubmit} className="auth-card-form">
+                <form onSubmit={handleLoginSubmit} className="auth-card-form" noValidate aria-busy={formLoading} onBlurCapture={onAuthBlur} onChangeCapture={onAuthChange}>
                   {registerSuccess && <div className="auth-registration-notice" role="status"><CheckCircle size={20} aria-hidden="true" /><div><strong>Account created</strong><p>Check your email to verify your account, then sign in.</p></div></div>}
-                  {loginError && <div className="auth-error-alert" role="alert">{loginError}</div>}
+                  {loginError && <div id="login-submit-error" tabIndex={-1} className="auth-error-alert" role="alert">{loginError}</div>}
                   <div className="form-input-box full-width">
                     <label htmlFor="login-email">Email Address</label>
                     <div className="input-with-icon">
-                      <Mail size={16} />
-                      <input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="email@example.com" required />
+                      <Mail size={16} aria-hidden="true" />
+                      <input id="login-email" name="email" autoComplete="email" maxLength={254} autoCapitalize="none" spellCheck={false} {...authInputProps('login-email')} type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="email@example.com" required />
                     </div>
+                    <AuthFieldMessage id="login-email" errors={authFieldErrors} />
                   </div>
                   <div className="form-input-box full-width">
                     <div className="label-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <label htmlFor="login-pass">Password</label>
-                      <button type="button" onClick={() => setAuthScreen("forgot")} className="forgot-password-link">Forgot?</button>
+                      <button type="button" disabled={formLoading} onClick={() => setAuthScreen("forgot")} className="forgot-password-link">Forgot password?</button>
                     </div>
                     <div className="input-with-icon">
-                      <Lock size={16} />
-                      <input id="login-pass" type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="Enter password" required />
-                      <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="password-toggle-btn" aria-label="Toggle password visibility">
+                      <Lock size={16} aria-hidden="true" />
+                      <input id="login-pass" name="password" autoComplete="current-password" maxLength={128} {...authInputProps('login-pass')} type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="Enter password" required />
+                      <button type="button" disabled={formLoading} onClick={() => setShowLoginPassword(!showLoginPassword)} className="password-toggle-btn" aria-label={showLoginPassword ? "Hide password" : "Show password"} aria-pressed={showLoginPassword} aria-controls="login-pass">
                         {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    <AuthFieldMessage id="login-pass" errors={authFieldErrors} />
                   </div>
                   <button type="submit" className="save-profile-btn" disabled={formLoading}>
                     {formLoading ? "Accessing…" : "Log In"}
@@ -762,7 +790,7 @@ export default function Account() {
                 </form>
                 <div className="auth-card-footer">
                   <span>Don't have an account?</span>
-                  <button onClick={() => { setRegisterSuccess(""); setAuthScreen("register"); }} className="auth-toggle-link">Create one</button>
+                  <button type="button" disabled={formLoading} onClick={() => { setRegisterSuccess(""); setAuthScreen("register"); }} className="auth-toggle-link">Create one</button>
                 </div>
               </Reveal>
             )}
@@ -773,29 +801,33 @@ export default function Account() {
                   <h2>Create Account</h2>
                   <p>Register to unlock premium member benefits.</p>
                 </div>
-                <form onSubmit={handleRegisterSubmit} className="auth-card-form">
-                  {registerError && <div className="auth-error-alert" role="alert">{registerError}</div>}
+                <form onSubmit={handleRegisterSubmit} className="auth-card-form" noValidate aria-busy={formLoading} onBlurCapture={onAuthBlur} onChangeCapture={onAuthChange}>
+                  {registerError && <div id="register-submit-error" tabIndex={-1} className="auth-error-alert" role="alert">{registerError}</div>}
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-first-name">First Name</label>
-                    <div className="input-with-icon"><User size={16} /><input id="reg-first-name" type="text" autoComplete="given-name" value={registerFirstName} onChange={(e) => setRegisterFirstName(e.target.value)} placeholder="John" maxLength={80} required /></div>
+                    <div className="input-with-icon"><User size={16} aria-hidden="true" /><input id="reg-first-name" {...authInputProps('reg-first-name')} type="text" autoComplete="given-name" value={registerFirstName} onChange={(e) => setRegisterFirstName(e.target.value)} placeholder="John" maxLength={80} required /></div>
+                    <AuthFieldMessage id="reg-first-name" errors={authFieldErrors} />
                   </div>
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-last-name">Last Name</label>
-                    <div className="input-with-icon"><User size={16} /><input id="reg-last-name" type="text" autoComplete="family-name" value={registerLastName} onChange={(e) => setRegisterLastName(e.target.value)} placeholder="Doe" maxLength={80} required /></div>
+                    <div className="input-with-icon"><User size={16} aria-hidden="true" /><input id="reg-last-name" {...authInputProps('reg-last-name')} type="text" autoComplete="family-name" value={registerLastName} onChange={(e) => setRegisterLastName(e.target.value)} placeholder="Doe" maxLength={80} required /></div>
+                    <AuthFieldMessage id="reg-last-name" errors={authFieldErrors} />
                   </div>
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-country">Country</label>
-                    <div className="input-with-icon"><MapPin size={16} /><select id="reg-country" autoComplete="country-name" value={registerAccountCountry} onChange={(e) => setRegisterAccountCountry(e.target.value)} required><option value="">Select your country</option>{COUNTRIES.map(country => <option key={country} value={country}>{country}</option>)}</select></div>
+                    <div className="input-with-icon"><MapPin size={16} aria-hidden="true" /><select id="reg-country" {...authInputProps('reg-country')} autoComplete="country-name" value={registerAccountCountry} onChange={(e) => setRegisterAccountCountry(e.target.value)} required><option value="">Select your country</option>{COUNTRIES.map(country => <option key={country} value={country}>{country}</option>)}</select></div>
+                    <AuthFieldMessage id="reg-country" errors={authFieldErrors} />
                   </div>
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-email">Email Address</label>
-                    <div className="input-with-icon"><Mail size={16} /><input id="reg-email" type="email" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} placeholder="john@example.com" required /></div>
+                    <div className="input-with-icon"><Mail size={16} aria-hidden="true" /><input id="reg-email" name="email" autoComplete="email" maxLength={254} autoCapitalize="none" spellCheck={false} {...authInputProps('reg-email')} type="email" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} placeholder="john@example.com" required /></div>
+                    <AuthFieldMessage id="reg-email" errors={authFieldErrors} />
                   </div>
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-phone">Phone Number <span style={{ fontWeight: 400, opacity: 0.6 }}>(Optional)</span></label>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <div className="auth-phone-row">
                       <select
-                        id="reg-phone-country"
+                        id="reg-phone-country" aria-label="Phone country and calling code" disabled={formLoading}
                         value={registerCountry.iso}
                         onChange={(e) => {
                           const found = COUNTRY_PHONE_OPTIONS.find((c) => c.iso === e.target.value);
@@ -804,27 +836,18 @@ export default function Account() {
                             setRegisterPhone(formatPhoneNumber(registerPhone, found.iso));
                           }
                         }}
-                        style={{
-                          padding: "0.65rem 0.5rem",
-                          borderRadius: "6px",
-                          border: "1px solid rgba(255, 255, 255, 0.15)",
-                          background: "rgba(255, 255, 255, 0.05)",
-                          color: "inherit",
-                          fontSize: "0.85rem",
-                          cursor: "pointer",
-                          outline: "none"
-                        }}
+
                       >
                         {COUNTRY_PHONE_OPTIONS.map((c) => (
-                          <option key={c.iso} value={c.iso} style={{ background: "#18181b", color: "#fff" }}>
+                          <option key={c.iso} value={c.iso}>
                             {c.flag} {c.dialCode} ({c.iso})
                           </option>
                         ))}
                       </select>
                       <div className="input-with-icon" style={{ flex: 1 }}>
-                        <Phone size={16} />
+                        <Phone size={16} aria-hidden="true" />
                         <input
-                          id="reg-phone"
+                          id="reg-phone" autoComplete="tel-national" {...authInputProps('reg-phone')}
                           type="tel"
                           value={registerPhone}
                           onChange={(e) => {
@@ -835,33 +858,37 @@ export default function Account() {
                         />
                       </div>
                     </div>
+                    <AuthFieldMessage id="reg-phone" errors={authFieldErrors} />
                   </div>
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-pass">Password</label>
                     <div className="input-with-icon">
-                      <Lock size={16} />
-                      <input id="reg-pass" type={showRegisterPassword ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={128} aria-describedby="reg-pass-help" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Create strong password" required />
-                      <button type="button" onClick={() => setShowRegisterPassword(!showRegisterPassword)} className="password-toggle-btn" aria-label="Toggle password visibility">
+                      <Lock size={16} aria-hidden="true" />
+                      <input id="reg-pass" {...authInputProps('reg-pass', 'reg-pass-help')} type={showRegisterPassword ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={128} value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Create strong password" required />
+                      <button type="button" disabled={formLoading} onClick={() => setShowRegisterPassword(value => !value)} className="password-toggle-btn" aria-label={showRegisterPassword ? "Hide password" : "Show password"} aria-pressed={showRegisterPassword} aria-controls="reg-pass">
                         {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                     <PasswordStrengthMeter password={registerPassword} personalValues={[registerFirstName, registerLastName, registerEmail.split('@')[0]]} />
+                    <AuthFieldMessage id="reg-pass" errors={authFieldErrors} />
                   </div>
                   <div className="form-input-box full-width">
                     <label htmlFor="reg-pass-conf">Confirm Password</label>
                     <div className="input-with-icon">
-                      <Lock size={16} />
-                      <input id="reg-pass-conf" type={showRegisterConfirmPassword ? "text" : "password"} autoComplete="new-password" value={registerConfirmPassword} onChange={(e) => setRegisterConfirmPassword(e.target.value)} placeholder="Repeat password" required />
-                      <button type="button" onClick={() => setShowRegisterConfirmPassword(value => !value)} className="password-toggle-btn" aria-label={showRegisterConfirmPassword ? "Hide confirmation password" : "Show confirmation password"} aria-pressed={showRegisterConfirmPassword} aria-controls="reg-pass-conf">
+                      <Lock size={16} aria-hidden="true" />
+                      <input id="reg-pass-conf" {...authInputProps('reg-pass-conf', 'reg-confirm-feedback')} type={showRegisterConfirmPassword ? "text" : "password"} autoComplete="new-password" value={registerConfirmPassword} onChange={(e) => setRegisterConfirmPassword(e.target.value)} placeholder="Repeat password" required />
+                      <button type="button" disabled={formLoading} onClick={() => setShowRegisterConfirmPassword(value => !value)} className="password-toggle-btn" aria-label={showRegisterConfirmPassword ? "Hide confirmation password" : "Show confirmation password"} aria-pressed={showRegisterConfirmPassword} aria-controls="reg-pass-conf">
                         {showRegisterConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    <AuthFieldMessage id="reg-pass-conf" errors={authFieldErrors} />
+                    <p id="reg-confirm-feedback" className="auth-confirmation-feedback" role="status" aria-live="polite">{registerConfirmPassword && !authFieldErrors['reg-pass-conf'] ? registerPassword === registerConfirmPassword ? 'Passwords match.' : 'Passwords do not match yet.' : ''}</p>
                   </div>
                   <button type="submit" className="save-profile-btn" disabled={formLoading}>{formLoading ? "Creating Account…" : "Create Account"}</button>
                 </form>
                 <div className="auth-card-footer">
                   <span>Already have an account?</span>
-                  <button onClick={() => setAuthScreen("login")} className="auth-toggle-link">Log In</button>
+                  <button type="button" disabled={formLoading} onClick={() => setAuthScreen("login")} className="auth-toggle-link">Log In</button>
                 </div>
               </Reveal>
             )}
@@ -872,12 +899,13 @@ export default function Account() {
                   <h2>Forgot Password</h2>
                   <p>Provide your email to receive recovery instructions.</p>
                 </div>
-                <form onSubmit={handleForgotSubmit} className="auth-card-form">
-                  {forgotError && <div className="auth-error-alert" role="alert">{forgotError}</div>}
+                <form onSubmit={handleForgotSubmit} className="auth-card-form" noValidate aria-busy={formLoading} onBlurCapture={onAuthBlur} onChangeCapture={onAuthChange}>
+                  {forgotError && <div id="forgot-submit-error" tabIndex={-1} className="auth-error-alert" role="alert">{forgotError}</div>}
                   {forgotMessage && <div className="auth-success-alert" role="status">{forgotMessage}</div>}
                   <div className="form-input-box full-width">
                     <label htmlFor="forgot-email">Email Address</label>
-                    <div className="input-with-icon"><Mail size={16} /><input id="forgot-email" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="email@example.com" required /></div>
+                    <div className="input-with-icon"><Mail size={16} aria-hidden="true" /><input id="forgot-email" name="email" autoComplete="email" maxLength={254} autoCapitalize="none" spellCheck={false} {...authInputProps('forgot-email')} type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="email@example.com" required /></div>
+                    <AuthFieldMessage id="forgot-email" errors={authFieldErrors} />
                   </div>
                   {forgotDevLink && (
                     <div className="dev-helper-alert">
@@ -892,7 +920,7 @@ export default function Account() {
                   <button type="submit" className="save-profile-btn" disabled={formLoading}>{formLoading ? "Sending…" : "Send Reset Link"}</button>
                 </form>
                 <div className="auth-card-footer">
-                  <button onClick={() => setAuthScreen("login")} className="auth-toggle-link">← Back to Log In</button>
+                  <button type="button" disabled={formLoading} onClick={() => setAuthScreen("login")} className="auth-toggle-link">← Back to Log In</button>
                 </div>
               </Reveal>
             )}
@@ -954,6 +982,7 @@ export default function Account() {
           <button
             key={tab.key}
             className={`account-mobile-tab${activeTab === tab.key ? " active" : ""}`}
+            aria-current={activeTab === tab.key ? "page" : undefined}
             onClick={() => handleTabChange(tab.key)}
             type="button"
           >
@@ -962,6 +991,7 @@ export default function Account() {
           </button>
         ))}
       </nav>
+      <button type="button" className="account-mobile-signout" onClick={logout}><LogOut size={16} aria-hidden="true" /> Sign out</button>
 
       <div className="account-layout">
 
@@ -1016,6 +1046,8 @@ export default function Account() {
                     <Link to="/shop" className="empty-state-cta">Shop the Collection</Link>
                   </Reveal>
                 ) : (
+                  <>
+                  {reorderNotice && <p className="auth-success-alert" role="status">{reorderNotice}</p>}
                   <RevealGroup className="orders-history-list">
                     {orders.map((order) => (
                       <Reveal as="article"
@@ -1072,7 +1104,7 @@ export default function Account() {
                                   </p>
                                 </div>
                               </div>
-                              <span className="order-item-price">{money(item.prices?.[currency] ? item.prices[currency]!.priceMinor / (currency === "JPY" ? 1 : 100) : NaN)}</span>
+                              <span className="order-item-price">{moneyLabel(orderAmountMinor(item, "unitPrice", order.currency), order.currency)}</span>
                             </div>
                           ))}
                         </div>
@@ -1081,7 +1113,7 @@ export default function Account() {
                         <div className="order-card-footer">
                           <div className="order-card-total">
                             <span>Total</span>
-                            <strong>{moneyLabel(order.totalMinor, order.currency)}</strong>
+                            <strong>{moneyLabel(orderAmountMinor(order, 'total', order.currency), order.currency)}</strong>
                           </div>
                           <div className="order-card-actions">
                             <button
@@ -1131,6 +1163,7 @@ export default function Account() {
                       </Reveal>
                     ))}
                   </RevealGroup>
+                  </>
                 )}
               </section>
             )}
@@ -1198,7 +1231,7 @@ export default function Account() {
                 </Reveal>
                 <RevealGroup className="addresses-cards-grid">
                   {(user?.addresses ?? []).length === 0 ? (
-                    <Reveal className="account-empty-state" style={{ gridColumn: "span 2" }}>
+                    <Reveal className="account-empty-state" style={{ gridColumn: "1 / -1" }}>
                       <MapPin size={36} strokeWidth={1} className="empty-state-icon" />
                       <p>No saved addresses yet.</p>
                     </Reveal>
@@ -1312,7 +1345,7 @@ export default function Account() {
               setSelectedOrderDetail(null);
               setSelectedInvoice(ord);
             }}
-            money={(value) => formatMajor(value, (selectedInvoice || selectedOrderDetail)?.currency)}
+            money={(value) => moneyLabel(value, selectedOrderDetail.currency)}
             adminProducts={adminProducts}
           />
         )}
@@ -1324,7 +1357,7 @@ export default function Account() {
           <OrderInvoiceModal
             order={selectedInvoice}
             onClose={() => setSelectedInvoice(null)}
-            money={(value) => formatMajor(value, (selectedInvoice || selectedOrderDetail)?.currency)}
+            money={(value) => moneyLabel(value, selectedInvoice.currency)}
           />
         )}
       </AnimatePresence>

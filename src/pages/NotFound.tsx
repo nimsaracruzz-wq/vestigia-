@@ -18,8 +18,8 @@ export default function NotFound() {
       <PageIntro as="div" className="not-found-content">
         <span className="not-found-eyebrow">VESTIGIA · A moment off course</span>
         <div className="not-found-art" aria-hidden="true">
-          <span>404</span>
-          <img src="/images/vestigia_head-320.png" alt="" width={160} height={160} />
+          <span className="not-found-watermark" />
+          <span className="not-found-number">404</span>
         </div>
         <h1>A different path awaits.</h1>
         <p>This page is no longer here. Discover something enduring in the collection, or find your way home.</p>

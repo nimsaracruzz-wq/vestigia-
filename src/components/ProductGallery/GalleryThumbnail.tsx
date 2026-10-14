@@ -31,7 +31,7 @@ export const GalleryThumbnail: React.FC<GalleryThumbnailProps> = React.memo(
 
     return (
       <div className="vst-thumbnail-strip-wrapper">
-        <div className="vst-thumbnail-strip" ref={scrollContainerRef} role="tablist">
+        <div className="vst-thumbnail-strip" ref={scrollContainerRef} role="group" aria-label="Choose a product photograph">
           {images.map((img, idx) => {
             const isActive = activeIndex === idx;
             return (
@@ -43,8 +43,7 @@ export const GalleryThumbnail: React.FC<GalleryThumbnailProps> = React.memo(
                   thumbRefs.current[idx] = el;
                 }}
                 type="button"
-                role="tab"
-                aria-selected={isActive}
+                aria-pressed={isActive}
                 aria-label={`${altPrefix} thumbnail ${idx + 1}`}
                 className={`vst-thumbnail-btn ${isActive ? "active" : ""}`}
                 onClick={() => onSelect(idx)}

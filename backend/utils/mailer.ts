@@ -540,7 +540,7 @@ export const sendPasswordResetEmail = async (email: string, resetLink: string): 
         If this was you, click the button below to set a new password.
       </p>
       <p class="body-text">
-        This link will expire in <strong style="font-weight:500;color:${TEXT_LIGHT};">1 hour</strong>.
+        This link will expire in <strong style="font-weight:500;color:${TEXT_LIGHT};">45 minutes</strong>.
       </p>
       <div style="margin:36px 0;">
         <a href="${resetLink}" class="btn-primary">Reset Password</a>
@@ -556,7 +556,7 @@ export const sendPasswordResetEmail = async (email: string, resetLink: string): 
     from: process.env.SMTP_FROM || 'no-reply@gmail.com',
     to: email,
     subject: 'Reset Your Password — Vestigia',
-    html: buildEmailBase(content, 'Reset your Vestigia account password. This link expires in 1 hour.'),
+    html: buildEmailBase(content, 'Reset your Vestigia account password. This link expires in 45 minutes.'),
   });
 };
 

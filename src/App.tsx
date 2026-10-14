@@ -124,6 +124,7 @@ function MainAppShell() {
               <Route path="/shop/product/:id" element={<LegacyProductRedirect />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/reset-password" element={<Account />} />
               <Route path="/activate" element={<ActivateAccount />} />
               <Route path="/activate-account" element={<ActivateAccount />} />
               <Route path="/lookbook" element={<Lookbook onQuickShop={(p) => setQuickProduct(p)} />} />

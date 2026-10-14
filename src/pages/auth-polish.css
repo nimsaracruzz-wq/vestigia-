@@ -1,0 +1,41 @@
+/* Targeted refinements for the existing login, registration, and recovery card. */
+.auth-page .auth-card-container.auth-card--polished { width: 100%; max-width: 460px; padding: 40px 36px; }
+.auth-card--polished .auth-card-header { margin-bottom: 28px; }
+.auth-card--polished .auth-card-header h2 { margin: 0 0 10px; }
+.auth-card--polished .auth-card-header p { margin: 0; line-height: 1.65; color: #756b60; }
+.auth-card--polished .auth-card-form { gap: 20px; }
+.auth-card--polished .form-input-box { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.auth-card--polished .form-input-box label { margin: 0; }
+.auth-card--polished .input-with-icon :is(input, select),
+.auth-card--polished .auth-phone-row > select { box-sizing: border-box; width: 100%; min-width: 0; height: 50px; border: 1px solid #b8b1a7; border-radius: 6px; background: #fff; color: #171412; font-family: inherit; font-size: 16px; line-height: 1.4; }
+.auth-card--polished .input-with-icon input { padding: 12px 48px 12px 42px; }
+.auth-card--polished .input-with-icon select { padding: 12px 30px 12px 42px; }
+.auth-card--polished input::placeholder { color: #756b60; opacity: 1; }
+.auth-card--polished :is(input, select):focus { outline: 1px solid #171412; outline-offset: 1px; border-color: #171412; box-shadow: 0 0 0 3px rgba(23,20,18,.05); }
+.auth-card--polished :is(input, select)[aria-invalid="true"] { border-color: #171412; }
+.auth-card--polished .password-toggle-btn { right: 4px; min-width: 44px; min-height: 44px; padding: 0; color: #756b60; border-radius: 4px; }
+.auth-card--polished :is(button, a):focus-visible { outline: 1px solid #171412; outline-offset: 3px; }
+.auth-card--polished .label-row { gap: 10px; min-height: 28px; }
+.auth-card--polished .forgot-password-link { color: #171412; min-height: 32px; padding: 4px 0; text-underline-offset: 3px; white-space: nowrap; }
+.auth-card--polished .save-profile-btn { width: 100%; min-height: 50px; margin: 4px 0 0; padding: 12px 16px; display: flex; align-items: center; justify-content: center; text-align: center; }
+.auth-card--polished :is(button, input, select):disabled { opacity: .55; cursor: default; }
+.auth-card--polished .auth-phone-row { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.auth-card--polished .auth-phone-row > select { flex: 0 0 118px; width: 118px; padding: 10px 8px; }
+.auth-card--polished .auth-phone-row > .input-with-icon { flex: 1; min-width: 0; }
+.auth-card--polished :is(.auth-field-message, .auth-confirmation-feedback) { margin: 0; font-size: 12px; line-height: 1.55; color: #171412; overflow-wrap: anywhere; }
+.auth-card--polished .auth-confirmation-feedback { color: #756b60; }
+.auth-card--polished :is(.auth-error-alert, .auth-success-alert) { background: #fbfaf8; border-color: #ddd5cc; color: #171412; text-align: left; line-height: 1.6; }
+.auth-card--polished .auth-error-alert { border-left: 2px solid #171412; }
+.auth-card--polished .auth-card-footer { margin-top: 28px; padding-top: 20px; flex-wrap: wrap; gap: 6px 8px; line-height: 1.6; }
+.auth-card--polished .auth-toggle-link { min-height: 44px; padding: 8px 2px; text-underline-offset: 3px; }
+.auth-card--polished .password-strength { margin-top: 4px; }
+.auth-card--polished .password-strength p { color: #756b60; }
+@media (max-width: 600px) {
+  .auth-page .auth-card-container.auth-card--polished { padding: 28px 20px; margin: 0 auto; }
+  .auth-card--polished .auth-card-form { gap: 18px; }
+  .auth-card--polished .forgot-password-link { min-height: 44px; }
+}
+@media (max-width: 360px) {
+  .auth-page .auth-card-container.auth-card--polished { padding: 24px 16px; }
+  .auth-card--polished .auth-phone-row > select { flex-basis: 102px; width: 102px; }
+}

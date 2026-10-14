@@ -9,44 +9,17 @@ interface GalleryImageProps {
   alt: string;
   direction?: number;
   priority?: boolean;
+  active?: boolean;
   onClick?: () => void;
   aspectRatio?: string;
 }
 
-/**
- * Determine whether a given image src has a corresponding WebP version available.
- * Only attempt WebP for image paths that are from the static public folder
- * (i.e. /images/...) — NOT for /uploads/ paths which are dynamically generated
- * by the backend and only exist as the original format.
- *
- * Also excludes external URLs (http/https) since we have no control over their formats.
- */
-function deriveWebPSrc(src: string): string | null {
-  if (!src) return null;
-
-  // External URLs → no WebP attempt
-  if (src.startsWith("http://") || src.startsWith("https://")) return null;
-
-  // Backend upload paths (e.g. /uploads/1234-image.png) → NO WebP, files don't exist
-  if (src.startsWith("/uploads/")) return null;
-
-  // Static public folder images (e.g. /images/products/foo.png) → safe to attempt WebP
-  if ((src.endsWith(".jpg") || src.endsWith(".png")) && src.startsWith("/images/")) {
-    return src.replace(/\.(jpg|png)$/, ".webp");
-  }
-
-  return null;
-}
-
 export const GalleryImage: React.FC<GalleryImageProps> = React.memo(
-  ({ src, alt, direction = 0, priority = true, onClick, aspectRatio = "3/4" }) => {
+  ({ src, alt, direction = 0, priority = true, active = true, onClick, aspectRatio = "3/4" }) => {
     const entrance = useReveal({ variant: "fade", disabled: true });
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
-
-    // Only attempt WebP for static public images — NOT for /uploads/ paths
-    const webpSrc = deriveWebPSrc(src);
 
     // Reset state when src changes (e.g. thumbnail click)
     useEffect(() => {
@@ -78,7 +51,7 @@ export const GalleryImage: React.FC<GalleryImageProps> = React.memo(
         style={{ aspectRatio }}
         onClick={onClick}
         role="button"
-        tabIndex={0}
+        tabIndex={active ? 0 : -1}
         aria-label={`Enlarge ${alt}`}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -120,18 +93,16 @@ export const GalleryImage: React.FC<GalleryImageProps> = React.memo(
             exit="exit"
             className="vst-gallery-picture"
           >
-            {/* Only add WebP source for known-safe paths — avoids broken source for /uploads/ */}
-            {webpSrc && <source srcSet={webpSrc} type="image/webp" />}
             <img
               ref={imgRef}
               src={src}
+              draggable={false}
               alt={alt}
               width={800}
               height={1067}
               decoding="async"
               loading={priority ? "eager" : "lazy"}
-              // @ts-ignore — fetchpriority is a valid HTML attribute
-              fetchpriority={priority ? "high" : "auto"}
+              fetchPriority={priority ? "high" : "auto"}
               onLoad={handleLoad}
               onError={handleError}
               className={`vst-gallery-img ${isLoaded && !hasError ? "loaded" : "loading"}`}

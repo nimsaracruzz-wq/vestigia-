@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import { businessContact as contact } from '../../shared/businessContact';
+import { registerDocumentFont } from './pdfFonts';
 
 export type DocumentKind = 'invoice' | 'packing-slip';
 export type DocumentOrder = {
@@ -12,9 +13,10 @@ export type DocumentOrder = {
   items: { productName?: string; name?: string; size?: string; color?: string; quantity: number; unitPriceMinor?: number; subtotalMinor?: number; price?: number }[];
 };
 
-export function buildOrderDocument(orders: DocumentOrder[], kind: DocumentKind) {
+export async function buildOrderDocument(orders: DocumentOrder[], kind: DocumentKind) {
   if (!orders.length) throw new Error('Select at least one order.');
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', putOnlyUsedFonts: true, compress: true });
+  const font = await registerDocumentFont(pdf);
   const invoice = kind === 'invoice';
   const clean = (value: unknown) => String(value ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/[–—]/g, '-');
   for (const [index, order] of orders.entries()) {
@@ -27,11 +29,11 @@ export function buildOrderDocument(orders: DocumentOrder[], kind: DocumentKind) 
     };
     let y = 20;
     const text = (value: string, size = 10, bold = false) => {
-      pdf.setFont('helvetica', bold ? 'bold' : 'normal'); pdf.setFontSize(size);
+      pdf.setFont(font, bold ? 'bold' : 'normal'); pdf.setFontSize(size);
       const lines = pdf.splitTextToSize(clean(value), 170);
       const height = lines.length * size * .45 + 3;
       if (y + height > 273) { pdf.addPage(); y = 20; }
-      pdf.setFont('helvetica', bold ? 'bold' : 'normal'); pdf.setFontSize(size);
+      pdf.setFont(font, bold ? 'bold' : 'normal'); pdf.setFontSize(size);
       pdf.text(lines, 20, y); y += height;
     };
     pdf.setTextColor(17, 17, 15);
@@ -56,7 +58,7 @@ export function buildOrderDocument(orders: DocumentOrder[], kind: DocumentKind) 
     autoTable(pdf, {
       startY: y + 3, margin: { left: 20, right: 20, top: 20, bottom: 24 },
       head: [invoice ? ['Item', 'Variant', 'Qty', 'Unit price', 'Subtotal'] : ['Item', 'Variant', 'Qty', 'Packed']], body,
-      theme: 'grid', styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, lineColor: [226, 223, 216], lineWidth: .15, overflow: 'linebreak' },
+      theme: 'grid', styles: { font, fontSize: 9, cellPadding: 3, lineColor: [226, 223, 216], lineWidth: .15, overflow: 'linebreak' },
       headStyles: { fillColor: [247, 244, 237], textColor: [17, 17, 15], fontStyle: 'bold' },
       columnStyles: invoice ? { 0: { cellWidth: 57 }, 1: { cellWidth: 35 }, 2: { cellWidth: 12 }, 3: { halign: 'right' }, 4: { halign: 'right' } } : { 0: { cellWidth: 85 }, 1: { cellWidth: 45 }, 2: { cellWidth: 20 }, 3: { cellWidth: 20 } },
       rowPageBreak: 'avoid',
@@ -90,7 +92,8 @@ export function buildOrderDocument(orders: DocumentOrder[], kind: DocumentKind) 
   return pdf;
 }
 
-export function downloadOrderDocument(orders: DocumentOrder[], kind: DocumentKind) {
+export async function downloadOrderDocument(orders: DocumentOrder[], kind: DocumentKind) {
   const suffix = orders.length === 1 ? orders[0].id.replace(/[^a-zA-Z0-9_-]/g, '-') : `${orders.length}-orders`;
-  buildOrderDocument(orders, kind).save(`VESTIGIA-${kind}-${suffix}.pdf`);
+  const pdf = await buildOrderDocument(orders, kind);
+  pdf.save(`VESTIGIA-${kind}-${suffix}.pdf`);
 }

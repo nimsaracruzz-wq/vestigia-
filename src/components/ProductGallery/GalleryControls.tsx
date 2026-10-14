@@ -44,25 +44,6 @@ export const GalleryControls: React.FC<GalleryControlsProps> = React.memo(
           </button>
         </div>
 
-        {/* Mobile Invisible 25% Touch Zones */}
-        <div className="vst-mobile-touch-zones">
-          <div
-            className="vst-touch-zone left"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPrev();
-            }}
-            aria-label="Previous image touch zone"
-          />
-          <div
-            className="vst-touch-zone right"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNext();
-            }}
-            aria-label="Next image touch zone"
-          />
-        </div>
       </>
     );
   }

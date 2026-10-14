@@ -1,4 +1,5 @@
 .vestigia-not-found {
+  --not-found-art-color: #eae5dc;
   background: #fbfaf8;
   color: #171412;
   min-height: 82svh;
@@ -9,8 +10,24 @@
 .not-found-content { width: 100%; max-width: 720px; text-align: center; }
 .not-found-eyebrow { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: #756b60; }
 .not-found-art { position: relative; display: grid; place-items: center; height: 230px; margin: 28px 0 20px; }
-.not-found-art > span { font: 400 clamp(140px, 24vw, 230px)/1 Georgia, serif; letter-spacing: -.06em; color: #eae5dc; }
-.not-found-art img { position: absolute; width: 125px; height: 125px; object-fit: contain; filter: drop-shadow(0 8px 18px #17141212); }
+.not-found-number { position: relative; z-index: 1; font: 400 clamp(140px, 24vw, 230px)/1 Georgia, serif; letter-spacing: -.06em; color: var(--not-found-art-color); }
+.not-found-watermark {
+  position: absolute;
+  width: clamp(280px, 44vw, 400px);
+  height: clamp(280px, 44vw, 400px);
+  background: var(--not-found-art-color);
+  opacity: .65;
+  pointer-events: none;
+  -webkit-mask-image: url('/images/vestigia_head-320.png');
+  mask-image: url('/images/vestigia_head-320.png');
+  mask-mode: luminance;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
 .not-found-content h1 { margin: 0 0 18px; font: 400 clamp(32px, 5vw, 48px)/1.15 Georgia, serif; letter-spacing: -.025em; }
 .not-found-content > p { max-width: 420px; margin: 0 auto; font-size: 14px; line-height: 1.85; color: #756b60; }
 .not-found-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 16px 28px; margin: 32px 0 48px; }
@@ -25,7 +42,7 @@
 @media (max-width: 600px) {
   .vestigia-not-found { padding: 120px 20px 56px; min-height: 75svh; }
   .not-found-art { height: 180px; margin: 24px 0; }
-  .not-found-art img { width: 100px; height: 100px; }
+  .not-found-watermark { width: 280px; height: 280px; }
   .not-found-actions { flex-direction: column; gap: 8px; margin-bottom: 32px; }
   .not-found-shop { width: 100%; max-width: 320px; box-sizing: border-box; }
   .not-found-assistance { flex-direction: column; gap: 0; }

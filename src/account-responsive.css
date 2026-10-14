@@ -1,0 +1,115 @@
+/* Account layout overrides follow the legacy storefront styles. */
+.account-page-container,
+.account-page-container * { box-sizing: border-box; }
+.account-page-container .account-layout { grid-template-columns: 220px minmax(0, 1fr); }
+.account-page-container :is(.account-header-identity, .account-header-text, .account-pane-section, .form-input-box, .input-with-icon, .address-card, .wishlist-item-card, .modal-item-details) { min-width: 0; }
+.account-page-container :is(.account-name, .order-card-id, .address-card p, .meta-box p, .inv-address-col p, .auth-error-alert, .auth-success-alert) { overflow-wrap: anywhere; }
+.account-page-container .account-header-identity { max-width: 100%; }
+.account-page-container .account-layout > * { min-width: 0; }
+.account-page-container .addresses-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.account-page-container .form-input-box.full-width { grid-column: 1 / -1; }
+.account-mobile-signout { display: none; }
+.account-invoice-table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.account-invoice-table-scroll .invoice-table { min-width: 560px; }
+.account-page-container :is(.order-modal-card, .invoice-modal-card, .address-form-modal) {
+  min-width: 0;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.account-page-container :is(.summary-row, .tot-row) { gap: 16px; }
+.account-page-container :is(.summary-row, .tot-row) > :last-child { text-align: right; overflow-wrap: anywhere; }
+
+@media screen and (max-width: 900px) {
+  .account-page-container { padding: 88px 24px 64px; }
+  .account-page-container .account-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .account-page-container .account-sidebar-navigation { display: none; }
+  .account-page-container .account-mobile-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px;
+    margin-bottom: 12px;
+    border: 1px solid #ede8e1;
+    border-radius: 8px;
+    background: #faf9f6;
+  }
+  .account-mobile-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 64px;
+    padding: 10px 3px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #746b60;
+    font: inherit;
+    font-size: 11px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  .account-mobile-tab.active { background: #171412; color: #faf9f6; }
+  .account-mobile-tab svg { flex-shrink: 0; width: 18px; height: 18px; }
+  .account-mobile-signout { display: flex; align-items: center; justify-content: flex-end; gap: 7px; margin: 0 0 24px auto; min-height: 44px; padding: 8px; background: transparent; border: 0; color: #746b60; font-size: 12px; }
+  .account-page-container .account-header-v2 { margin-bottom: 24px; padding-bottom: 24px; }
+  .account-page-container .order-action-btn { min-height: 44px; white-space: normal; justify-content: center; text-align: center; }
+  .account-page-container :is(input, select, textarea) { font-size: 16px; min-width: 0; max-width: 100%; }
+  .account-page-container .input-with-icon input { width: 100%; }
+  .account-page-container #reg-phone-country { flex: 0 1 120px; width: 120px; min-width: 0; }
+}
+
+@media screen and (max-width: 600px) {
+  .account-page-container { padding: 80px 16px 48px; }
+  .account-page-container.auth-page { padding: 88px 16px 48px; align-items: flex-start; }
+  .account-page-container .auth-card-container { padding: 28px 20px; margin: 0 auto; border-radius: 10px; }
+  .account-page-container .account-header-v2 { flex-direction: column; align-items: stretch; gap: 22px; }
+  .account-page-container .account-header-identity { gap: 14px; }
+  .account-page-container .account-monogram { width: 48px; height: 48px; }
+  .account-page-container .account-name { font-size: clamp(24px, 6vw, 32px); line-height: 1.2; }
+  .account-page-container .account-stats-strip { justify-content: space-around; gap: 12px; width: 100%; }
+  .account-page-container :is(.profile-form-grid, .addresses-cards-grid) { grid-template-columns: minmax(0, 1fr); }
+  .account-page-container .pane-section-header { flex-wrap: wrap; gap: 8px; }
+  .account-page-container .account-content-pane .pane-section-title { margin: 0; font-size: 22px; }
+  .account-page-container .order-card-header { padding: 16px; gap: 10px; }
+  .account-page-container .order-card-items { padding: 16px; }
+  .account-page-container .order-card-item-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .account-page-container .order-card-item-info { width: 100%; gap: 12px; }
+  .account-page-container .order-item-details h4 { white-space: normal; overflow-wrap: anywhere; }
+  .account-page-container .order-item-price { text-align: right; overflow-wrap: anywhere; }
+  .account-page-container .order-card-footer { padding: 16px; flex-direction: column; align-items: stretch; gap: 16px; }
+  .account-page-container .order-card-total { justify-content: space-between; }
+  .account-page-container .order-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  .account-page-container .wishlist-items-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .account-page-container .wishlist-actions-row { flex-direction: column; gap: 6px; }
+  .account-page-container :is(.wishlist-move-btn, .wishlist-view-btn, .save-profile-btn, .address-actions-row button, .form-actions-row button) { min-height: 44px; height: auto; padding: 10px; }
+  .account-page-container :is(.wishlist-item-card h3, .wishlist-item-card strong) { overflow-wrap: anywhere; }
+  .account-page-container :is(.modal-backdrop-overlay, .address-form-overlay) { padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .account-page-container :is(.order-modal-header, .order-modal-body, .order-modal-footer, .invoice-modal-header, .invoice-document-sheet, .address-form-modal) { padding: 18px; }
+  .account-page-container :is(.order-modal-meta-grid, .invoice-addresses-grid, .address-form-modal form) { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .account-page-container .address-form-modal :is(.form-input-box.full-width, .form-checkbox-box, .form-actions-row) { grid-column: 1 / -1; }
+  .account-page-container :is(.order-modal-header, .invoice-modal-header) > :first-child { min-width: 0; }
+  .account-page-container .modal-title-row { flex-wrap: wrap; gap: 8px; overflow-wrap: anywhere; }
+  .account-page-container .modal-close-icon-btn { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+  .account-page-container .modal-item-row { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 12px; }
+  .account-page-container .modal-item-pricing { grid-column: 2; overflow-wrap: anywhere; }
+  .account-page-container .modal-item-specs { flex-wrap: wrap; gap: 8px; }
+  .account-page-container :is(.invoice-sheet-header, .invoice-footer-summary, .order-modal-footer, .invoice-modal-header) { flex-wrap: wrap; gap: 16px; }
+  .account-page-container .invoice-footer-summary { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .account-page-container .inv-totals-box { width: 100%; min-width: 0; }
+  .account-page-container .inv-meta-right :is(p, h3) { text-align: left; overflow-wrap: anywhere; }
+}
+
+@media screen and (max-width: 360px) {
+  .account-page-container { padding-left: 12px; padding-right: 12px; }
+  .account-page-container .auth-card-container { padding: 24px 16px; }
+  .account-page-container .wishlist-items-grid { grid-template-columns: minmax(0, 1fr); }
+  .account-mobile-tab { font-size: 10px; }
+}
+
+@media print { .account-mobile-tabs, .account-mobile-signout { display: none !important; } .account-invoice-table-scroll { overflow: visible; } }

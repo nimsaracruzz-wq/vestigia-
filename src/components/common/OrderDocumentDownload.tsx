@@ -7,7 +7,7 @@ export default function OrderDocumentDownload({ orders, kind, className = 'admin
   const download = async () => {
     if (busy) return;
     setBusy(true); setError('');
-    try { const { downloadOrderDocument } = await import('../../utils/orderDocuments'); downloadOrderDocument(orders, kind); }
+    try { const { downloadOrderDocument } = await import('../../utils/orderDocuments'); await downloadOrderDocument(orders, kind); }
     catch (err) { setError(err instanceof Error ? err.message : 'Download failed. Please try again.'); }
     finally { setBusy(false); }
   };
