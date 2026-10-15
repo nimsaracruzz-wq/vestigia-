@@ -1,3 +1,4 @@
+import EmailVerificationNotice from './components/common/EmailVerificationNotice';
 import { HomepageProvider, useHomepage } from './homepage/HomepageContext';
 import CmsFooter from './homepage/CmsFooter';
 const HomepageAdmin = lazy(() => import('./admin/homepage/HomepageAdmin'));
@@ -65,6 +66,8 @@ const Products = lazy(() => import("./admin/pages/Products"));
 const Inventory = lazy(() => import("./admin/pages/Inventory"));
 const Orders = lazy(() => import("./admin/pages/Orders"));
 const Customers = lazy(() => import("./admin/pages/Customers"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const RegisteredUsers = lazy(() => import("./admin/pages/RegisteredUsers"));
 const Analytics = lazy(() => import("./admin/pages/Analytics"));
 const Promotions = lazy(() => import("./admin/pages/Promotions"));
 const AdminJournal = lazy(() => import("./admin/pages/AdminJournal"));
@@ -114,6 +117,7 @@ function MainAppShell() {
           </div>
         )}
 
+        <EmailVerificationNotice />
         <main className={isCheckout ? "main-content-area checkout-mode" : "main-content-area"}>
           <Suspense fallback={<div className="route-loading" role="status">Loading page...</div>}>
             <PageTransition><Routes>
@@ -125,6 +129,8 @@ function MainAppShell() {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/account" element={<Account />} />
               <Route path="/reset-password" element={<Account />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/confirm-email-change" element={<VerifyEmail emailChange />} />
               <Route path="/activate" element={<ActivateAccount />} />
               <Route path="/activate-account" element={<ActivateAccount />} />
               <Route path="/lookbook" element={<Lookbook onQuickShop={(p) => setQuickProduct(p)} />} />
@@ -169,6 +175,7 @@ function AdminAppShell() {
         <Route path="pricing" element={<PricingControl />} />
         <Route path="orders" element={<Orders />} />
         <Route path="customers" element={<Customers />} />
+        <Route path="users" element={<RegisteredUsers />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="promotions" element={<Promotions />} />
         <Route path="shipping" element={<AdminShipping />} />

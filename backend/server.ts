@@ -1,3 +1,6 @@
+import { validatePassword } from '../shared/passwordPolicy.js';
+import { correctUnverifiedEmail, verifyCustomerEmail, confirmUnverifiedEmailChange } from './utils/customerEmail.js';
+import { adminCustomerDirectory } from './utils/adminCustomers.js';
 import { saveInventory } from './utils/inventoryManagement.js';
 import { customerClaims } from './utils/customerClaims.js';
 import { createRateLimiter, requestSafety, safeErrorHandler, validateRequestShape, PublicError } from './utils/requestSafety.js';
@@ -192,26 +195,7 @@ const normalizeTaxRate = (value: unknown) => {
   if (!Number.isFinite(rate) || rate < 0) return 0;
   return rate > 1 ? rate / 100 : rate;
 };
-const validatePassword = (value: unknown) => {
-  const password = String(value ?? '');
-  if (password.length < 12 || password.length > 128) {
-    throw new Error('Password must be between 12 and 128 characters.');
-  }
-  const normalized = password.toLowerCase().replace(/\s+/g, '');
-  const blocked = new Set([
-    'password1234',
-    'password12345',
-    'password123456',
-    '123456789012',
-    'qwertyuiop12',
-    'letmeinplease',
-    'vestigia1234',
-  ]);
-  if (blocked.has(normalized)) {
-    throw new Error('Please choose a less common password.');
-  }
-  return password;
-};
+
 const moneyFromMinor = (minor: number, currency: SupportedCurrency) => minor / (currency === 'JPY' ? 1 : 100);
 const cartHash = (payload: unknown) => crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 const tokenHash = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
@@ -440,25 +424,6 @@ async function generateOrderId(db: any = prisma): Promise<{ orderId: string; inv
     invoiceNumber: `INV-${year}-${padded}`,
   };
 }
-
-const serializeCustomer = (customer: any) => ({
-  id: customer.id,
-  name: customer.name,
-  firstName: customer.firstName ?? '',
-  lastName: customer.lastName ?? '',
-  email: customer.email,
-  phone: customer.phone ?? '',
-  accountStatus: customer.accountStatus ?? (customer.emailVerified ? 'REGISTERED_VERIFIED' : customer.activationStatus ?? 'GUEST'),
-  emailVerified: Boolean(customer.emailVerified),
-  emailVerifiedAt: customer.emailVerifiedAt ?? null,
-  customerType: customer.customerType ?? 'GUEST',
-  activationStatus: customer.activationStatus ?? 'GUEST',
-  orders: customer.orders,
-  totalSpend: customer.totalSpend,
-  joined: customer.joined,
-  lastOrder: customer.lastOrder ?? customer.joined,
-  lastLogin: customer.lastLogin ?? null,
-});
 
 const serializePromoCode = (promo: {
   id: number;
@@ -738,7 +703,7 @@ const seedDatabase = async () => {
     if (!initialPassword) {
       throw new Error('ADMIN_INITIAL_PASSWORD must be configured before creating the first production admin.');
     }
-    const hashedPassword = await bcrypt.hash(validatePassword(initialPassword), BCRYPT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(validatePassword(initialPassword, 12), BCRYPT_ROUNDS);
     await prisma.adminUser.create({ data: { username: 'admin', password: hashedPassword } });
   }
 
@@ -1465,49 +1430,13 @@ app.post('/api/customers/resend-verification', authRateLimit, async (req, res) =
   }
 });
 
-const verifyEmailTokenHandler = async (req: express.Request, res: express.Response) => {
+const verifyEmailTokenHandler = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   try {
-    const token = String((req.query.token || req.body?.token || '') as string);
-    if (!token || token.length > 300) {
-      res.status(400).json({ error: 'Verification link is invalid or expired.' });
-      return;
-    }
-
-    const hashed = tokenHash(token);
-    const record = await prisma.verificationToken.findUnique({
-      where: { tokenHash: hashed },
-      include: { customer: true },
-    });
-    if (!record || record.usedAt || record.expiresAt <= new Date() || !isSafeAccountStatus(record.customer.accountStatus)) {
-      res.status(400).json({ error: 'Verification link is invalid or expired.' });
-      return;
-    }
-
-    await prisma.$transaction([
-      prisma.customer.update({
-        where: { id: record.customerId },
-        data: {
-          emailVerified: true,
-          emailVerifiedAt: new Date(),
-          activationStatus: 'ACTIVATED',
-          accountStatus: 'REGISTERED_VERIFIED',
-        },
-      }),
-      prisma.verificationToken.update({
-        where: { id: record.id },
-        data: { usedAt: new Date() },
-      }),
-      prisma.verificationToken.updateMany({
-        where: { customerId: record.customerId, id: { not: record.id }, usedAt: null },
-        data: { usedAt: new Date() },
-      }),
-    ]);
-    await logSecurityEvent(req, 'CUSTOMER_EMAIL_VERIFIED', { customerId: record.customerId });
+    const token = String(req.query.token || req.body?.token || '');
+    const customerId = await verifyCustomerEmail(prisma, token);
+    await logSecurityEvent(req, 'CUSTOMER_EMAIL_VERIFIED', {customerId});
     res.json({ success: true, message: 'Your email has been verified.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Unable to verify email.' });
-  }
+  } catch (error) { next(error); }
 };
 
 app.get('/api/customers/verify-email', authRateLimit, verifyEmailTokenHandler);
@@ -1660,97 +1589,28 @@ app.put('/api/customers/profile', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/customers/request-email-change', authenticateToken, async (req, res) => {
+const correctCustomerEmailHandler = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   try {
-    const userPayload = (req as any).user;
-    const { newEmail } = req.body ?? {};
-    if (!isValidEmail(newEmail)) {
-      res.status(400).json({ error: 'A valid new email address is required.' });
-      return;
-    }
+    const { customer, token } = await correctUnverifiedEmail(prisma, (req as any).user.id, req.body?.newEmail);
+    let emailRequested = true;
+    try { await sendCustomerVerificationEmail(customer, token); }
+    catch { emailRequested = false; console.error('Verification email delivery failed after email correction.'); }
+    await logSecurityEvent(req, 'CUSTOMER_UNVERIFIED_EMAIL_CORRECTED', {customerId: customer.id});
+    res.json({success: true, user: serializeCustomerProfile(customer), message: emailRequested
+      ? 'Email updated. Check your new inbox for a verification link.'
+      : 'Email updated, but the verification email could not be sent. Use Resend verification email to try again.'});
+  } catch (error) { next(error); }
+};
+app.put('/api/customers/update-email', authenticateToken, authRateLimit, correctCustomerEmailHandler);
+app.post('/api/customers/request-email-change', authenticateToken, authRateLimit, correctCustomerEmailHandler);
 
-    const normalizedNewEmail = normalizeEmail(newEmail);
-    const existing = await prisma.customer.findUnique({ where: { email: normalizedNewEmail } });
-    if (existing && existing.id !== userPayload.id) {
-      res.status(409).json({ error: 'Unable to use this email address.' });
-      return;
-    }
-
-    const customer = await prisma.customer.findUnique({ where: { id: userPayload.id } });
-    if (!customer) {
-      res.status(404).json({ error: 'Customer not found' });
-      return;
-    }
-
-    const token = randomToken(32);
-    await prisma.$transaction(async (tx) => {
-      await tx.emailChangeToken.updateMany({
-        where: { customerId: userPayload.id, usedAt: null },
-        data: { usedAt: new Date() },
-      });
-      await tx.emailChangeToken.create({
-        data: {
-          customerId: userPayload.id,
-          newEmail: normalizedNewEmail,
-          tokenHash: tokenHash(token),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
-      });
-    });
-
-    const verifyLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/confirm-email-change?token=${encodeURIComponent(token)}`;
-    sendVerificationEmail(normalizedNewEmail, customer.firstName || customer.name || 'there', verifyLink, 24).catch((mailError) => {
-      console.error('Email change verification failed:', mailError);
-    });
-    await logSecurityEvent(req, 'CUSTOMER_EMAIL_CHANGE_REQUESTED', { customerId: userPayload.id });
-    res.json({ success: true, message: 'Please check the new email address to confirm this change.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to request email change' });
-  }
-});
-
-app.post('/api/customers/confirm-email-change', authRateLimit, async (req, res) => {
+app.post('/api/customers/confirm-email-change', authRateLimit, async (req, res, next) => {
   try {
-    const token = String(req.body?.token || req.query?.token || '');
-    if (!token) {
-      res.status(400).json({ error: 'Email change link is invalid or expired.' });
-      return;
-    }
-    const record = await prisma.emailChangeToken.findUnique({
-      where: { tokenHash: tokenHash(token) },
-      include: { customer: true },
-    });
-    if (!record || record.usedAt || record.expiresAt <= new Date() || isRestrictedStatus(record.customer.accountStatus)) {
-      res.status(400).json({ error: 'Email change link is invalid or expired.' });
-      return;
-    }
-
-    await prisma.$transaction([
-      prisma.customer.update({
-        where: { id: record.customerId },
-        data: {
-          email: record.newEmail,
-          emailVerified: true,
-          emailVerifiedAt: new Date(),
-          accountStatus: 'REGISTERED_VERIFIED',
-        },
-      }),
-      prisma.emailChangeToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
-      prisma.customerSession.updateMany({
-        where: { customerId: record.customerId, revokedAt: null },
-        data: { revokedAt: new Date(), revokeReason: 'email_changed' },
-      }),
-    ]);
-    await logSecurityEvent(req, 'CUSTOMER_EMAIL_CHANGED', { customerId: record.customerId });
-    sendSecurityNoticeEmail(record.customer.email, record.customer.firstName || record.customer.name || 'there', 'Your Vestigia account email address was changed. If you did not request this, contact support immediately.').catch((mailError) => {
-      console.error('Old email security notice failed:', mailError);
-    });
-    res.json({ success: true, message: 'Your email address has been updated. Please sign in again.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to confirm email change' });
-  }
+    const customer = await confirmUnverifiedEmailChange(prisma, String(req.body?.token || req.query.token || ''));
+    await logSecurityEvent(req, 'CUSTOMER_EMAIL_CHANGED', {customerId: customer.id});
+    sendSecurityNoticeEmail(customer.email, customer.firstName || customer.name || 'there', 'Your Vestigia account email address was changed. If you did not request this, contact support immediately.').catch(() => console.error('Email change security notice failed.'));
+    res.json({success: true, message: 'Your email address has been verified. Please sign in again.'});
+  } catch (error) { next(error); }
 });
 
 app.put('/api/customers/change-password', authenticateToken, async (req, res) => {
@@ -1860,7 +1720,7 @@ app.post('/api/customers/reset-password', authRateLimit, async (req, res) => {
 
     let validPassword: string;
     try { validPassword = validatePassword(password); }
-    catch { return res.status(400).json({ error: 'Password must be between 12 and 128 characters.' }); }
+    catch { return res.status(400).json({ error: 'Password must be between 10 and 128 characters.' }); }
     const hashedPassword = await bcrypt.hash(validPassword, BCRYPT_ROUNDS);
     await prisma.$transaction([
       prisma.customer.update({
@@ -3214,58 +3074,7 @@ app.post('/api/orders/:id/duplicate', authenticateAdmin, async (req, res) => {
   }
 });
 
-app.get('/api/customers', authenticateAdmin, async (_req, res) => {
-  try {
-    const orders = await prisma.order.findMany({
-      select: {
-        email: true,
-        total: true,
-        date: true,
-      },
-    });
-
-    const statsByEmail = new Map<string, { orders: number; totalSpend: number; lastOrder: string }>();
-    for (const order of orders) {
-      const email = order.email.toLowerCase().trim();
-      const current = statsByEmail.get(email);
-      if (!current) {
-        statsByEmail.set(email, {
-          orders: 1,
-          totalSpend: order.total,
-          lastOrder: order.date,
-        });
-        continue;
-      }
-
-      current.orders += 1;
-      current.totalSpend += order.total;
-      if (new Date(order.date).getTime() > new Date(current.lastOrder).getTime()) {
-        current.lastOrder = order.date;
-      }
-    }
-
-    const customers = await prisma.customer.findMany({
-      where: { email: { in: Array.from(statsByEmail.keys()) } },
-    });
-
-    const serialized = customers
-      .map((customer) => {
-        const stats = statsByEmail.get(customer.email.toLowerCase().trim());
-        return {
-          ...serializeCustomer(customer),
-          orders: stats?.orders ?? 0,
-          totalSpend: stats?.totalSpend ?? 0,
-          lastOrder: stats?.lastOrder ?? customer.lastOrder ?? customer.joined,
-        };
-      })
-      .sort((a, b) => b.totalSpend - a.totalSpend);
-
-    res.json(serialized);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch customers' });
-  }
-});
+app.get('/api/customers', authenticateAdmin, adminCustomerDirectory(prisma));
 
 app.get('/api/admin/customers/:id', authenticateAdmin, async (req, res) => {
   try {

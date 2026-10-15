@@ -45,7 +45,8 @@ test('real Express routes return correct statuses, aliases, robots and fresh sit
  const app=express();let data=snapshot();const source={get:async()=>data,catalog:async()=>data,journal:async()=>[]};installStorefront(app,source as any);
  const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));const address=server.address() as {port:number};const base='http://127.0.0.1:'+address.port;
  try{
- for(const route of ['/','/shop','/collections/clothing','/product/aurelius-tee','/contact','/checkout'])assert.equal((await fetch(base+route)).status,200,route);
+ for(const route of ['/','/shop','/collections/clothing','/product/aurelius-tee','/contact','/checkout','/verify-email','/confirm-email-change'])assert.equal((await fetch(base+route)).status,200,route);
+ for(const route of ['/verify-email','/confirm-email-change'])assert.equal((await fetch(base+route)).headers.get('x-robots-tag'),'noindex');
  for(const route of ['/product/missing','/collections/missing','/not-real']){const r=await fetch(base+route);assert.equal(r.status,404);assert.equal(r.headers.get('x-robots-tag'),'noindex');}
  for(const route of ['/product/42','/product/old-tee','/shop/product/42']){const r=await fetch(base+route,{redirect:'manual'});assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/product/aurelius-tee');}
  assert.equal((await fetch(base+'/SHOP/',{redirect:'manual'})).status,301);

@@ -1,8 +1,11 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { API_BASE_URL } from "../config/api";
 import { apiErrorMessage } from "../utils/apiError";
 
 type UserProfile = {
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
+  accountStatus?: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -54,6 +57,7 @@ interface UserContextType {
   forgotPassword: (email: string) => Promise<{ success: boolean; devLink?: string; error?: string }>;
   resetPassword: (token: string, password: string) => Promise<{ success: boolean; error?: string }>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  refreshProfile: () => Promise<UserProfile | null>;
   sendVerificationCode: () => Promise<any>;
   verifyEmailCode: (code: string) => Promise<any>;
   updateEmail: (newEmail: string) => Promise<any>;
@@ -145,6 +149,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       firstName: firstName || defaultAddr?.firstName || "",
       lastName: lastName || defaultAddr?.lastName || "",
       email: cust.email,
+      emailVerified: Boolean(cust.emailVerified),
+      emailVerifiedAt: cust.emailVerifiedAt || null,
+      accountStatus: cust.accountStatus,
       phone: cust.phone || defaultAddr?.phone || "",
       phoneCountry: defaultAddr?.phoneCountry || "US",
       phoneDialCode: defaultAddr?.phoneDialCode || "+1",
@@ -156,6 +163,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       addresses,
     };
   };
+
+  const refreshProfile = useCallback(async () => {
+    if (!token) return null;
+    const data = await apiRequest("/customers/profile");
+    const profile = mapCustomerToProfile(data);
+    setUser(profile);
+    return profile;
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const onFocus = () => { void refreshProfile().catch(() => undefined); };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [token, refreshProfile]);
 
   // Fetch customer profile on mount or token change
   useEffect(() => {
@@ -375,8 +397,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const sendVerificationCode = async () => {
     try {
-      const data = await apiRequest("/customers/send-verification", {
+      const data = await apiRequest("/customers/resend-verification", {
         method: "POST",
+        body: JSON.stringify({email: user?.email}),
       });
       return { success: true, devCode: data.devCode, message: data.message };
     } catch (err: any) {
@@ -384,15 +407,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const verifyEmailCode = async (code: string) => {
+  const verifyEmailCode = async (verificationToken: string) => {
     try {
       const data = await apiRequest("/customers/verify-email", {
         method: "POST",
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ token: verificationToken }),
       });
       if (data.user) {
         setUser(mapCustomerToProfile(data.user));
       }
+      if (token) await refreshProfile().catch(() => null);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err.message };
@@ -408,7 +432,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (data.user) {
         setUser(mapCustomerToProfile(data.user));
       }
-      return { success: true, devCode: data.devCode };
+      return { success: true, message: data.message };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -470,6 +494,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         forgotPassword,
         resetPassword,
         changePassword,
+        refreshProfile,
         sendVerificationCode,
         verifyEmailCode,
         updateEmail,

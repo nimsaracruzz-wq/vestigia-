@@ -26,8 +26,8 @@ export default function ActivateAccount() {
       setErrorMessage("Invalid activation token.");
       return;
     }
-    if (password.length < 12) {
-      setErrorMessage("Password must be at least 12 characters long.");
+    if (password.length < 10 || password.length > 128) {
+      setErrorMessage("Password must be between 10 and 128 characters.");
       return;
     }
     if (password !== confirmPassword) {
@@ -93,7 +93,7 @@ export default function ActivateAccount() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 12 characters"
+                  minLength={10} maxLength={128} placeholder="10-128 characters"
                   required
                   style={{ width: "100%", padding: "0.75rem 1rem", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "0.95rem" }}
                 />

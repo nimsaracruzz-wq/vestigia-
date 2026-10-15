@@ -1,3 +1,4 @@
+import AccountEmailSettings from '../components/common/AccountEmailSettings';
 import AuthFieldMessage from '../components/common/AuthFieldMessage';
 import { validateAuthFields, type AuthFieldErrors } from '../utils/authValidation';
 import './auth-polish.css';
@@ -621,7 +622,7 @@ export default function Account() {
       const result = await registerUser({ firstName: registerFirstName.trim(), lastName: registerLastName.trim(), email: registerEmail.trim(), password: registerPassword, confirmPassword: registerConfirmPassword, country: registerAccountCountry, phone: fullPhone });
       if (!result.success) { setRegisterError(result.error || "Registration failed."); }
       else {
-        setRegisterSuccess("Your account has been created. Please check your email to verify your account, then sign in.");
+        setRegisterSuccess("Your account has been created. You can sign in now. Please check your email to verify your account.");
         setLoginEmail(registerEmail.trim());
         setLoginPassword("");
         setLoginError("");
@@ -661,7 +662,7 @@ export default function Account() {
     setResetError(""); setResetMessage("");
     if (!tokenParam) { setResetError("Reset token is missing from the URL."); return; }
     if (!resetNewPassword) { setResetError("Please enter a new password."); return; }
-    if (resetNewPassword.length < 12 || resetNewPassword.length > 128) { setResetError("Use a password between 12 and 128 characters."); return; }
+    if (resetNewPassword.length < 10 || resetNewPassword.length > 128) { setResetError("Use a password between 10 and 128 characters."); return; }
     if (resetNewPassword !== resetConfirmPassword) { setResetError("Passwords do not match."); return; }
     setFormLoading(true);
     const result = await resetPassword(tokenParam, resetNewPassword);
@@ -682,6 +683,7 @@ export default function Account() {
     e.preventDefault();
     setChangePwdError(""); setChangePwdMessage("");
     if (!changeOldPassword || !changeNewPassword) { setChangePwdError("Current password and new password are required."); return; }
+    if (changeNewPassword.length < 10 || changeNewPassword.length > 128) { setChangePwdError("Use a password between 10 and 128 characters."); return; }
     if (changeNewPassword !== changeConfirmPassword) { setChangePwdError("Passwords do not match."); return; }
     setFormLoading(true);
     const result = await changePassword(changeOldPassword, changeNewPassword);
@@ -721,7 +723,7 @@ export default function Account() {
               <label htmlFor="rst-pwd">New Password</label>
               <div className="input-with-icon">
                 <Lock size={16} />
-                <input id="rst-pwd" type="password" autoComplete="new-password" minLength={12} maxLength={128} value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)} placeholder="12–128 characters" required />
+                <input id="rst-pwd" type="password" autoComplete="new-password" minLength={10} maxLength={128} value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)} placeholder="10–128 characters" required />
               </div>
             </div>
             <div className="form-input-box full-width">
@@ -760,7 +762,7 @@ export default function Account() {
                   <p>Access your orders and account settings.</p>
                 </div>
                 <form onSubmit={handleLoginSubmit} className="auth-card-form" noValidate aria-busy={formLoading} onBlurCapture={onAuthBlur} onChangeCapture={onAuthChange}>
-                  {registerSuccess && <div className="auth-registration-notice" role="status"><CheckCircle size={20} aria-hidden="true" /><div><strong>Account created</strong><p>Check your email to verify your account, then sign in.</p></div></div>}
+                  {registerSuccess && <div className="auth-registration-notice" role="status"><CheckCircle size={20} aria-hidden="true" /><div><strong>Account created</strong><p>You can sign in now. Check your email to verify your account.</p></div></div>}
                   {loginError && <div id="login-submit-error" tabIndex={-1} className="auth-error-alert" role="alert">{loginError}</div>}
                   <div className="form-input-box full-width">
                     <label htmlFor="login-email">Email Address</label>
@@ -864,7 +866,7 @@ export default function Account() {
                     <label htmlFor="reg-pass">Password</label>
                     <div className="input-with-icon">
                       <Lock size={16} aria-hidden="true" />
-                      <input id="reg-pass" {...authInputProps('reg-pass', 'reg-pass-help')} type={showRegisterPassword ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={128} value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Create strong password" required />
+                      <input id="reg-pass" {...authInputProps('reg-pass', 'reg-pass-help')} type={showRegisterPassword ? "text" : "password"} autoComplete="new-password" minLength={10} maxLength={128} value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Create strong password" required />
                       <button type="button" disabled={formLoading} onClick={() => setShowRegisterPassword(value => !value)} className="password-toggle-btn" aria-label={showRegisterPassword ? "Hide password" : "Show password"} aria-pressed={showRegisterPassword} aria-controls="reg-pass">
                         {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -1280,7 +1282,7 @@ export default function Account() {
                     <input id="prof-lname" type="text" defaultValue={user?.lastName || ""} />
                   </div>
                   <div className="form-input-box full-width">
-                    <label htmlFor="prof-email">Email Address <span className="field-locked-note">— cannot be changed</span></label>
+                    <label htmlFor="prof-email">Email Address <span className="field-locked-note">{user?.emailVerified ? "Verified and locked" : "Verification pending"}</span></label>
                     <input id="prof-email" type="email" value={user?.email || ""} disabled />
                   </div>
                   <div className="form-input-box full-width">
@@ -1303,6 +1305,7 @@ export default function Account() {
                   </button>
                 </Reveal>
 
+                <AccountEmailSettings />
                 <div className="profile-section-divider" />
 
                 <Reveal className="pane-section-header">
@@ -1317,7 +1320,7 @@ export default function Account() {
                   </div>
                   <div className="form-input-box">
                     <label htmlFor="prof-pwd-new">New Password</label>
-                    <input id="prof-pwd-new" type="password" value={changeNewPassword} onChange={(e) => setChangeNewPassword(e.target.value)} placeholder="Minimum 6 characters" required />
+                    <input id="prof-pwd-new" type="password" minLength={10} maxLength={128} value={changeNewPassword} onChange={(e) => setChangeNewPassword(e.target.value)} placeholder="Minimum 10 characters" required />
                   </div>
                   <div className="form-input-box">
                     <label htmlFor="prof-pwd-conf">Confirm Password</label>

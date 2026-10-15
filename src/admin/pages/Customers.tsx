@@ -2,6 +2,7 @@ import { Reveal } from "../../animation/Reveal";
 import { moneyLabel, salesByCurrency } from "../../utils/money";
 import { useState, useMemo } from "react";
 import { useAdmin } from "../AdminContext";
+import { Link } from "react-router-dom";
 import { 
   Search, ArrowLeft, Mail, Phone, Calendar, 
   ShoppingBag, DollarSign, Award, ChevronDown, ChevronUp, MapPin 
@@ -69,9 +70,7 @@ export default function Customers() {
   };
 
   if (selectedCustomer) {
-    const avgOrderValue = selectedCustomer.orders > 0 
-      ? selectedCustomer.totalSpend / selectedCustomer.orders 
-      : 0;
+
 
     return (
       <div className="admin-page">
@@ -251,8 +250,9 @@ export default function Customers() {
       <Reveal className="admin-page-header">
         <div>
           <h1>Customers</h1>
-          <p>View customer history and lifetime value.</p>
+          <p>All customer records, including registered accounts and guest checkouts.</p>
         </div>
+        <Link to="/admin/users" className="admin-btn admin-btn-secondary">Registered users</Link>
       </Reveal>
 
       <Reveal variant="fade" className="admin-panel">

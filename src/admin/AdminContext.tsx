@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, ReactNode } from "react";
 import { readPublicBootstrap } from '../homepage/bootstrap';
 import { API_BASE_URL } from "../config/api";
 import { apiErrorMessage } from "../utils/apiError";
@@ -58,10 +58,18 @@ export type Customer = {
   name: string;
   email: string;
   orders: number;
-  totalSpend: number;
   joined: string;
-  lastOrder: string;
-  phone?: string;
+  lastOrder: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  country?: string | null;
+  customerType?: string;
+  activationStatus?: string;
+  accountStatus?: string;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
+  lastLogin?: string | null;
+  phone?: string | null;
   addresses?: string;
 };
 
@@ -107,6 +115,9 @@ interface AdminContextType {
   products: Product[];
   orders: Order[];
   customers: Customer[];
+  customersLoaded: boolean;
+  customerDataError: string | null;
+  refreshCustomers: () => Promise<void>;
   promoCodes: PromoCode[];
   settings: StoreSettings;
   journal: JournalArticle[];
@@ -245,6 +256,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(()=>readPublicBootstrap()?.products||[]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customersLoaded, setCustomersLoaded] = useState(false);
+  const [customerDataError, setCustomerDataError] = useState<string | null>(null);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [settings, setSettings] = useState<StoreSettings>(() => ({
     ...DEFAULT_SETTINGS,
@@ -263,6 +276,22 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     return savedAuth;
   });
   const [isSynced, setIsSynced] = useState(()=>!!readPublicBootstrap());
+
+  const refreshCustomers = useCallback(async () => {
+    if (!getAdminToken()) return;
+    setCustomerDataError(null);
+    try {
+      const data = await apiRequest("/customers");
+      if (!Array.isArray(data)) throw new Error("Invalid customer response");
+      setCustomers(data as Customer[]);
+      setCustomersLoaded(true);
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      setCustomerDataError(status === 401 || status === 403
+        ? "Your admin session expired. Sign out and sign in again."
+        : "Customer accounts could not be loaded. Please try refreshing.");
+    }
+  }, []);
 
   const refreshOrdersAndCustomers = async () => {
     const token = getAdminToken();
@@ -284,12 +313,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       }
       setAdminDataError("Orders could not be loaded. Check that the backend is running and refresh.");
     }
-    try {
-      const remoteCustomers = await apiRequest("/customers");
-      if (Array.isArray(remoteCustomers)) setCustomers(remoteCustomers as Customer[]);
-    } catch (e) {
-      console.error("Failed to fetch customers:", e);
-    }
+    await refreshCustomers();
   };
 
   useEffect(() => {
@@ -519,7 +543,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   return (
     <AdminContext.Provider value={{
-      products, orders, customers, promoCodes, settings, journal, journalLoaded,
+      products, orders, customers, customersLoaded, customerDataError, refreshCustomers, promoCodes, settings, journal, journalLoaded,
       addProduct, updateProduct, deleteProduct, updateProductInventory,
       updateOrderStatus, updateOrderNotes, updateOrderShipping, duplicateOrder,
       addPromoCode, togglePromoCode, deletePromoCode,

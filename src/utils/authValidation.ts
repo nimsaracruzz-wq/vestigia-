@@ -19,7 +19,7 @@ export function validateAuthFields(form: AuthForm, fields: AuthFields): AuthFiel
       else if (fields[field]!.trim().length > 80) errors[id] = `Your ${label} cannot exceed 80 characters.`;
     }
     if (!fields.country) errors['reg-country'] = 'Select your country.';
-    if (!fields.password || fields.password.length < 12 || fields.password.length > 128) errors['reg-pass'] = 'Use a password between 12 and 128 characters.';
+    if (!fields.password || fields.password.length < 10 || fields.password.length > 128) errors['reg-pass'] = 'Use a password between 10 and 128 characters.';
     if (!fields.confirmPassword) errors['reg-pass-conf'] = 'Confirm your password.';
     else if (fields.password !== fields.confirmPassword) errors['reg-pass-conf'] = 'Passwords do not match.';
     if (fields.phone?.trim()) {

@@ -43,6 +43,7 @@ export default function AdminShell() {
     { name: "Dashboard", path: "/admin", icon: <LayoutDashboard size={22} />, exact: true },
     { name: "Orders", path: "/admin/orders", icon: <Package size={22} /> },
     { name: "Customers", path: "/admin/customers", icon: <Users size={22} /> },
+    { name: "Registered users", path: "/admin/users", icon: <Users size={22} /> },
     { name: "Analytics", path: "/admin/analytics", icon: <BarChart2 size={22} /> },
     { name: "Marketing", path: "/admin/promotions", icon: <Monitor size={22} /> },
   ];
