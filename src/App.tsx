@@ -1,4 +1,6 @@
 import EmailVerificationNotice from './components/common/EmailVerificationNotice';
+import SiteTrafficTracker from './components/common/SiteTrafficTracker';
+const VisitorAnalytics = lazy(() => import('./admin/pages/VisitorAnalytics'));
 import { HomepageProvider, useHomepage } from './homepage/HomepageContext';
 import CmsFooter from './homepage/CmsFooter';
 const HomepageAdmin = lazy(() => import('./admin/homepage/HomepageAdmin'));
@@ -177,6 +179,7 @@ function AdminAppShell() {
         <Route path="customers" element={<Customers />} />
         <Route path="users" element={<RegisteredUsers />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="visitors" element={<VisitorAnalytics />} />
         <Route path="promotions" element={<Promotions />} />
         <Route path="shipping" element={<AdminShipping />} />
         <Route path="journal" element={<AdminJournal />} />
@@ -203,6 +206,7 @@ export default function App() {
               <CookieConsentProvider>
                 <HomepageProvider><BrowserRouter>
                   <ScrollToTop />
+                  <SiteTrafficTracker />
                   <Suspense fallback={<div className="route-loading" role="status">Loading page...</div>}>
                     <Routes>
                       <Route path="/admin/*" element={<AdminAppShell />} />

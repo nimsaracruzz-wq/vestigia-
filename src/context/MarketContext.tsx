@@ -1,14 +1,14 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { MARKETS, marketForCurrency, type Currency, type Market, formatMoney, toMinor } from '../../shared/money';
+import { localeCurrency, visitorCurrency } from '../../shared/visitorCurrency';
 export type CurrencyCode = Currency;
 function savedCurrency(): Currency {
   const locked = sessionStorage.getItem('vestigia_checkout_currency');
   const requested = new URLSearchParams(window.location.search).get('currency');
   const landingCurrency = ['EUR','USD','JPY','GBP'].includes(requested||'') ? requested : null;
-  const saved = locked || landingCurrency || localStorage.getItem('vstigia_currency');
+  const saved = locked || landingCurrency || localStorage.getItem('vstigia_currency') || sessionStorage.getItem('vestigia_detected_currency');
   if (['JPY','USD','EUR','GBP'].includes(saved || '')) return saved as Currency;
-  const locale = navigator.language.toUpperCase();
-  return locale.includes('JP') ? 'JPY' : locale.includes('GB') ? 'GBP' : 'EUR';
+  return localeCurrency(navigator.language);
 }
 type Context = { currency: Currency; market: Market; priceListId: string; setCurrency: (c: Currency) => void; formatPrice: (amount: number) => string; rates: null; isLoading: boolean; lockCheckout: () => void; unlockCheckout: () => void; checkoutLocked: boolean };
 const MarketContext = createContext<Context | undefined>(undefined);
@@ -29,43 +29,25 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const requested=new URLSearchParams(window.location.search).get('currency');
     if(['EUR','USD','JPY','GBP'].includes(requested||'')&&!sessionStorage.getItem('vestigia_checkout_currency'))localStorage.setItem('vstigia_currency',requested!);
-    const onStorage=(event: StorageEvent)=> { if(event.key==='vstigia_currency'&&!sessionStorage.getItem('vestigia_checkout_currency'))setState(savedCurrency()); };
-    window.addEventListener('storage',onStorage);
-    const syncAvailableMarket = async () => {
-      if (sessionStorage.getItem('vestigia_checkout_currency')) return;
-      try {
-        const response = await fetch('/api/markets');
-        const lists = await response.json();
-        const activeCurrencies = Array.isArray(lists)
-          ? lists.filter((list: any) => list.status === 'ACTIVE').map((list: any) => list.currency)
-          : [];
-        if (activeCurrencies.length && !activeCurrencies.includes(currency)) {
-          const next = activeCurrencies[0] as Currency;
-          localStorage.setItem('vstigia_currency', next);
-          explicit.current = false;
-          setState(next);
-        }
-      } catch {
-        // Keep the local default when the market endpoint is temporarily unavailable.
+    const onStorage=(event: StorageEvent)=> {
+      if(event.key==='vstigia_currency'&&!sessionStorage.getItem('vestigia_checkout_currency')) {
+        explicit.current = ['EUR','USD','JPY','GBP'].includes(event.newValue || '');
+        setState(savedCurrency());
       }
     };
-    void syncAvailableMarket();
+    window.addEventListener('storage',onStorage);
     // A saved selection and an active checkout always outrank a late geolocation response.
     if (!explicit.current && !sessionStorage.getItem('vestigia_checkout_currency')) {
       const controller = new AbortController();
       const timer=setTimeout(()=>controller.abort(),4000);
       fetch('https://ipwho.is/',{signal:controller.signal}).then(r=>r.json()).then(data=>{
         if(!data.success || explicit.current || sessionStorage.getItem('vestigia_checkout_currency'))return;
-        const code=data.country_code;
-        const c:Currency=code==='JP'?'JPY':code==='GB'?'GBP':['AT','BE','BG','CY','EE','FI','FR','DE','GR','IE','IT','HR','LV','LT','LU','MT','NL','PT','SK','SI','ES'].includes(code)?'EUR':'EUR';
-        // Once an item is in the bag, automatic market changes stop.
+        if(controller.signal.aborted || !/^[A-Z]{2}$/i.test(data.country_code || ''))return;
+        // Never reprice a bag automatically or override a newer manual selection.
         if(JSON.parse(localStorage.getItem('vestigia_cart')||'[]').length)return;
-        fetch('/api/markets').then(r=>r.json()).then(lists=>{
-          const activeCurrencies = Array.isArray(lists)
-            ? lists.filter((list: any) => list.status === 'ACTIVE').map((list: any) => list.currency)
-            : [];
-          if (activeCurrencies.includes(c) && !explicit.current && !sessionStorage.getItem('vestigia_checkout_currency')) setState(c);
-        }).catch(()=>{});
+        const detected = visitorCurrency(data.country_code);
+        sessionStorage.setItem('vestigia_detected_currency', detected);
+        setState(detected);
       }).catch(()=>{}).finally(()=>clearTimeout(timer));
       return()=>{controller.abort();clearTimeout(timer);window.removeEventListener('storage',onStorage);};
     }

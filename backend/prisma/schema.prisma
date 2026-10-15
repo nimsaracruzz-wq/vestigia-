@@ -703,3 +703,25 @@ model GiftCard {
   active Boolean @default(true)
   createdAt DateTime @default(now())
 }
+
+model TrafficSession {
+  id String @id
+  visitorId String
+  startedAt DateTime @default(now())
+  lastSeen DateTime @default(now())
+  path String
+  device String
+  referrer String
+  @@index([lastSeen])
+}
+
+model TrafficPageView {
+  id String @id
+  sessionId String
+  visitorId String
+  path String
+  device String
+  referrer String
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}

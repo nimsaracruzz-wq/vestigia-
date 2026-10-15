@@ -45,6 +45,7 @@ export default function AdminShell() {
     { name: "Customers", path: "/admin/customers", icon: <Users size={22} /> },
     { name: "Registered users", path: "/admin/users", icon: <Users size={22} /> },
     { name: "Analytics", path: "/admin/analytics", icon: <BarChart2 size={22} /> },
+    { name: "Visitor monitoring", path: "/admin/visitors", icon: <Activity size={22} /> },
     { name: "Marketing", path: "/admin/promotions", icon: <Monitor size={22} /> },
   ];
   const financeNavItems = [

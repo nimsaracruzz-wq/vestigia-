@@ -39,6 +39,20 @@ test('initial product HTML has single metadata, H1, matching money, product sche
  for(const match of html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g))assert.doesNotThrow(()=>JSON.parse(match[1]));
  const usd=storefrontHtml(template,snapshot(),'/product/aurelius-tee','?currency=USD');assert.match(usd,/79.00/);assert.match(usd,/"priceCurrency":"USD"/);
 });
+
+test('regional prices keep the same canonical URL and match initial HTML structured offers',()=>{
+ const regional={...product,prices:{...product.prices,JPY:{priceMinor:12000,isActive:true}}};
+ for(const [currency,price] of [['JPY','12000'],['EUR','65.00'],['USD','79.00']] as const){
+  const data={...snapshot(),products:[regional]};
+  const html=storefrontHtml(template,data,'/product/aurelius-tee','?currency='+currency);
+  assert.match(html,new RegExp('"priceCurrency":"'+currency+'"'));
+  const schema=productSchema(regional,currency) as any;
+  assert.equal(schema.hasVariant[0].offers.price,price);
+  assert.match(html,/rel="canonical" href="https:\/\/thevestigia.com\/product\/aurelius-tee"/);
+  assert.equal(urlPolicy('/product/aurelius-tee','?currency='+currency).noIndex,false);
+  assert.equal(urlPolicy('/','?currency='+currency).canonical,'/');
+ }
+});
 test('real Express routes return correct statuses, aliases, robots and fresh sitemap',async()=>{
  const folder=await fs.mkdtemp(path.join(os.tmpdir(),'vestigia-seo-'));await fs.writeFile(path.join(folder,'index.html'),template);
  const previous=process.env.STOREFRONT_DIST;process.env.STOREFRONT_DIST=folder;

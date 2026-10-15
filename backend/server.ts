@@ -1,4 +1,5 @@
 import { validatePassword } from '../shared/passwordPolicy.js';
+import { installSiteTraffic } from './utils/siteTraffic.js';
 import { correctUnverifiedEmail, verifyCustomerEmail, confirmUnverifiedEmailChange } from './utils/customerEmail.js';
 import { adminCustomerDirectory } from './utils/adminCustomers.js';
 import { saveInventory } from './utils/inventoryManagement.js';
@@ -4554,6 +4555,7 @@ async function maybeRunScheduledBackup() {
 }
 
 const publishedStorefront=installHomepageRoutes(app, prisma, authenticateAdmin, adminWriteRateLimit, serializeProduct);
+installSiteTraffic(app, prisma, authenticateAdmin);
 installPricingRoutes(app, prisma, authenticateAdmin, stripe, allowMockPayments);
 
 installStorefront(app,publishedStorefront);

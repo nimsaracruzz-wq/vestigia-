@@ -33,7 +33,7 @@ export default function CookieConsent() {
           <div className="cookie-consent-copy">
             <p className="cookie-consent-eyebrow">YOUR PRIVACY MATTERS</p>
             <p id="cookie-consent-title" className="cookie-consent-description">
-              We use essential storage to improve your experience, keep your account and cart working, and keep VESTIGIA secure.
+              We use essential storage for your account, cart, and site security. With your permission, optional analytics measure public page visits and browser sessions.
             </p>
             <Link to="/privacy-policy" className="cookie-consent-policy">Privacy Policy</Link>
           </div>
@@ -57,7 +57,7 @@ export default function CookieConsent() {
             <div className="cookie-preferences-heading">
               <p className="cookie-consent-eyebrow">PRIVACY</p>
               <h2 id="cookie-preferences-title">Cookie Preferences</h2>
-              <p>Choose which optional categories you want to allow. VESTIGIA currently does not load analytics or marketing trackers.</p>
+              <p>Optional first-party analytics measure public page visits and active browser sessions. No marketing trackers are loaded. You can change these choices at any time.</p>
             </div>
 
             <div className="cookie-preference-row">
