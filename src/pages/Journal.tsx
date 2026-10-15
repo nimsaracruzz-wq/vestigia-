@@ -5,11 +5,13 @@ import { PageIntro } from '../animation/PageIntro';
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { Clock, ArrowLeft, ArrowRight } from "lucide-react";
 import { m as motion, AnimatePresence } from "framer-motion";
-import { journalArticles } from "../data";
+import { useAdmin } from "../admin/AdminContext";
+import NotFound from "./NotFound";
 
 import { SEOHead } from "../components/common/SEOHead";
 
 export default function Journal() {
+  const { journal: journalArticles, journalLoaded } = useAdmin();
   const { articleId } = useParams<{ articleId?: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,6 +45,10 @@ export default function Journal() {
     "url": "https://thevestigia.com/journal",
     "isPartOf": { "@id": "https://thevestigia.com/#website" }
   };
+
+  if (readId && !activeArticle) {
+    return journalLoaded ? <NotFound /> : <p role="status">Loading article...</p>;
+  }
 
   return (
     <div

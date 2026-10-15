@@ -42,7 +42,7 @@ test('initial product HTML has single metadata, H1, matching money, product sche
 test('real Express routes return correct statuses, aliases, robots and fresh sitemap',async()=>{
  const folder=await fs.mkdtemp(path.join(os.tmpdir(),'vestigia-seo-'));await fs.writeFile(path.join(folder,'index.html'),template);
  const previous=process.env.STOREFRONT_DIST;process.env.STOREFRONT_DIST=folder;
- const app=express();let data=snapshot();const source={get:async()=>data,catalog:async()=>data};installStorefront(app,source as any);
+ const app=express();let data=snapshot();const source={get:async()=>data,catalog:async()=>data,journal:async()=>[]};installStorefront(app,source as any);
  const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));const address=server.address() as {port:number};const base='http://127.0.0.1:'+address.port;
  try{
  for(const route of ['/','/shop','/collections/clothing','/product/aurelius-tee','/contact','/checkout'])assert.equal((await fetch(base+route)).status,200,route);

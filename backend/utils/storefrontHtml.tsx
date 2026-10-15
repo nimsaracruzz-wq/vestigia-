@@ -1,4 +1,4 @@
-import { journalArticles } from '../../src/data.js';
+import type { JournalArticle } from '../../src/data.js';
 import { renderToString } from 'react-dom/server';
 import PublicStorefront from '../../shared/PublicStorefront.js';
 import { catalog } from '../../shared/seo/catalog.js';
@@ -31,7 +31,7 @@ export function storefrontHtml(template:string,snapshot:PublicSnapshot,pathname=
  const markup=renderToString(<PublicStorefront config={snapshot.config} products={snapshot.products} pathname={pathname} search={search}/>);
  return html.replace(/<div id="root"><\/div>/,()=>'<div id="root">'+markup+'</div><script id="vestigia-public-data" type="application/json">'+safeJson(snapshot)+'</script>');
 }
-export function fallbackHtml(template:string,pathname:string,missing=false){
+export function fallbackHtml(template:string,pathname:string,missing=false,journalArticles:JournalArticle[]=[]){
  const base=process.env.PUBLIC_SITE_URL||SITE,article=journalArticles.find(a=>pathname==='/journal/'+a.id),page=article?{title:article.title,description:article.excerpt}:staticPages[pathname];
  const canonical=new URL(pathname,base).href;
  const faqSchema={'@context':'https://schema.org','@type':'FAQPage',mainEntity:[{name:'Where do VESTIGIA garments ship from?','@type':'Question',acceptedAnswer:{'@type':'Answer',text:'All garments are dispatched directly from our luxury studio in Sri Lanka, where each piece undergoes meticulous hand-inspection prior to express shipment via DHL, FedEx, or UPS.'}},{name:'How long does shipping take?','@type':'Question',acceptedAnswer:{'@type':'Answer',text:'Standard express delivery takes 3 to 5 business days for Western Europe, North America, and Australia. Orders are processed within 24 to 48 hours.'}},{name:'Is complimentary shipping available?','@type':'Question',acceptedAnswer:{'@type':'Answer',text:'Yes, we offer complimentary express delivery worldwide on all orders exceeding $150 (€140 / ¥22,000).'}},{name:'What is your return policy?','@type':'Question',acceptedAnswer:{'@type':'Answer',text:'We offer a 30-day complimentary return period. Garments must be unworn, unwashed, with all original tags attached. Returns are refunded back to your original payment method.'}},{name:'How do VESTIGIA garments fit?','@type':'Question',acceptedAnswer:{'@type':'Answer',text:'Our garments feature a refined contemporary oversized silhouette with relaxed shoulders. We recommend choosing your standard size for the intended structured drop-shoulder fit, or sizing down for a closer fit.'}},{name:'What fabric quality does VESTIGIA use?','@type':'Question',acceptedAnswer:{'@type':'Answer',text:'We use 280 GSM (Grams per Square Meter) combed organic heavyweight cotton jersey, offering exceptional structure, softness, and longevity.'}}]};

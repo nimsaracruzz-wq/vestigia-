@@ -1,3 +1,4 @@
+import type { JournalArticle } from '../../src/data.js';
 import type { PrismaClient } from '@prisma/client';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -11,6 +12,10 @@ export class PublishedStorefront {
  private ready:Promise<void>;
  constructor(private db:PrismaClient,private serialize:(p:any)=>any,private ensure:()=>Promise<any>,private file=path.resolve(process.env.PUBLIC_SNAPSHOT_PATH||'private/published-storefront.json')){
   this.ready=fs.readFile(file,'utf8').then(raw=>{const saved=JSON.parse(raw);this.snapshot={config:publicHomepage(saved.config),products:Array.isArray(saved.products)?saved.products.filter((p:any)=>p.published!==false):[],version:Number(saved.version)||0};}).catch(()=>{});
+ }
+ async journal():Promise<JournalArticle[]>{
+  const articles=await this.db.journalArticle.findMany({orderBy:[{date:'desc'},{id:'desc'}]});
+  return articles.map(article=>({...article,content:JSON.parse(article.content) as string[]}));
  }
  async catalog():Promise<PublicSnapshot>{
   const [snapshot,products]=await Promise.all([this.get(),this.db.product.findMany({include:{prices:true,inventory:true,reviews:true},orderBy:{id:'asc'}})]);

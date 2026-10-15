@@ -3469,7 +3469,7 @@ app.delete('/api/promos/:id', authenticateAdmin, async (req, res) => {
 app.get('/api/journal', async (_req, res) => {
   try {
     const articles = await prisma.journalArticle.findMany({ orderBy: { date: 'desc' } });
-    res.json(articles.map(serializeJournalArticle));
+    res.set('Cache-Control', 'no-store').json(articles.map(serializeJournalArticle));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch journal articles' });

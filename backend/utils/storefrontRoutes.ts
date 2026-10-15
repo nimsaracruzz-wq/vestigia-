@@ -1,4 +1,3 @@
-import { journalArticles } from '../../src/data.js';
 import { installSeoRoutes } from './seoRoutes.js';
 import { productRoute } from '../../shared/seo/product.js';
 import { catalog } from '../../shared/seo/catalog.js';
@@ -30,5 +29,5 @@ export function installStorefront(app:Express,published:PublishedStorefront){
  res.set('Cache-Control','no-cache').type('html').send(storefrontHtml(template,snapshot,req.path,search));
  }catch{res.status(503).set('Retry-After','60').set('X-Robots-Tag','noindex').type('text').send('Store temporarily unavailable. Please try again.');}});
  app.use(express.static(directory,{index:false,maxAge:'1h'}));
- app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)|\/assets(?:\/|$)).*/,(req,res)=>{const article=journalArticles.find(a=>req.path==='/journal/'+a.id);const missing=!staticPages[req.path]&&!privateRoute(req.path)&&!article;if(missing||privateRoute(req.path)||process.env.SEO_NOINDEX==='true')res.set('X-Robots-Tag','noindex');res.status(missing?404:200).set('Cache-Control','no-store').type('html').send(fallbackHtml(template,req.path,missing));});
+ app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)|\/assets(?:\/|$)).*/,async(req,res)=>{try{const journalArticles=req.path==='/journal'||req.path.startsWith('/journal/')?await published.journal():[];const article=journalArticles.find(a=>req.path==='/journal/'+a.id);const missing=!staticPages[req.path]&&!privateRoute(req.path)&&!article;if(missing||privateRoute(req.path)||process.env.SEO_NOINDEX==='true')res.set('X-Robots-Tag','noindex');res.status(missing?404:200).set('Cache-Control','no-store').type('html').send(fallbackHtml(template,req.path,missing,journalArticles));}catch{res.status(503).set('Retry-After','5').type('text').send('Journal temporarily unavailable. Please try again.');}});
 }

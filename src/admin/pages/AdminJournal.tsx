@@ -7,6 +7,8 @@ import { Plus, Edit2, Trash2 } from "lucide-react";
 
 export default function AdminJournal() {
   const { journal, addJournalArticle, updateJournalArticle, deleteJournalArticle } = useAdmin();
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<JournalArticle | null>(null);
 
@@ -38,9 +40,16 @@ export default function AdminJournal() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number, title: string) => {
-    if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
-      deleteJournalArticle(id);
+  const handleDelete = async (id: number, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+    setDeleteError("");
+    setDeletingId(id);
+    try {
+      await deleteJournalArticle(id);
+    } catch {
+      setDeleteError("The article could not be deleted. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -76,6 +85,7 @@ export default function AdminJournal() {
         </button>
       </Reveal>
 
+      {deleteError && <p role="alert" className="text-danger">{deleteError}</p>}
       <Reveal variant="fade" className="admin-panel">
         <div className="admin-panel-content p-0">
           <table className="admin-table">
@@ -100,7 +110,7 @@ export default function AdminJournal() {
                       <button onClick={() => handleEditClick(article)} title="Edit">
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => handleDelete(article.id, article.title)} className="text-danger" title="Delete">
+                      <button onClick={() => handleDelete(article.id, article.title)} className="text-danger" title="Delete" disabled={deletingId !== null}>
                         <Trash2 size={16} />
                       </button>
                     </div>

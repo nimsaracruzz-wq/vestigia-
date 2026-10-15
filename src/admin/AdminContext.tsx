@@ -4,7 +4,6 @@ import { API_BASE_URL } from "../config/api";
 import { apiErrorMessage } from "../utils/apiError";
 import {
   products as initialProducts,
-  journalArticles as initialJournal,
   type Product,
   type JournalArticle,
 } from "../data";
@@ -111,6 +110,7 @@ interface AdminContextType {
   promoCodes: PromoCode[];
   settings: StoreSettings;
   journal: JournalArticle[];
+  journalLoaded: boolean;
   addProduct: (p: Omit<Product, "id">) => Promise<void>;
   updateProduct: (p: Product) => Promise<void>;
   deleteProduct: (id: number) => void;
@@ -125,7 +125,7 @@ interface AdminContextType {
   updateSettings: (s: StoreSettings) => void;
   addJournalArticle: (a: Omit<JournalArticle, "id">) => void;
   updateJournalArticle: (a: JournalArticle) => void;
-  deleteJournalArticle: (id: number) => void;
+  deleteJournalArticle: (id: number) => Promise<void>;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   isSynced: boolean;
@@ -249,7 +249,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<StoreSettings>(() => ({
     ...DEFAULT_SETTINGS,
   }));
-  const [journal, setJournal] = useState<JournalArticle[]>(() => initialJournal);
+  const [journal, setJournal] = useState<JournalArticle[]>([]);
+  const [journalLoaded, setJournalLoaded] = useState(false);
   const [adminDataError, setAdminDataError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const token = getAdminToken();
@@ -322,6 +323,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
       if (journalRes.status === "fulfilled" && Array.isArray(journalRes.value)) {
         setJournal(journalRes.value as JournalArticle[]);
+        setJournalLoaded(true);
       }
 
       // Admin-only data (orders, customers)
@@ -476,9 +478,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }).catch(() => undefined);
   };
 
-  const deleteJournalArticle = (id: number) => {
+  const deleteJournalArticle = async (id: number) => {
+    await apiRequest(`/journal/${id}`, { method: "DELETE" });
     setJournal(prev => prev.filter(x => x.id !== id));
-    void apiRequest(`/journal/${id}`, { method: "DELETE" }).catch(() => undefined);
   };
 
   const login = async (username: string, password: string) => {
@@ -517,7 +519,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   return (
     <AdminContext.Provider value={{
-      products, orders, customers, promoCodes, settings, journal,
+      products, orders, customers, promoCodes, settings, journal, journalLoaded,
       addProduct, updateProduct, deleteProduct, updateProductInventory,
       updateOrderStatus, updateOrderNotes, updateOrderShipping, duplicateOrder,
       addPromoCode, togglePromoCode, deletePromoCode,

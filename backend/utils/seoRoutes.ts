@@ -1,4 +1,3 @@
-import { journalArticles } from '../../src/data.js';
 import type { Express } from 'express';
 import type { PublishedStorefront } from './publishedStorefront.js';
 import { SITE,productRoute,canonicalProduct } from '../../shared/seo/product.js';
@@ -30,6 +29,7 @@ export function installSeoRoutes(app:Express,published:PublishedStorefront){
   res.set('Cache-Control','no-cache').type('xml').send(xml);
   return;
  }
+ const journalArticles=(!kind||kind==='journal')?await published.journal():[];
  const today='2026-09-26';
  const prodMap=new Map(indexable.map(p=>[productRoute(p),p]));
  let paths=kind==='products'?indexable.map(productRoute):kind==='categories'?links.map(l=>l.path):kind==='journal'?journalArticles.map(a=>'/journal/'+a.id):kind==='pages'?Object.keys(staticPages):[...Object.keys(staticPages),...journalArticles.map(a=>'/journal/'+a.id),...links.map(l=>l.path),...indexable.map(productRoute)];
