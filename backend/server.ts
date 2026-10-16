@@ -4406,14 +4406,16 @@ app.post('/api/admin/shipping/import', async (req, res) => {
     if (enabled) await prisma.shippingCountry.updateMany({ data: { isEnabled: false } });
     for (const c of countries) {
       if (c.countryCode) {
+        const region = c.regionName ? await prisma.shippingRegion.findFirst({ where: { name: String(c.regionName) } }) : null;
         await prisma.shippingCountry.upsert({
           where: { countryCode: String(c.countryCode).toUpperCase() },
           update: {
+            ...(region ? { regionId: region.id } : {}),
             isEnabled: c.isEnabled !== undefined ? Boolean(c.isEnabled) : true,
             ...(c.taxRateBps !== undefined ? { taxRateBps: normalizeCountryTaxRate(c.taxRateBps) } : {}),
           },
           create: {
-            regionId: Number(c.regionId || 1),
+            regionId: region?.id || Number(c.regionId || 1),
             countryCode: String(c.countryCode).toUpperCase(),
             countryName: String(c.countryName || c.countryCode),
             isEnabled: c.isEnabled !== undefined ? Boolean(c.isEnabled) : true,
@@ -4427,7 +4429,7 @@ app.post('/api/admin/shipping/import', async (req, res) => {
 
     let methodsCount = 0;
     if (Array.isArray(shippingMethods)) for (const method of shippingMethods) {
-      const region = method.regionId ? await prisma.shippingRegion.findUnique({ where: { id: Number(method.regionId) } }) : await prisma.shippingRegion.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
+      const region = method.regionName ? await prisma.shippingRegion.findFirst({ where: { name: String(method.regionName) } }) : method.regionId ? await prisma.shippingRegion.findUnique({ where: { id: Number(method.regionId) } }) : await prisma.shippingRegion.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
       if (!region || !method.name) continue;
       const existing = await prisma.shippingMethod.findFirst({ where: { regionId: region.id, name: String(method.name) } });
       const saved = existing
