@@ -4395,13 +4395,15 @@ app.get('/api/admin/shipping/export', async (_req, res) => {
 // POST /api/admin/shipping/import (CSV / JSON Import)
 app.post('/api/admin/shipping/import', async (req, res) => {
   try {
-    const { countries } = req.body ?? {};
+    const { countries, shippingMethods, policy } = req.body ?? {};
     if (!Array.isArray(countries)) {
       res.status(400).json({ error: 'Array of countries data is required' });
       return;
     }
 
     let updatedCount = 0;
+    const enabled = Array.isArray(policy?.enabledCountries) ? policy.enabledCountries.map((c: unknown) => String(c).toUpperCase()) : null;
+    if (enabled) await prisma.shippingCountry.updateMany({ data: { isEnabled: false } });
     for (const c of countries) {
       if (c.countryCode) {
         await prisma.shippingCountry.upsert({
@@ -4423,8 +4425,21 @@ app.post('/api/admin/shipping/import', async (req, res) => {
       }
     }
 
+    let methodsCount = 0;
+    if (Array.isArray(shippingMethods)) for (const method of shippingMethods) {
+      const region = method.regionId ? await prisma.shippingRegion.findUnique({ where: { id: Number(method.regionId) } }) : await prisma.shippingRegion.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
+      if (!region || !method.name) continue;
+      const existing = await prisma.shippingMethod.findFirst({ where: { regionId: region.id, name: String(method.name) } });
+      const saved = existing
+        ? await prisma.shippingMethod.update({ where: { id: existing.id }, data: { description: method.description ? String(method.description) : null, price: Number(method.price ?? 0), estimatedDays: String(method.estimatedDays || '2-4 business days'), freeShippingThreshold: method.freeShippingThreshold == null ? null : Number(method.freeShippingThreshold), isActive: method.isActive !== false } })
+        : await prisma.shippingMethod.create({ data: { regionId: region.id, name: String(method.name), description: method.description ? String(method.description) : null, price: Number(method.price ?? 0), estimatedDays: String(method.estimatedDays || '2-4 business days'), freeShippingThreshold: method.freeShippingThreshold == null ? null : Number(method.freeShippingThreshold), isActive: method.isActive !== false } });
+      const currency = String(method.currency || 'EUR').toUpperCase();
+      await prisma.shippingPrice.upsert({ where: { shippingMethodId_currency: { shippingMethodId: saved.id, currency } }, update: { amountMinor: Number(method.amountMinor ?? Math.round(Number(method.price ?? 0) * 100)), freeThresholdMinor: null }, create: { shippingMethodId: saved.id, currency, amountMinor: Number(method.amountMinor ?? Math.round(Number(method.price ?? 0) * 100)), freeThresholdMinor: null } });
+      methodsCount++;
+    }
+
     await logShippingAction('IMPORT_COUNTRIES', `Imported/Updated ${updatedCount} shipping countries`);
-    res.json({ success: true, count: updatedCount });
+    res.json({ success: true, count: updatedCount, methods: methodsCount });
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to import shipping data' });
   }

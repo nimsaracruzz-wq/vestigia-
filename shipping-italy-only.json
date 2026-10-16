@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "name": "Italy only - Express Shipping",
+  "currency": "EUR",
+  "countries": [
+    {
+      "countryCode": "IT",
+      "countryName": "Italy",
+      "isEnabled": true,
+      "currency": "EUR",
+      "taxRateBps": 0
+    }
+  ],
+  "shippingMethods": [
+    {
+      "name": "Express Shipping",
+      "description": "Express delivery within Italy",
+      "currency": "EUR",
+      "amountMinor": 250,
+      "price": 2.5,
+      "freeShippingThreshold": null,
+      "isActive": true,
+      "estimatedDays": "2-4 business days"
+    }
+  ],
+  "policy": {
+    "enabledCountries": ["IT"],
+    "blockedCountries": "All countries except Italy"
+  }
+}
