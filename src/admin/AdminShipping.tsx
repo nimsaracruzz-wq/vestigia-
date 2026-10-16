@@ -128,6 +128,7 @@ export default function AdminShipping() {
 
   // Toast / Feedback
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -438,6 +439,24 @@ export default function AdminShipping() {
     }
   };
 
+  const handleImportJSON = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    try {
+      const payload = JSON.parse(await file.text());
+      const countries = Array.isArray(payload) ? payload : payload.countries || payload.regions?.flatMap((r: any) => (r.countries || []).map((c: any) => ({ ...c, regionId: c.regionId || r.id }))) || [];
+      if (!countries.length) throw new Error("The file contains no country settings");
+      const res = await fetch(`${API_BASE_URL}/admin/shipping/import`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ countries }) });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Import failed");
+      await fetchAllData();
+      showToast(`Imported ${result.count} country and currency settings`);
+    } catch (err: any) { showToast(err.message || "Invalid configuration file", "error"); }
+    finally { setImporting(false); }
+  };
+
   // Filtered Countries
   const filteredCountries = countries.filter((c) => {
     const matchesSearch =
@@ -471,6 +490,10 @@ export default function AdminShipping() {
           <button className="admin-btn secondary" onClick={handleExportJSON}>
             <Download size={16} /> Export Config
           </button>
+          <label className="admin-btn secondary" style={{ cursor: importing ? "wait" : "pointer" }}>
+            <Upload size={16} /> {importing ? "Importing…" : "Import Config"}
+            <input type="file" accept="application/json,.json" onChange={handleImportJSON} disabled={importing} style={{ display: "none" }} />
+          </label>
           <button className="admin-btn secondary" onClick={fetchAllData}>
             <RefreshCw size={16} /> Refresh
           </button>
