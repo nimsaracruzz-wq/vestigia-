@@ -448,7 +448,8 @@ export default function AdminShipping() {
       const payload = JSON.parse(await file.text());
       const countries = Array.isArray(payload) ? payload : payload.countries || payload.regions?.flatMap((r: any) => (r.countries || []).map((c: any) => ({ ...c, regionId: c.regionId || r.id }))) || [];
       if (!countries.length) throw new Error("The file contains no country settings");
-      const res = await fetch(`${API_BASE_URL}/admin/shipping/import`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ countries }) });
+      const token = localStorage.getItem("vstigia_adm_token");
+      const res = await fetch(`${API_BASE_URL}/admin/shipping/import`, { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ countries, shippingMethods: payload.shippingMethods, policy: payload.policy }) });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Import failed");
       await fetchAllData();
