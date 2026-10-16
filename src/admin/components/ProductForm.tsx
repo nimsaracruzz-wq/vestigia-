@@ -359,8 +359,11 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     await onSubmit({
       ...formData,
       price: Number(formData.price),
-      prices: initialData?.prices || {},
-      priceChangeReason: "Product details updated; use Pricing Control for prices",
+      prices: Object.fromEntries(Object.entries(prices).map(([currency, value]) => [currency, {
+        priceMinor: Number(value.priceMinor) || 0,
+        compareAtMinor: value.compareAtMinor == null ? null : Number(value.compareAtMinor),
+      }])),
+      priceChangeReason: "Updated from product form",
       compareAt: formData.compareAt ? Number(formData.compareAt) : undefined,
       sizes: formData.sizes.split(",").map(s => s.trim()).filter(Boolean),
       colors: formData.colors.split(",").map(c => c.trim()).filter(Boolean),
@@ -417,7 +420,25 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         </div>
       </div>
 
-      <p>Base and market prices are managed in <a href="/admin/pricing">Pricing Control</a>, with a confirmation and change history.</p>
+      <div className="admin-form-group" style={{ marginBottom: "24px" }}>
+        <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>PRICES</label>
+        <p style={{ color: "#666", fontSize: "12px", margin: "0 0 12px" }}>
+          Enter the selling price for each market you use. Leave a currency at 0 if you do not sell there.
+        </p>
+        <div className="admin-form-row">
+          {(["EUR", "USD", "JPY"] as const).map(currency => {
+            const decimals = currency === "JPY" ? 0 : 2;
+            const value = prices[currency].priceMinor / (currency === "JPY" ? 1 : 100);
+            return <div className="admin-form-group" key={currency}>
+              <label htmlFor={`product-price-${currency}`}>{currency} price</label>
+              <input id={`product-price-${currency}`} type="number" min="0" step={decimals ? "0.01" : "1"} value={value || ""} onChange={e => {
+                const amount = Number(e.target.value);
+                setPrices(prev => ({ ...prev, [currency]: { ...prev[currency], priceMinor: Number.isFinite(amount) ? Math.round(amount * (currency === "JPY" ? 1 : 100)) : 0 } }));
+              }} inputMode="decimal" />
+            </div>;
+          })}
+        </div>
+      </div>
       <div className="admin-form-group">
         <label>Badge (Optional)</label>
         <input type="text" name="badge" value={formData.badge} onChange={handleChange} />
