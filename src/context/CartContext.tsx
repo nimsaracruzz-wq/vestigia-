@@ -1,6 +1,7 @@
+import { API_BASE_URL } from "../config/api";
 import { minor, toMajor, roundedRatio } from "../../shared/money";
 import { variantQuantityLimit } from "../../shared/stock";
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { type Product } from "../data";
 import { useAdmin } from "../admin/AdminContext";
 import { useCurrency } from "./CurrencyContext";
@@ -34,7 +35,8 @@ interface CartContextType {
   updateQuantity: (productId: number, size: string, color: string, change: number) => void;
   toggleWishlist: (product: Product) => void;
   isInWishlist: (productId: number) => boolean;
-  applyPromoCode: (code: string) => boolean;
+  applyPromoCode: (code: string) => Promise<boolean>;
+  promoApplying: boolean;
   removePromoCode: () => void;
   clearCart: () => void;
   acceptQuote: (quote: any) => void;
@@ -43,7 +45,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { settings, products, isSynced, promoCodes } = useAdmin();
+  const { settings, products, isSynced } = useAdmin();
   const { currency, market, priceListId } = useCurrency();
 
   // Load initial cart and wishlist from localStorage
@@ -69,6 +71,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem("vestigia_promo") || null;
   });
 
+  const [promoApplying, setPromoApplying] = useState(false);
+  const promoRequest = useRef(0);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -208,51 +212,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return wishlist.some((item) => item.id === productId);
   };
 
-  const applyPromoCode = (code: string) => {
+  const applyPromoCode = async (code: string) => {
     const cleanCode = code.trim().toUpperCase();
-    if (!cleanCode) {
-      setPromoError("Please enter a promotional code.");
+    if (!cleanCode) { setPromoError("Please enter a discount code."); return false; }
+    const request = ++promoRequest.current;
+    setPromoApplying(true); setPromoError(null);
+    try {
+      const response = await fetch(API_BASE_URL + "/promos/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: cleanCode, currency }), signal: AbortSignal.timeout(8000) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Code could not be checked.");
+      if (request !== promoRequest.current) return false;
+      setPromoCode(data.code); return true;
+    } catch (error) {
+      if (request === promoRequest.current) setPromoError(error instanceof Error ? error.message : "Code could not be checked. Please retry.");
       return false;
-    }
-
-    if (cleanCode === "VESTIGIA20") {
-      setPromoCode("VESTIGIA20");
-      setPromoError(null);
-      return true;
-    }
-
-    const found = (promoCodes || []).find((p) => p.code.toUpperCase() === cleanCode);
-    if (!found) {
-      setPromoError("Invalid promotional code.");
-      return false;
-    }
-
-    if (!found.active) {
-      setPromoError("This promotional code is no longer active.");
-      return false;
-    }
-
-    if (found.expiry && new Date(found.expiry) < new Date()) {
-      setPromoError("This promotional code has expired.");
-      return false;
-    }
-
-    if (found.maxUses !== null && found.maxUses !== undefined && found.uses >= found.maxUses) {
-      setPromoError("This promotional code has reached its maximum usage limit.");
-      return false;
-    }
-
-    setPromoCode(found.code);
-    setPromoError(null);
-    return true;
+    } finally { if (request === promoRequest.current) setPromoApplying(false); }
   };
 
   const removePromoCode = () => {
+    ++promoRequest.current; setPromoApplying(false);
     setPromoCode(null);
     setPromoError(null);
   };
 
   const clearCart = () => {
+    ++promoRequest.current; setPromoApplying(false);
     setCart([]);
     setPromoCode(null);
   };
@@ -279,7 +263,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         updateQuantity,
         toggleWishlist,
         isInWishlist,
-        applyPromoCode,
+        applyPromoCode, promoApplying,
         removePromoCode,
         clearCart, acceptQuote,
       }}

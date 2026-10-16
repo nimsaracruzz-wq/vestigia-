@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { validateCoupon, couponAmount } from './coupons.js';
 import { calculateCountryTax } from './countryTax.js';
 import { SUPPORTED_CURRENCIES, MARKETS, requireCurrency, resolveMarket, minor, roundedRatio, allocate, formatMoney, decimalRatio, exponent, type Currency } from '../../shared/money.js';
 export { SUPPORTED_CURRENCIES, formatMoney };
@@ -54,28 +55,24 @@ export class PricingService {
     const code = String(payload.promoCode || '').trim().toUpperCase();
     if (code) {
       promo = await this.db.promoCode.findUnique({ where: { code } });
-      if (!promo?.active || (promo.expiry && new Date(promo.expiry) < new Date()) || (promo.maxUses !== null && promo.uses >= promo.maxUses)) throw new Error('Promo code is unavailable');
-      if (promo.type === 'fixed') {
-        if (promo.currency !== context.currency || promo.amountMinor === null) throw new Error('Promo code does not support this currency');
-        discountMinor = Math.min(subtotalMinor, minor(promo.amountMinor));
-      } else {
-        const bps = minor(promo.percentageBps);
-        if (bps > 10000) throw new Error('Invalid discount');
-        discountMinor = roundedRatio(subtotalMinor, BigInt(bps), 10000n);
-      }
+      validateCoupon(promo, context.currency);
+      if (promo.type !== 'free_shipping' && (promo.target || 'items') === 'items') discountMinor = couponAmount(promo, subtotalMinor);
     }
     const method = await this.db.shippingMethod.findUnique({ where: { id: Number(payload.shippingMethodId) } });
     if (!method?.isActive || method.regionId !== shippingCountry.regionId) throw new Error('Selected shipping method is unavailable');
     const shippingPrice = await this.db.shippingPrice.findUnique({ where: { shippingMethodId_currency: { shippingMethodId: method.id, currency: context.currency } } });
     if (!shippingPrice) throw new Error('Shipping price is not configured for this currency');
     const net = subtotalMinor - discountMinor;
-    const shippingMinor = shippingPrice.freeThresholdMinor !== null && net >= shippingPrice.freeThresholdMinor ? 0 : minor(shippingPrice.amountMinor);
+    const shippingBaseMinor = shippingPrice.freeThresholdMinor !== null && net >= shippingPrice.freeThresholdMinor ? 0 : minor(shippingPrice.amountMinor);
+    const shippingDiscountMinor = promo && (promo.type === 'free_shipping' || promo.target === 'shipping') ? couponAmount(promo, shippingBaseMinor) : 0;
+    const shippingMinor = shippingBaseMinor - shippingDiscountMinor;
+    if (promo && discountMinor + shippingDiscountMinor === 0) throw new Error(shippingBaseMinor === 0 && (promo.target === 'shipping' || promo.type === 'free_shipping') ? 'Shipping is already complimentary. Remove this shipping code to continue.' : 'This code does not reduce the current total. Remove it or choose another code.');
     const { taxMinor, taxRateBps } = calculateCountryTax(shippingCountry.taxRateBps, net, context.currency, list.taxRateBps);
     const discounts = allocate(discountMinor, pricedItems.map((i: any) => i.subtotalMinor));
     const taxes = allocate(taxMinor, pricedItems.map((i: any, n: number) => i.subtotalMinor - discounts[n]));
     pricedItems.forEach((i: any, n: number) => Object.assign(i, { discountMinor: discounts[n], taxMinor: taxes[n], totalMinor: i.subtotalMinor - discounts[n] + taxes[n] }));
     const priceChanged = requested.some((i: any, n: number) => i.unitPriceMinor !== pricedItems[n].unitPriceMinor || i.currency !== context.currency || i.priceVersion !== pricedItems[n].priceVersion || i.priceListId !== list.id);
-    return { ...context, priceListVersion: list.version, pricedItems, subtotalMinor, discountMinor, shippingMinor, taxMinor, taxRateBps, totalMinor: minor(net + shippingMinor + taxMinor), promo, shippingCountry, shippingMethod: method, priceChanged };
+    return { ...context, priceListVersion: list.version, pricedItems, subtotalMinor, discountMinor, shippingBaseMinor, shippingDiscountMinor, shippingMinor, taxMinor, taxRateBps, totalMinor: minor(net + shippingMinor + taxMinor), promo, shippingCountry, shippingMethod: method, priceChanged };
   }
   async createQuote(payload: any) {
     const quote = await this.calculateCart(payload);
@@ -88,7 +85,7 @@ export class PricingService {
     if (forPayment && new Date(saved.expiresAt) < new Date()) throw new Error('Checkout quote expired. Review a new quote.');
     if (forPayment) {
       const current = await this.calculateCart(payload), previous = JSON.parse(saved.snapshot);
-      if (current.priceListVersion !== saved.priceListVersion || current.totalMinor !== saved.totalMinor || current.taxMinor !== previous.taxMinor || current.taxRateBps !== previous.taxRateBps || current.shippingMinor !== previous.shippingMinor || current.discountMinor !== previous.discountMinor || current.pricedItems.some((i: any, n: number) => i.priceVersion !== previous.pricedItems[n]?.priceVersion || i.unitPriceMinor !== previous.pricedItems[n]?.unitPriceMinor)) throw new Error('One or more prices changed. Review a new quote.');
+      if (current.priceListVersion !== saved.priceListVersion || current.totalMinor !== saved.totalMinor || current.taxMinor !== previous.taxMinor || current.taxRateBps !== previous.taxRateBps || current.shippingMinor !== previous.shippingMinor || current.shippingDiscountMinor !== (previous.shippingDiscountMinor || 0) || current.discountMinor !== previous.discountMinor || current.pricedItems.some((i: any, n: number) => i.priceVersion !== previous.pricedItems[n]?.priceVersion || i.unitPriceMinor !== previous.pricedItems[n]?.unitPriceMinor)) throw new Error('One or more prices changed. Review a new quote.');
     }
     return { ...JSON.parse(saved.snapshot), checkoutId: saved.id, providerPaymentId: saved.providerPaymentId, checkoutState: saved.state };
   }

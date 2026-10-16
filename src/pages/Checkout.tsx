@@ -106,7 +106,7 @@ function CheckoutContent() {
     shippingCost,
     taxCost,
     grandTotal,
-    applyPromoCode,
+    applyPromoCode, promoApplying,
     removePromoCode,
     clearCart,
   } = useCart();
@@ -191,6 +191,7 @@ function CheckoutContent() {
   const [receiptSummary, setReceiptSummary] = useState({
     subtotal: 0,
     discount: 0,
+    shippingDiscount: 0,
     shipping: 0,
     tax: 0,
     total: 0,
@@ -358,7 +359,7 @@ function CheckoutContent() {
   // Prepare the final amount automatically. Accepting its price snapshots must
   // not restart this request or invalidate the quote that the customer sees.
   useEffect(() => {
-    if (step !== "payment" || !quotePayload.items.length || !quotePayload.shippingMethodId) return;
+    if (step === "success" || !quotePayload.items.length || !quotePayload.shippingMethodId) return;
     const controller = new AbortController();
     const requestedKey = quoteInputKey;
     setQuoteLoading(true);
@@ -383,8 +384,8 @@ function CheckoutContent() {
         if (!controller.signal.aborted) setQuoteLoading(false);
       }
     };
-    void prepareTotal();
-    return () => controller.abort();
+    const quoteTimer = window.setTimeout(() => { void prepareTotal(); }, 350);
+    return () => { window.clearTimeout(quoteTimer); controller.abort(); };
   }, [step, quoteInputKey, quoteReload]);
 
   useEffect(() => {
@@ -470,11 +471,10 @@ function CheckoutContent() {
   }
 
   // Handle promo code application
-  const handleApplyPromo = (e: React.FormEvent) => {
+  const handleApplyPromo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (promoInput.trim()) {
-      applyPromoCode(promoInput.trim());
-      setPromoInput("");
+      if (await applyPromoCode(promoInput.trim())) setPromoInput("");
     }
   };
 
@@ -517,6 +517,7 @@ function CheckoutContent() {
 
   // Validate payment form
   const handlePaymentSubmit = async () => {
+    if (promoApplying) { setQuoteError('Please wait while your discount code is checked.'); return; }
     if (paymentInFlight.current || quoteLoading || !serverQuote) return;
     if (checkoutConfig.publishableKeyRequired && !stripePublishableKeyLooksValid) {
       setPaymentError("Stripe is not ready. Add VITE_STRIPE_PUBLISHABLE_KEY to the frontend environment and restart the dev server.");
@@ -607,6 +608,7 @@ function CheckoutContent() {
       setSuccessCart([...cart]);
       setReceiptSummary({
         subtotal: quote.subtotalMinor / (quote.currency === "JPY" ? 1 : 100),
+        shippingDiscount: (quote.shippingDiscountMinor || 0) / (quote.currency === "JPY" ? 1 : 100),
         discount: (quote.discountMinor || 0) / (quote.currency === "JPY" ? 1 : 100),
         shipping: quote.shippingMinor / (quote.currency === "JPY" ? 1 : 100),
         tax: quote.taxMinor / (quote.currency === "JPY" ? 1 : 100),
@@ -1358,12 +1360,13 @@ function CheckoutContent() {
                         {([
                           ["Subtotal", serverQuote.subtotalMinor],
                           ["Discount", serverQuote.discountMinor],
-                          ["Shipping", serverQuote.shippingMinor],
+                          ["Shipping", serverQuote.shippingBaseMinor ?? serverQuote.shippingMinor],
+                          ["Shipping discount", serverQuote.shippingDiscountMinor || 0],
                           [`Tax (${serverQuote.taxRateBps / 100}%)`, serverQuote.taxMinor],
                         ] as [string, number][]).map(([label, amount]) => (
                           <div key={label}>
                             <dt>{label}</dt>
-                            <dd>{label === "Discount" && amount > 0 ? "-" : ""}{formatMoney(amount, lockedCurrency)}</dd>
+                            <dd>{label.toLowerCase().includes("discount") && amount > 0 ? "-" : ""}{formatMoney(amount, lockedCurrency)}</dd>
                           </div>
                         ))}
                         <div className="checkout-quote-total">
@@ -1384,7 +1387,7 @@ function CheckoutContent() {
                     className="checkout-continue-btn full-width"
                     type="button"
                     onClick={handlePaymentSubmit}
-                    disabled={isProcessing || stripeFrontendMissing || quoteLoading || !serverQuote}
+                    disabled={isProcessing || promoApplying || stripeFrontendMissing || quoteLoading || !serverQuote}
                   >
                     {isProcessing ? (
                       <>
@@ -1536,9 +1539,10 @@ function CheckoutContent() {
                             <span>-{money(receiptSummary.discount)}</span>
                           </div>
                         )}
+                        {receiptSummary.shippingDiscount > 0 && <div className="calc-row discount"><span>Shipping discount ({receiptSummary.promoCode})</span><span>-{money(receiptSummary.shippingDiscount)}</span></div>}
                         <div className="calc-row">
-                          <span>Shipping</span>
-                          <span>{receiptSummary.shipping === 0 ? "Complimentary" : money(receiptSummary.shipping)}</span>
+                          <span>Shipping before coupon</span>
+                          <span>{receiptSummary.shipping + receiptSummary.shippingDiscount === 0 ? "Complimentary" : money(receiptSummary.shipping + receiptSummary.shippingDiscount)}</span>
                         </div>
                         <div className="calc-row">
                           <span>Tax</span>
@@ -1607,7 +1611,7 @@ function CheckoutContent() {
             <div className="checkout-promo-box">
               {promoCode ? (
                 <div className="promo-tag-applied">
-                  <span>Code <strong>{promoCode}</strong> applied</span>
+                  <span>Code <strong>{promoCode}</strong> selected</span>
                   <button type="button" disabled={isProcessing} onClick={removePromoCode}>Remove</button>
                 </div>
               ) : (
@@ -1620,10 +1624,12 @@ function CheckoutContent() {
                     value={promoInput}
                     onChange={(e) => setPromoInput(e.target.value)}
                   />
-                  <button type="submit" disabled={isProcessing}>Apply</button>
+                  <button type="submit" disabled={isProcessing || promoApplying}>{promoApplying ? "Checking..." : "Apply"}</button>
                 </form>
               )}
-              {promoError && <p className="promo-error-text">{promoError}</p>}
+              {promoError && <p className="promo-error-text" role="alert">{promoError}</p>}
+              {quoteError && <p className="promo-error-text" role="alert">{quoteError}</p>}
+              {promoCode && !serverQuote && !quoteError && <p>Discount will be confirmed after your shipping method is selected.</p>}
             </div>
 
             {/* Price Calculations breakdown */}
@@ -1638,9 +1644,10 @@ function CheckoutContent() {
                   <span>-{money(summaryDiscount)}</span>
                 </div>
               )}
+              {serverQuote?.shippingDiscountMinor > 0 && <div className="discount-row"><span>Shipping discount ({promoCode})</span><span>-{money(toMajor(serverQuote.shippingDiscountMinor, lockedCurrency))}</span></div>}
               <div>
-                <span>Shipping</span>
-                <span>{summaryShipping === 0 ? "Complimentary" : money(summaryShipping)}</span>
+                <span>Shipping before coupon</span>
+                <span>{serverQuote ? (serverQuote.shippingBaseMinor === 0 ? "Complimentary" : money(toMajor(serverQuote.shippingBaseMinor ?? serverQuote.shippingMinor, lockedCurrency))) : (summaryShipping === 0 ? "Complimentary" : money(summaryShipping))}</span>
               </div>
               <div>
                 <span>Tax</span>

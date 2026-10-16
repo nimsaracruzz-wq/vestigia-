@@ -35,7 +35,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     discountAmount,
     promoCode,
     promoError,
-    applyPromoCode,
+    applyPromoCode, promoApplying,
     removePromoCode,
     updateQuantity,
     removeFromCart,
@@ -87,10 +87,10 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [open, onClose]);
 
-  const handleApplyPromo = (e: React.FormEvent) => {
+  const handleApplyPromo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (promoInput.trim()) {
-      const success = applyPromoCode(promoInput.trim());
+      const success = await applyPromoCode(promoInput.trim());
       if (success) setPromoInput("");
     }
   };
@@ -260,7 +260,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 <div className="cart-drawer__promo">
                   {promoCode ? (
                     <div className="cart-drawer__promo-applied">
-                      <span><Tag size={13} /> Code <strong>{promoCode}</strong> applied</span>
+                      <span><Tag size={13} /> Code <strong>{promoCode}</strong> selected</span>
                       <button type="button" onClick={removePromoCode}>Remove</button>
                     </div>
                   ) : (
@@ -271,10 +271,11 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                         value={promoInput}
                         onChange={(e) => setPromoInput(e.target.value)}
                       />
-                      <button type="submit">Apply</button>
+                      <button type="submit" disabled={promoApplying}>Apply</button>
                     </form>
                   )}
-                  {promoError && <p className="cart-drawer__promo-error">{promoError}</p>}
+                  {promoError && <p className="cart-drawer__promo-error" role="alert">{promoError}</p>}
+                  {promoCode && <p className="cart-drawer__shipping-note">Discount amount is calculated at checkout after selecting delivery.</p>}
                 </div>
 
                 {/* Totals */}

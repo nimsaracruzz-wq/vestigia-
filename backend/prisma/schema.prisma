@@ -162,6 +162,8 @@ model Order {
   checkoutId            String? @unique
   subtotalMinor         Int      @default(0)
   shippingMinor         Int      @default(0)
+  shippingBaseMinor     Int      @default(0)
+  shippingDiscountMinor Int      @default(0)
   taxMinor              Int      @default(0)
   totalMinor            Int      @default(0)
 
@@ -420,11 +422,20 @@ model PromoCode {
   currency String?
   amountMinor Int?
   percentageBps Int?
-  type     String  // "percentage" | "fixed"
+  type     String  // "percentage" | "fixed" | "free_shipping"
+  target   String @default("items") // "items" | "shipping"
   uses     Int     @default(0)
   maxUses  Int?
   active   Boolean @default(true)
   expiry   String?
+}
+
+model CouponReservation {
+  checkoutId String @id
+  promoId Int
+  state String @default("RESERVED")
+  createdAt DateTime @default(now())
+  @@index([promoId, state])
 }
 
 model StoreSettings {

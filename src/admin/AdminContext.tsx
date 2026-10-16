@@ -77,9 +77,11 @@ export type PromoCode = {
   id: number;
   code: string;
   discount: number;
-  currency?: import("../../shared/money").Currency; amountMinor?: number; percentageBps?: number;
-  type: "percentage" | "fixed";
+  currency?: import("../../shared/money").Currency | null; amountMinor?: number | null; percentageBps?: number | null;
+  type: "percentage" | "fixed" | "free_shipping";
+  target?: "items" | "shipping";
   uses: number;
+  reservedUses?: number;
   maxUses: number | null;
   active: boolean;
   expiry: string | null;
@@ -130,9 +132,9 @@ interface AdminContextType {
   updateOrderNotes: (orderId: string, notes: string) => void;
   updateOrderShipping: (orderId: string, data: { trackingNumber?: string; courier?: string; phone?: string }) => void;
   duplicateOrder: (orderId: string) => Promise<Order | null>;
-  addPromoCode: (p: Omit<PromoCode, "id" | "uses">) => void;
-  togglePromoCode: (id: number) => void;
-  deletePromoCode: (id: number) => void;
+  addPromoCode: (p: Omit<PromoCode, "id" | "uses">) => Promise<void>;
+  togglePromoCode: (id: number) => Promise<void>;
+  deletePromoCode: (id: number) => Promise<void>;
   updateSettings: (s: StoreSettings) => void;
   addJournalArticle: (a: Omit<JournalArticle, "id">) => void;
   updateJournalArticle: (a: JournalArticle) => void;
@@ -324,7 +326,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       const [productsRes, settingsRes, promosRes, journalRes] = await Promise.allSettled([
         apiRequest(isAuthenticated && window.location.pathname.startsWith("/admin") ? "/admin/products" : "/products"),
         apiRequest("/settings"),
-        apiRequest("/promos"),
+        isAuthenticated ? apiRequest("/promos") : Promise.resolve([]),
         apiRequest("/journal"),
       ]);
 
@@ -442,32 +444,19 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     return null;
   };
 
-  const addPromoCode = (p: Omit<PromoCode, "id" | "uses">) => {
-    void apiRequest("/promos", {
-      method: "POST",
-      body: JSON.stringify(p),
-    }).then((created) => {
-      if (created) {
-        setPromoCodes((prev) => [...prev, created as PromoCode]);
-      }
-    }).catch(() => undefined);
+  const addPromoCode = async (p: Omit<PromoCode, "id" | "uses">) => {
+    const created = await apiRequest("/promos", { method: "POST", body: JSON.stringify(p) });
+    setPromoCodes(prev => [...prev, created as PromoCode]);
   };
-
-  const togglePromoCode = (id: number) => {
-    const promo = promoCodes.find((item) => item.id === id);
+  const togglePromoCode = async (id: number) => {
+    const promo = promoCodes.find(item => item.id === id);
     if (!promo) return;
-
-    const nextPromo = { ...promo, active: !promo.active };
-    setPromoCodes((prev) => prev.map((item) => (item.id === id ? nextPromo : item)));
-    void apiRequest(`/promos/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(nextPromo),
-    }).catch(() => undefined);
+    const updated = await apiRequest(`/promos/${id}`, { method: "PUT", body: JSON.stringify({ active: !promo.active }) });
+    setPromoCodes(prev => prev.map(item => item.id === id ? updated as PromoCode : item));
   };
-
-  const deletePromoCode = (id: number) => {
-    setPromoCodes(prev => prev.filter(p => p.id !== id));
-    void apiRequest(`/promos/${id}`, { method: "DELETE" }).catch(() => undefined);
+  const deletePromoCode = async (id: number) => {
+    await apiRequest(`/promos/${id}`, { method: "DELETE" });
+    setPromoCodes(prev => prev.filter(item => item.id !== id));
   };
 
   const updateSettings = (s: StoreSettings) => {

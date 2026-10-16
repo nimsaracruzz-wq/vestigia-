@@ -1,3 +1,5 @@
+import { stripeConfiguration } from './utils/stripeConfiguration.js';
+import { installCouponRoutes, reserveCoupon, redeemCoupon, releaseAbandonedCoupons } from './utils/coupons.js';
 import { validatePassword } from '../shared/passwordPolicy.js';
 import { installSiteTraffic } from './utils/siteTraffic.js';
 import { correctUnverifiedEmail, verifyCustomerEmail, confirmUnverifiedEmailChange } from './utils/customerEmail.js';
@@ -42,20 +44,9 @@ import {
   type BackupType,
 } from './utils/backupSystem.js';
 
-const stripeSecretKey = String(process.env.STRIPE_SECRET_KEY || '').trim().replace(/^["']|["']$/g, '');
-const stripeSecretKeyIsPlaceholder = stripeSecretKey.includes('1234567890') || stripeSecretKey.endsWith('...');
-const stripeSecretKeyLooksValid = /^sk_(test|live)_[A-Za-z0-9_]+$/.test(stripeSecretKey)
-  && !stripeSecretKeyIsPlaceholder;
-const stripe = stripeSecretKeyLooksValid
-  ? new Stripe(stripeSecretKey)
-  : null;
-const stripeConfigurationIssue = stripeSecretKey && !stripeSecretKeyLooksValid
-  ? stripeSecretKey.startsWith('pk_')
-    ? 'STRIPE_SECRET_KEY must be a Stripe secret key such as sk_test_... or sk_live_..., not a publishable key such as pk_test_....'
-    : stripeSecretKeyIsPlaceholder
-      ? 'STRIPE_SECRET_KEY is still a placeholder. Use your full Stripe test secret key from Developers > API keys, starting with sk_test_.'
-      : 'STRIPE_SECRET_KEY must start with sk_test_ or sk_live_ and contain the full Stripe secret key value.'
-  : null;
+const stripeSettings = stripeConfiguration(process.env);
+const stripe = stripeSettings.valid ? new Stripe(stripeSettings.secretKey) : null;
+const stripeConfigurationIssue = stripeSettings.issue;
 
 // ─── Prisma: SQLite locally, PostgreSQL on Railway ───────────────────────────
 if (process.env.DATABASE_PROVIDER && process.env.DATABASE_PROVIDER !== 'sqlite' || process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('file:')) throw new Error('This build uses the SQLite Prisma schema. Configure DATABASE_PROVIDER=sqlite and a persistent file: DATABASE_URL; PostgreSQL requires a separate schema and adapter migration.');
@@ -137,7 +128,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const isDevMode = process.env.NODE_ENV !== 'production';
-const allowMockPayments = process.env.ALLOW_MOCK_PAYMENTS === 'true' || (isDevMode && !stripe);
+const allowMockPayments = stripeSettings.allowMockPayments;
 
 if (stripeConfigurationIssue && !isDevMode) {
   throw new Error(stripeConfigurationIssue);
@@ -2503,6 +2494,8 @@ app.post('/api/checkout/quote', checkoutRateLimit, async (req, res) => {
       subtotalMinor: quote.subtotalMinor,
       discountMinor: quote.discountMinor,
       shippingMinor: quote.shippingMinor,
+      shippingBaseMinor: quote.shippingBaseMinor,
+      shippingDiscountMinor: quote.shippingDiscountMinor,
       taxMinor: quote.taxMinor,
       taxRateBps: quote.taxRateBps,
       totalMinor: quote.totalMinor,
@@ -2527,6 +2520,7 @@ app.post('/api/checkout/quote', checkoutRateLimit, async (req, res) => {
 
 app.post('/api/checkout/payment-intent', checkoutRateLimit, async (req, res) => {
   try {
+    await releaseAbandonedCoupons(prisma, stripe, allowMockPayments);
     const payload = req.body ?? {};
     const quote = await new PricingService(prisma).validateCheckout(payload, true);
     const checkoutEmail = normalizeEmail(payload.email);
@@ -2549,8 +2543,10 @@ app.post('/api/checkout/payment-intent', checkoutRateLimit, async (req, res) => 
           error: stripeConfigurationIssue || 'Stripe payments are not configured.',
         });
       }
+      await reserveCoupon(prisma, quote);
       const mockId = quote.providerPaymentId || `pi_mock_${crypto.randomBytes(16).toString('hex')}`;
-      await prisma.checkoutSnapshot.update({ where: { id: quote.checkoutId }, data: { providerPaymentId: mockId, state: 'PAYMENT_CREATED' } });
+      const started = await prisma.checkoutSnapshot.updateMany({ where: { id: quote.checkoutId, state: { in: ['QUOTED', 'PAYMENT_CREATED'] } }, data: { providerPaymentId: mockId, state: 'PAYMENT_CREATED' } });
+      if (!started.count) throw new Error('Checkout canceled. Request a new quote.');
       return res.json({
         mockPaymentIntentId: mockId,
         amount: quote.totalMinor,
@@ -2558,6 +2554,7 @@ app.post('/api/checkout/payment-intent', checkoutRateLimit, async (req, res) => 
       });
     }
 
+    await reserveCoupon(prisma, quote);
     const intent = await stripe.paymentIntents.create({
       amount: quote.totalMinor,
       currency: quote.currency.toLowerCase(),
@@ -2579,7 +2576,8 @@ app.post('/api/checkout/payment-intent', checkoutRateLimit, async (req, res) => 
       },
     }, { idempotencyKey: `checkout:${quote.checkoutId}` });
 
-    await prisma.checkoutSnapshot.update({ where: { id: quote.checkoutId }, data: { providerPaymentId: intent.id, state: 'PAYMENT_CREATED' } });
+    const started = await prisma.checkoutSnapshot.updateMany({ where: { id: quote.checkoutId, state: { in: ['QUOTED', 'PAYMENT_CREATED'] } }, data: { providerPaymentId: intent.id, state: 'PAYMENT_CREATED' } });
+    if (!started.count) { await stripe.paymentIntents.cancel(intent.id); throw new Error('Checkout canceled. Request a new quote.'); }
     res.json({
       clientSecret: intent.client_secret,
       paymentIntentId: intent.id,
@@ -2651,19 +2649,7 @@ app.post('/api/orders', checkoutRateLimit, async (req, res) => {
         }
       }
 
-      if (quote.promo?.id) {
-        const updatedPromo = await tx.promoCode.updateMany({
-          where: {
-            id: quote.promo.id,
-            active: true,
-            OR: [{ maxUses: null }, { uses: { lt: quote.promo.maxUses ?? 0 } }],
-          },
-          data: { uses: { increment: 1 } },
-        });
-        if (updatedPromo.count !== 1) {
-          throw new Error('Promo code is no longer available');
-        }
-      }
+      await redeemCoupon(tx, quote);
 
       const generated = await generateOrderId(tx);
       const order = await tx.order.create({
@@ -2685,6 +2671,8 @@ app.post('/api/orders', checkoutRateLimit, async (req, res) => {
           currency: quote.currency,
           subtotalMinor: quote.subtotalMinor,
           shippingMinor: quote.shippingMinor,
+          shippingBaseMinor: quote.shippingBaseMinor ?? quote.shippingMinor,
+          shippingDiscountMinor: quote.shippingDiscountMinor ?? 0,
           taxMinor: quote.taxMinor,
           totalMinor: quote.totalMinor,
           address: cleanText(payload.address, 500),
@@ -3044,7 +3032,7 @@ app.post('/api/orders/:id/duplicate', authenticateAdmin, async (req, res) => {
         date: new Date().toISOString().split('T')[0],
         status: 'pending', paymentStatus: 'UNPAID', pricingVersion: original.pricingVersion,
         currency: original.currency, market: original.market, priceListId: original.priceListId, priceListVersion: original.priceListVersion,
-        subtotalMinor: original.subtotalMinor, shippingMinor: original.shippingMinor, taxMinor: original.taxMinor, discountMinor: original.discountMinor, totalMinor: original.totalMinor,
+        subtotalMinor: original.subtotalMinor, shippingBaseMinor: original.shippingBaseMinor, shippingDiscountMinor: original.shippingDiscountMinor, shippingMinor: original.shippingMinor, taxMinor: original.taxMinor, discountMinor: original.discountMinor, totalMinor: original.totalMinor,
         subtotal: original.subtotal,
         shipping: original.shipping,
         tax: original.tax,
@@ -3211,68 +3199,6 @@ app.post('/api/admin/customers/:id/notes', authenticateAdmin, adminWriteRateLimi
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to add customer note' });
-  }
-});
-
-app.get('/api/promos', async (_req, res) => {
-  try {
-    const promos = await prisma.promoCode.findMany({ orderBy: { id: 'asc' } });
-    res.json(promos.map(serializePromoCode));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch promos' });
-  }
-});
-
-app.post('/api/promos', authenticateAdmin, async (req, res) => {
-  try {
-    const promo = await prisma.promoCode.create({
-      data: {
-        code: String(req.body.code ?? '').toUpperCase(),
-        discount: Number(req.body.discount ?? 0),
-        type: String(req.body.type ?? 'percentage'),
-        maxUses: req.body.maxUses === null || req.body.maxUses === undefined || req.body.maxUses === '' ? null : Number(req.body.maxUses),
-        active: Boolean(req.body.active ?? true),
-        expiry: req.body.expiry ? String(req.body.expiry) : null,
-        uses: 0,
-      },
-    });
-
-    res.status(201).json(serializePromoCode(promo));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to create promo code' });
-  }
-});
-
-app.put('/api/promos/:id', authenticateAdmin, async (req, res) => {
-  try {
-    const promo = await prisma.promoCode.update({
-      where: { id: Number(req.params.id) },
-      data: {
-        code: String(req.body.code ?? '').toUpperCase(),
-        discount: Number(req.body.discount ?? 0),
-        type: String(req.body.type ?? 'percentage'),
-        maxUses: req.body.maxUses === null || req.body.maxUses === undefined || req.body.maxUses === '' ? null : Number(req.body.maxUses),
-        active: Boolean(req.body.active ?? true),
-        expiry: req.body.expiry ? String(req.body.expiry) : null,
-      },
-    });
-
-    res.json(serializePromoCode(promo));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to update promo code' });
-  }
-});
-
-app.delete('/api/promos/:id', authenticateAdmin, async (req, res) => {
-  try {
-    await prisma.promoCode.delete({ where: { id: Number(req.params.id) } });
-    res.status(204).send();
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to delete promo code' });
   }
 });
 
@@ -4556,6 +4482,7 @@ async function maybeRunScheduledBackup() {
 
 const publishedStorefront=installHomepageRoutes(app, prisma, authenticateAdmin, adminWriteRateLimit, serializeProduct);
 installSiteTraffic(app, prisma, authenticateAdmin);
+installCouponRoutes(app, prisma, authenticateAdmin);
 installPricingRoutes(app, prisma, authenticateAdmin, stripe, allowMockPayments);
 
 installStorefront(app,publishedStorefront);
