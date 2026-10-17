@@ -4428,6 +4428,10 @@ app.post('/api/admin/shipping/import', async (req, res) => {
     }
 
     let methodsCount = 0;
+    if (Array.isArray(shippingMethods) && enabled) {
+      const regions = await prisma.shippingRegion.findMany({ where: { isActive: true }, select: { id: true } });
+      await prisma.shippingMethod.updateMany({ where: { regionId: { in: regions.map(r => r.id) } }, data: { isActive: false } });
+    }
     if (Array.isArray(shippingMethods)) for (const method of shippingMethods) {
       const region = method.regionName ? await prisma.shippingRegion.findFirst({ where: { name: String(method.regionName) } }) : method.regionId ? await prisma.shippingRegion.findUnique({ where: { id: Number(method.regionId) } }) : await prisma.shippingRegion.findFirst({ where: { isActive: true }, orderBy: { id: 'asc' } });
       if (!region || !method.name) continue;
