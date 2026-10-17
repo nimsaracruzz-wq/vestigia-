@@ -97,8 +97,8 @@ export async function syncPrices(db: any, productId: number, raw: any, actor: st
     const list = await db.priceList.findUnique({ where: { market } });
     if (!list) throw new Error('Price list is not configured');
     const old = await db.productPrice.findUnique({ where: { productId_currency: { productId, currency } } });
-    const priceMinor = minor(entry.priceMinor), compareAtMinor = entry.compareAtMinor == null ? null : minor(entry.compareAtMinor), isActive = entry.isActive !== false;
-    if (compareAtMinor !== null && compareAtMinor <= priceMinor) throw new Error('Compare-at price must exceed selling price');
+    const priceMinor = minor(entry.priceMinor), compareAtMinor = entry.compareAtMinor == null ? null : minor(entry.compareAtMinor), isActive = priceMinor > 0 && entry.isActive !== false;
+    if (compareAtMinor !== null && priceMinor > 0 && compareAtMinor <= priceMinor) throw new Error('Compare-at price must exceed selling price');
     if (old && old.priceMinor === priceMinor && old.compareAtMinor === compareAtMinor && old.isActive === isActive && old.priceListId === list.id && old.mode === (entry.mode || 'FIXED')) continue;
     if (!reason.trim()) throw new Error('A reason is required for price changes');
     let conversion: string | null = null;
