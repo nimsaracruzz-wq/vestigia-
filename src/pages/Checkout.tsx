@@ -1,7 +1,7 @@
 import { checkoutQuoteSignature, type CheckoutQuotePayload } from "../utils/checkoutQuote";
 import { animationConfig } from "../animation/config";
 import { Reveal } from "../animation/Reveal";
-import { formatMoney, toMinor, toMajor } from "../../shared/money";
+import { formatMoney, toMajor } from "../../shared/money";
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, CreditCard, Shield, Truck, CheckCircle2, ArrowRight, Loader, User, Info, Lock, Gift, Building } from "lucide-react";
@@ -113,7 +113,16 @@ function CheckoutContent() {
 
   const { currency, market, priceListId, lockCheckout, unlockCheckout } = useCurrency();
   const [lockedCurrency] = useState(currency);
-  const money = (amount: number) => Number.isFinite(amount) ? formatMoney(toMinor(String(amount), lockedCurrency), lockedCurrency) : 'Awaiting quote';
+  const money = (amount: number) => {
+    const numeric = typeof amount === 'number' ? amount : Number(amount);
+    if (!Number.isFinite(numeric) || numeric < 0) return 'Awaiting quote';
+    // Display values can come from JSON or browser state as ordinary numbers.
+    // Convert directly to minor units here instead of sending a formatted
+    // decimal back through the strict input parser (which rejects values such
+    // as scientific notation or locale-formatted strings).
+    const factor = lockedCurrency === 'JPY' ? 1 : 100;
+    return formatMoney(Math.round(numeric * factor), lockedCurrency);
+  };
   useEffect(() => { lockCheckout(); return () => unlockCheckout(); }, []);
   const { products, isSynced } = useAdmin();
   const { user, isAuthenticated, createAccount, updateUser, checkEmailStatus, activateAccount, login } = useUser();
