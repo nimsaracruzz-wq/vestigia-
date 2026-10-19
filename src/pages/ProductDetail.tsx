@@ -230,6 +230,10 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
   };
 
   const handleAddToCart = () => {
+    if (!Number.isFinite(getProductPrice(product, currency))) {
+      setError(`This product is unavailable in ${currency}.`);
+      return;
+    }
     if (!selectedSize) {
       setError("Please select a size before adding to cart.");
       const sizeSection = document.getElementById("mobile-pdp-size-section");
@@ -328,7 +332,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
 
             <div className="pdp-price">
               {compareAtPrice && <span className="compare-at">{formatPrice(compareAtPrice)}</span>}
-              <span className="current-price">{formatPrice(currentPrice)} {currency}</span>
+              <span className="current-price">{Number.isFinite(currentPrice) ? `${formatPrice(currentPrice)} ${currency}` : `Unavailable in ${currency}`}</span>
               <span>{selectedSize ? ((product.inventory?.[`${selectedColor}_${selectedSize}`] ?? 0)>0 ? "In stock" : "Out of stock") : Object.values(product.inventory||{}).some(n=>n>0)?"In stock":"Out of stock"}</span>
             </div>
           </PageIntro>
@@ -428,12 +432,14 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                 className="add-to-cart-cta-btn"
                 type="button"
                 onClick={handleAddToCart}
-                disabled={addedToCartText || !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0)}
+                disabled={addedToCartText || !Number.isFinite(currentPrice) || !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0)}
               >
                 {addedToCartText ? (
                   <span className="btn-success-flex">
                     <Check size={16} /> Added
                   </span>
+                ) : !Number.isFinite(currentPrice) ? (
+                  `Unavailable in ${currency}`
                 ) : !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0) ? (
                   "Out of Stock"
                 ) : (
@@ -651,7 +657,7 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
       <div className={`mobile-sticky-purchase-bar ${showStickyBar ? "show" : ""}`}>
         <div className="sticky-bar-content">
           <div className="sticky-bar-info">
-            <span className="sticky-price">{formatPrice(currentPrice)}</span>
+            <span className="sticky-price">{Number.isFinite(currentPrice) ? formatPrice(currentPrice) : `Unavailable in ${currency}`}</span>
             <span className="sticky-size">
               {selectedSize ? `SIZE ${selectedSize}` : "SELECT SIZE"}
             </span>
@@ -660,9 +666,9 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
             className="sticky-add-to-bag-btn"
             type="button"
             onClick={handleAddToCart}
-            disabled={addedToCartText || !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0)}
+            disabled={addedToCartText || !Number.isFinite(currentPrice) || !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0)}
           >
-            {addedToCartText ? "ADDED" : !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0) ? "OUT OF STOCK" : "ADD TO BAG"}
+            {addedToCartText ? "ADDED" : !Number.isFinite(currentPrice) ? `UNAVAILABLE IN ${currency}` : !!(product.inventory && selectedSize && product.inventory[`${selectedColor}_${selectedSize}`] === 0) ? "OUT OF STOCK" : "ADD TO BAG"}
           </button>
         </div>
       </div>

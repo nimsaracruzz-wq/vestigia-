@@ -23,15 +23,29 @@ export function priceBounds(filters:ShopFilters,currency:Currency) {
 export function filterShopProducts<T extends CatalogProduct>(products:T[],filters:ShopFilters,currency:Currency):T[] {
  const bounds=priceBounds(filters,currency);
  const selected=products.filter(p=>{
-  const price=p.prices?.[currency];if(!price||price.isActive===false)return false;
+  const price=p.prices?.[currency];
+  // Keep products in the catalog when a market price has not been configured.
+  // They remain browseable, while ProductCard/PDP disable purchase for that market.
+  if(price?.isActive===false)return false;
   if(filters.search&&!`${p.name} ${p.category} ${p.productType||''}`.toLowerCase().includes(filters.search.toLowerCase()))return false;
   const colors=p.colors.filter(c=>!filters.colors.length||filters.colors.some(v=>v.toLowerCase()===c.toLowerCase())),sizes=p.sizes.filter(s=>!filters.sizes.length||filters.sizes.includes(s));
   if(!colors.length||!sizes.length)return false;
   const stock=colors.some(c=>sizes.some(s=>variantStock(p,c,s)>0));
   if(filters.availability==='in_stock'&&!stock||filters.availability==='out_of_stock'&&stock)return false;
-  return (bounds.min===undefined||price.priceMinor>=bounds.min)&&(bounds.max===undefined||price.priceMinor<=bounds.max);
+  // A price range can only match products with an active price in this currency.
+  if(bounds.min!==undefined||bounds.max!==undefined){
+   if(!price)return false;
+   if(bounds.min!==undefined&&price.priceMinor<bounds.min)return false;
+   if(bounds.max!==undefined&&price.priceMinor>bounds.max)return false;
+  }
+  return true;
  });
  if(filters.sort==='newest')selected.sort((a,b)=>b.id-a.id);
- if(filters.sort==='price_asc'||filters.sort==='price_desc')selected.sort((a,b)=>(a.prices![currency]!.priceMinor-b.prices![currency]!.priceMinor)*(filters.sort==='price_asc'?1:-1));
+ if(filters.sort==='price_asc'||filters.sort==='price_desc')selected.sort((a,b)=>{
+  const ap=a.prices?.[currency],bp=b.prices?.[currency];
+  if(!ap)return bp?1:0;
+  if(!bp)return -1;
+  return (ap.priceMinor-bp.priceMinor)*(filters.sort==='price_asc'?1:-1);
+ });
  return selected;
 }

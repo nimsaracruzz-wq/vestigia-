@@ -34,7 +34,7 @@ export default function Shop({onQuickShop}:{onQuickShop:(p:Product)=>void}) {
  const needsSales=selectedSection?.type==='product_carousel'&&selectedSection.settings.source==='best_selling';
  useEffect(()=>{if(!needsSales)return;const controller=new AbortController();fetch(API_BASE_URL+'/storefront/homepage/best-sellers',{signal:controller.signal}).then(r=>r.ok?r.json():[]).then(setBestSellers).catch(()=>{});return()=>controller.abort();},[needsSales]);
  useEffect(()=>{nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[active]);
- const collectionProducts=selectedSection?.type==='product_carousel'?selectHomepageProducts(products,{...selectedSection.settings,maxProducts:Number.MAX_SAFE_INTEGER},currency,bestSellers):active?products.filter(p=>slugifySeo(p.category)===slugifySeo(active)||slugifySeo(p.productType||'')===slugifySeo(active)):products;
+ const collectionProducts=selectedSection?.type==='product_carousel'?selectHomepageProducts(products,{...selectedSection.settings,maxProducts:Number.MAX_SAFE_INTEGER},currency,bestSellers,true):active?products.filter(p=>slugifySeo(p.category)===slugifySeo(active)||slugifySeo(p.productType||'')===slugifySeo(active)):products;
  let filtered:Product[]=[],filterError='';try{filtered=filterShopProducts(collectionProducts,filters,currency);}catch{filterError=`The price filter is invalid for ${currency}. Clear filters or enter a valid range.`;}
  const page=Math.min(100,Math.max(1,Math.floor(Number(params.get('page'))||1))),visible=filtered.slice(0,settings.pageSize*page);
  const title=selectedSection?.type==='product_carousel'?selectedSection.settings.heading:currentCategory||settings.heading;

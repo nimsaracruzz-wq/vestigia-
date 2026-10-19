@@ -7,5 +7,14 @@ export function selectHomepageProducts<T extends Candidate>(products:T[], settin
     return ids.flatMap(id=>{const product=eligible.find(p=>p.id===id);return product?[product]:[];}).slice(0,settings.maxProducts);
   }
   const filtered=settings.source==='category'?eligible.filter(p=>p.category===settings.category):eligible;
-  return [...filtered].sort((a,b)=>settings.sort==='oldest'?a.id-b.id:settings.sort==='price_asc'||settings.sort==='price_desc'?((a.prices?.[currency]?.priceMinor??Number.MAX_SAFE_INTEGER)-(b.prices?.[currency]?.priceMinor??Number.MAX_SAFE_INTEGER))*(settings.sort==='price_asc'?1:-1):b.id-a.id).slice(0,settings.maxProducts);
+  return [...filtered].sort((a,b)=>{
+    if(settings.sort==='oldest')return a.id-b.id;
+    if(settings.sort==='price_asc'||settings.sort==='price_desc'){
+      const ap=a.prices?.[currency],bp=b.prices?.[currency];
+      if(!ap)return bp?1:0;
+      if(!bp)return -1;
+      return (ap.priceMinor-bp.priceMinor)*(settings.sort==='price_asc'?1:-1);
+    }
+    return b.id-a.id;
+  }).slice(0,settings.maxProducts);
 }
