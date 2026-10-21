@@ -6707,8 +6707,13 @@ img {
 
 @media (max-width: 600px) {
   .size-chart-modal {
+    left: 50%;
     width: calc(100vw - 24px);
-    max-height: calc(100dvh - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: 85dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    box-sizing: border-box;
   }
 
   .size-chart-header {
@@ -6734,7 +6739,10 @@ img {
 
   .size-chart-table-wrapper {
     padding: 16px;
+    min-width: 0;
+    max-width: 100%;
     overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .size-chart-table {
@@ -6748,10 +6756,17 @@ img {
 
   .size-chart-measure-tip {
     padding: 12px 16px 18px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    flex-shrink: 0;
   }
 
   .size-chart-modal .size-chart-notes {
     padding: 0 16px 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    flex-shrink: 0;
   }
 }
 
