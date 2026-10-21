@@ -8,8 +8,8 @@ import { SEOHead } from "../components/common/SEOHead";
 const storyJsonLd = {
   "@context": "https://schema.org",
   "@type": "AboutPage",
-  "name": "Our Story — VESTIGIA® | Italy × Sri Lanka",
-  "description": "Inspired by Italian design and crafted in Sri Lanka, VESTIGIA creates timeless essentials that combine contemporary style with exceptional craftsmanship.",
+  "name": "About VESTIGIA",
+  "description": "Learn about VESTIGIA and explore the contemporary clothing collection.",
   "url": "https://thevestigia.com/about/",
   "isPartOf": { "@id": "https://thevestigia.com/#website" },
   "about": { "@id": "https://thevestigia.com/#organization" },
@@ -30,8 +30,8 @@ export default function About() {
   return (
     <main className="story-page-shell" style={{ background: "#ffffff", color: "#171412", overflowX: "hidden" }}>
       <SEOHead
-        title="Our Story | VESTIGIA® — Italy × Sri Lanka"
-        description="Inspired by Italian design and crafted in Sri Lanka, VESTIGIA creates timeless essentials that combine contemporary style with exceptional craftsmanship."
+        title="About VESTIGIA"
+        description="Learn about VESTIGIA and explore the contemporary clothing collection."
         canonicalUrl="https://thevestigia.com/about/"
         ogImage="https://thevestigia.com/images/products/vestigia_logo.png"
         ogType="website"

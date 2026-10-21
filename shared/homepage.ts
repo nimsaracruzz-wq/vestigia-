@@ -77,7 +77,7 @@ export function initialHomepage(productIds: number[] = [], announcement?: { enab
   const bar = newSection('announcement', 'announcement');
   if (announcement) { bar.enabled = announcement.enabled; bar.settings.messages[0].text = announcement.text || 'THE FIRST RELEASE — AVAILABLE NOW'; }
   return { schemaVersion: 1, sections: [bar, hero, arrivals, manifesto, featured, campaign, wanted, identity, craft, legacy, precision, lookbook, newsletter].map((s, sortOrder) => ({ ...s, sortOrder })),
-    seo: { title: 'VESTIGIA | Luxury Clothing & Premium Essentials', description: 'EVERY THREAD LEAVES A LEGACY. Contemporary clothing shaped by Italian vision and made in Sri Lanka. Discover the first VESTIGIA release.', image: '/images/products/vestigia-hero-1254.jpg', canonical: 'https://thevestigia.com/', index: true },
+    seo: { title: 'VESTIGIA | Contemporary Clothing & Oversized T-Shirts', description: 'Explore VESTIGIA contemporary clothing, including Aurelius oversized T-shirts in black and white. Discover the first release.', image: '/images/products/vestigia-hero-1254.jpg', canonical: 'https://thevestigia.com/', index: true },
     footer: { description: 'DESIGNED IN ITALY.\nMADE IN SRI LANKA.\nEVERY THREAD LEAVES A LEGACY', copyright: '© 2026 VESTIGIA. ALL RIGHTS RESERVED.', groups: [
       { id: 'shop', title: 'Shop', links: [link('All products', '/shop')] },
       { id: 'about', title: 'About', links: [link('Our story', '/story'), link('About VESTIGIA', '/about'), link('Journal', '/journal')] },

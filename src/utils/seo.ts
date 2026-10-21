@@ -47,15 +47,11 @@ export const organizationJsonLd = (): JsonLd => ({
   name: BRAND_DISPLAY_NAME,
   url: SITE_URL,
   logo: DEFAULT_OG_IMAGE,
-  sameAs: [
-    "https://instagram.com/thevestigia",
-    "https://tiktok.com/@thevestigia",
-  ],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
     email: "support@thevestigia.com",
-    availableLanguage: ["English", "Italian"],
+    availableLanguage: ["English"],
   },
 });
 

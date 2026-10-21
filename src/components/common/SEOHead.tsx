@@ -16,8 +16,8 @@ interface SEOHeadProps {
 }
 
 export const SEOHead: React.FC<SEOHeadProps> = ({
-  title = "VESTIGIA | Luxury Clothing & Premium Essentials",
-  description = "Discover VESTIGIA Aurelius Oversized T-Shirts. Crafted with 280 GSM heavyweight cotton, Italian design principles, and artisan precision.",
+  title = "VESTIGIA | Contemporary Clothing & Oversized T-Shirts",
+  description = "Explore VESTIGIA contemporary clothing, including Aurelius oversized T-shirts in black and white. Discover the first release.",
   canonicalUrl = `${SITE_URL}/`,
   ogImage = DEFAULT_OG_IMAGE,
   ogImageAlt = "VESTIGIA brand emblem",
@@ -68,7 +68,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     setMetaTag('meta[property="og:url"]', "property", "og:url", normalizedCanonical);
     setMetaTag('meta[property="og:image"]', "property", "og:image", normalizedOgImage);
     setMetaTag('meta[property="og:image:alt"]', "property", "og:image:alt", ogImageAlt);
-    setMetaTag('meta[property="og:locale"]', "property", "og:locale", "it_IT");
+    setMetaTag('meta[property="og:locale"]', "property", "og:locale", "en_US");
+    document.querySelector('meta[property="og:locale:alternate"]')?.remove();
 
     setMetaTag('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
 

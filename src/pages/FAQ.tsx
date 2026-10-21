@@ -16,7 +16,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     category: "Orders & Shipping",
     question: "Where do VESTIGIA garments ship from?",
-    answer: "All garments are dispatched directly from our luxury studio in Sri Lanka, where each piece undergoes meticulous hand-inspection prior to express shipment via DHL, FedEx, or UPS."
+    answer: "Shipping origin and available delivery services are shown in the current shipping policy and at checkout."
   },
   {
     category: "Orders & Shipping",
@@ -46,7 +46,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     category: "Products & Sizing",
     question: "What fabric quality does VESTIGIA use?",
-    answer: "We use 280 GSM (Grams per Square Meter) combed organic heavyweight cotton jersey, offering exceptional structure, softness, and longevity."
+    answer: "Fabric composition and weight should be checked on the individual product page for the current product specifications."
   },
   {
     category: "Account & Payments",
