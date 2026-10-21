@@ -4,6 +4,7 @@ import { useAdmin } from "../AdminContext";
 
 import { Link } from "react-router-dom";
 import { Truck, ArrowRight } from "lucide-react";
+import AdminAuthenticatorSetup from '../components/AdminAuthenticatorSetup';
 
 export default function AdminSettings() {
   const { settings, updateSettings } = useAdmin();
@@ -70,6 +71,8 @@ export default function AdminSettings() {
           Manage Shipping Matrix <ArrowRight size={16} />
         </Link>
       </div>
+
+      <AdminAuthenticatorSetup />
 
       <div className="admin-settings-layout">
         <form onSubmit={handleSubmit}>

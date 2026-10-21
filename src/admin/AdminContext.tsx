@@ -140,7 +140,7 @@ interface AdminContextType {
   updateJournalArticle: (a: JournalArticle) => void;
   deleteJournalArticle: (id: number) => Promise<void>;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, otp: string) => Promise<boolean>;
   isSynced: boolean;
   adminDataError: string | null;
   refreshAdminData: () => Promise<void>;
@@ -496,12 +496,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     setJournal(prev => prev.filter(x => x.id !== id));
   };
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, otp: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, otp }),
       });
 
       if (!response.ok) {

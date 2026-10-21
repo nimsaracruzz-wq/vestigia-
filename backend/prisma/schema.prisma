@@ -10,9 +10,12 @@ datasource db {
 }
 
 model AdminUser {
-  id       Int    @id @default(autoincrement())
-  username String @unique
-  password String // hashed
+  id                         Int     @id @default(autoincrement())
+  username                   String  @unique
+  password                   String  // hashed
+  totpSecretCiphertext       String?
+  totpPendingSecretCiphertext String?
+  totpEnabled                Boolean @default(false)
 }
 
 model Homepage {

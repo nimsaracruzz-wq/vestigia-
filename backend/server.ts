@@ -145,6 +145,7 @@ const MAX_ITEM_QUANTITY = 20;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const authRateLimit = createRateLimiter({ keyPrefix: 'auth', windowMs: 15 * 60 * 1000, max: 20 });
+const adminLoginRateLimit = createRateLimiter({ keyPrefix: 'admin-login', windowMs: 15 * 60 * 1000, max: 5 });
 const checkoutRateLimit = createRateLimiter({ keyPrefix: 'checkout', windowMs: 5 * 60 * 1000, max: 60 });
 const formRateLimit = createRateLimiter({ keyPrefix: 'form', windowMs: 10 * 60 * 1000, max: 20 });
 const adminWriteRateLimit = createRateLimiter({ keyPrefix: 'admin-write', windowMs: 60 * 1000, max: 120 });
@@ -191,6 +192,59 @@ const normalizeTaxRate = (value: unknown) => {
 const moneyFromMinor = (minor: number, currency: SupportedCurrency) => minor / (currency === 'JPY' ? 1 : 100);
 const cartHash = (payload: unknown) => crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 const tokenHash = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
+const decodeBase32 = (secret: string) => {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const normalized = secret.toUpperCase().replace(/=+$/g, '').replace(/\s/g, '');
+  let bits = '';
+  for (const char of normalized) {
+    const value = alphabet.indexOf(char);
+    if (value < 0) throw new Error('ADMIN_TOTP_SECRET must be base32.');
+    bits += value.toString(2).padStart(5, '0');
+  }
+  const bytes: number[] = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  return Buffer.from(bytes);
+};
+const encodeBase32 = (bytes: Buffer) => {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = [...bytes].map(value => value.toString(2).padStart(8, '0')).join('');
+  let output = '';
+  while (bits.length) {
+    const chunk = bits.slice(0, 5).padEnd(5, '0');
+    output += alphabet[parseInt(chunk, 2)];
+    bits = bits.slice(5);
+  }
+  return output;
+};
+const totpCipherKey = () => crypto.createHash('sha256').update(`vestigia-admin-totp:${JWT_SECRET}`).digest();
+const encryptTotpSecret = (secret: string) => {
+  const iv = crypto.randomBytes(12), cipher = crypto.createCipheriv('aes-256-gcm', totpCipherKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
+  return `v1.${iv.toString('base64url')}.${cipher.getAuthTag().toString('base64url')}.${encrypted.toString('base64url')}`;
+};
+const decryptTotpSecret = (value: string) => {
+  const [version, iv, tag, body] = value.split('.');
+  if (version !== 'v1' || !iv || !tag || !body) throw new Error('Invalid stored authenticator secret.');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', totpCipherKey(), Buffer.from(iv, 'base64url'));
+  decipher.setAuthTag(Buffer.from(tag, 'base64url'));
+  return Buffer.concat([decipher.update(Buffer.from(body, 'base64url')), decipher.final()]).toString('utf8');
+};
+const verifyAdminTotp = (secret: string, code: unknown) => {
+  if (!/^\d{6}$/.test(String(code ?? ''))) return false;
+  const key = decodeBase32(secret);
+  if (key.length < 20) throw new Error('ADMIN_TOTP_SECRET must decode to at least 20 bytes.');
+  const counter = Math.floor(Date.now() / 30000);
+  for (const offset of [-1, 0, 1]) {
+    const message = Buffer.alloc(8);
+    message.writeBigUInt64BE(BigInt(counter + offset));
+    const digest = crypto.createHmac('sha1', key).update(message).digest();
+    const index = digest[digest.length - 1] & 0x0f;
+    const binary = ((digest[index] & 0x7f) << 24) | ((digest[index + 1] & 0xff) << 16) | ((digest[index + 2] & 0xff) << 8) | (digest[index + 3] & 0xff);
+    const expected = String(binary % 1_000_000).padStart(6, '0');
+    if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(code)))) return true;
+  }
+  return false;
+};
 const randomToken = (bytes = 32) => crypto.randomBytes(bytes).toString('base64url');
 const isRestrictedStatus = (status: unknown) => ['SUSPENDED', 'BANNED'].includes(String(status || '').toUpperCase());
 const isSafeAccountStatus = (status: unknown) => !isRestrictedStatus(status);
@@ -1816,18 +1870,22 @@ app.get('/api/customers/orders', authenticateToken, async (req, res) => {
 });
 
 // --- AUTHENTICATION ---
-app.post('/api/auth/login', authRateLimit, async (req, res) => {
+app.post('/api/auth/login', authRateLimit, adminLoginRateLimit, async (req, res) => {
   try {
-    const { username, password } = req.body ?? {};
-    if (!username || !password) {
-      res.status(400).json({ error: 'Username and password required', success: false });
+    const { username, password, otp } = req.body ?? {};
+    if (!username || !password || !otp) {
+      res.status(400).json({ error: 'Username, password, and authenticator code required', success: false });
       return;
     }
-
+    const bootstrapTotpSecret = String(process.env.ADMIN_TOTP_SECRET || '');
     const user = await prisma.adminUser.findUnique({ where: { username: cleanText(username, 64) } });
 
     if (!user) {
       res.status(401).json({ error: 'Invalid credentials', success: false });
+      return;
+    }
+    if (!user.totpEnabled && !bootstrapTotpSecret) {
+      res.status(503).json({ error: 'Admin authenticator setup is required before login can continue.', success: false });
       return;
     }
 
@@ -1846,9 +1904,12 @@ app.post('/api/auth/login', authRateLimit, async (req, res) => {
       }
     }
 
-    if (isPasswordValid) {
+    const loginTotpSecret = user.totpEnabled
+      ? (user.totpSecretCiphertext ? decryptTotpSecret(user.totpSecretCiphertext) : '')
+      : bootstrapTotpSecret;
+    if (isPasswordValid && loginTotpSecret && verifyAdminTotp(loginTotpSecret, otp)) {
       const token = jwt.sign({ id: user.id, username: user.username, role: 'admin' }, JWT_SECRET, {
-        expiresIn: '24h',
+        expiresIn: '8h',
       });
       res.json({ token, success: true });
     } else {
@@ -1857,6 +1918,47 @@ app.post('/api/auth/login', authRateLimit, async (req, res) => {
   } catch (error) {
     console.error('Admin authentication error:', error);
     res.status(500).json({ error: 'Authentication failed', success: false });
+  }
+});
+
+app.get('/api/admin/security/totp/status', authenticateAdmin, async (req, res) => {
+  const userId = Number((req as any).admin?.id);
+  const user = await prisma.adminUser.findUnique({ where: { id: userId }, select: { totpEnabled: true } });
+  if (!user) { res.status(404).json({ error: 'Admin account not found.' }); return; }
+  res.set('Cache-Control', 'private, no-store').json({ enabled: user.totpEnabled });
+});
+
+app.post('/api/admin/security/totp/setup', authenticateAdmin, adminWriteRateLimit, async (req, res) => {
+  try {
+    const userId = Number((req as any).admin?.id), password = String(req.body?.password || '');
+    const user = await prisma.adminUser.findUnique({ where: { id: userId } });
+    if (!user || !password || !(await bcrypt.compare(password, user.password))) {
+      res.status(401).json({ error: 'Current password is incorrect.' }); return;
+    }
+    const secret = encodeBase32(crypto.randomBytes(20));
+    await prisma.adminUser.update({ where: { id: userId }, data: { totpPendingSecretCiphertext: encryptTotpSecret(secret) } });
+    const label = encodeURIComponent(`VESTIGIA:${user.username}`);
+    const issuer = encodeURIComponent('VESTIGIA');
+    const otpauthUrl = `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
+    res.set('Cache-Control', 'private, no-store').json({ secret, otpauthUrl });
+  } catch (error) {
+    console.error('Admin authenticator setup failed:', error instanceof Error ? error.message : 'unknown');
+    res.status(400).json({ error: 'Could not start authenticator setup.' });
+  }
+});
+
+app.post('/api/admin/security/totp/verify', authenticateAdmin, adminWriteRateLimit, async (req, res) => {
+  try {
+    const userId = Number((req as any).admin?.id), code = req.body?.otp;
+    const user = await prisma.adminUser.findUnique({ where: { id: userId } });
+    if (!user?.totpPendingSecretCiphertext) { res.status(409).json({ error: 'Start authenticator setup before verifying.' }); return; }
+    const secret = decryptTotpSecret(user.totpPendingSecretCiphertext);
+    if (!verifyAdminTotp(secret, code)) { res.status(401).json({ error: 'Code is invalid or expired. Enter the current app code.' }); return; }
+    await prisma.adminUser.update({ where: { id: userId }, data: { totpSecretCiphertext: user.totpPendingSecretCiphertext, totpPendingSecretCiphertext: null, totpEnabled: true } });
+    res.json({ success: true, enabled: true });
+  } catch (error) {
+    console.error('Admin authenticator verification failed:', error instanceof Error ? error.message : 'unknown');
+    res.status(400).json({ error: 'Could not verify authenticator code.' });
   }
 });
 

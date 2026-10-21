@@ -1,5 +1,9 @@
 # Security and error recovery
 
+## Admin two-factor login
+
+Admin login requires the account password and a six-digit TOTP code. Set a private bootstrap `ADMIN_TOTP_SECRET` in the backend environment before deployment so the admin can sign in and enroll an authenticator through **Admin → Settings → Admin authenticator app**. Scan the displayed QR code, enter the current six-digit code to verify, then future logins use the per-admin secret encrypted in the database. The bootstrap secret may be removed after enrollment. Keep `JWT_SECRET` stable: it encrypts stored TOTP secrets. Keep a secure offline backup of authenticator recovery material. Admin login is limited to five requests per IP per 15 minutes, and newly issued admin tokens expire after eight hours. Existing browser sessions issued before deployment remain valid until their existing 24-hour expiration; log out admin browsers after deployment to ensure new sessions use the second factor.
+
 API failures include an `X-Request-ID` response header and a matching `requestId` in JSON errors. Support can correlate these with structured `request_failed` and `request_exception` events. These events omit bodies, query strings, credentials, and database exception text. Existing route-specific console logging has not been comprehensively replaced.
 
 Malformed JSON, oversized payloads, upload errors, conflicts, missing records, temporary database failures, and unexpected exceptions receive safe responses. JSON request structures are bounded to 16 nesting levels and 10,000 nodes and reject prototype-pollution keys. A React error boundary provides a recovery page. Customer JWTs use HS256 and cannot use admin identities; existing database-backed sessions and CSRF protections remain active.
