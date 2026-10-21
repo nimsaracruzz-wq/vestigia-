@@ -6705,6 +6705,56 @@ img {
   padding: 0 28px 12px;
 }
 
+@media (max-width: 600px) {
+  .size-chart-modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+
+  .size-chart-header {
+    padding: 16px 16px 12px;
+    gap: 12px;
+  }
+
+  .size-chart-title-row {
+    gap: 7px;
+  }
+
+  .size-chart-title-row h2 {
+    font-size: 1rem;
+  }
+
+  .size-chart-controls {
+    gap: 8px;
+  }
+
+  .size-unit-toggle button {
+    padding: 5px 9px;
+  }
+
+  .size-chart-table-wrapper {
+    padding: 16px;
+    overscroll-behavior-x: contain;
+  }
+
+  .size-chart-table {
+    min-width: max-content;
+  }
+
+  .size-chart-table th,
+  .size-chart-table td {
+    padding: 8px 10px;
+  }
+
+  .size-chart-measure-tip {
+    padding: 12px 16px 18px;
+  }
+
+  .size-chart-modal .size-chart-notes {
+    padding: 0 16px 12px;
+  }
+}
+
 /* ==========================================
    SIZE CHART — Admin Editor
    ========================================== */
