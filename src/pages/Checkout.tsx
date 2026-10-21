@@ -368,14 +368,34 @@ function CheckoutContent() {
   // Prepare the final amount automatically. Accepting its price snapshots must
   // not restart this request or invalidate the quote that the customer sees.
   useEffect(() => {
-    if (step === "success" || !quotePayload.items.length || !quotePayload.shippingMethodId) return;
+    if (step === "success") return;
+    if (!quotePayload.items.length) {
+      setQuoteLoading(false);
+      setQuoteError("Your bag is empty. Add an item before continuing to payment.");
+      setServerQuote(null);
+      return;
+    }
+    if (!quotePayload.shippingMethodId) {
+      setQuoteLoading(false);
+      setQuoteError(step === "payment"
+        ? "Choose an available shipping method to calculate your total. Use Edit shipping to review your delivery options."
+        : "Select a shipping method to calculate your total.");
+      setServerQuote(null);
+      return;
+    }
     const controller = new AbortController();
     const requestedKey = quoteInputKey;
+    let quoteTimedOut = false;
+    let quoteTimeout: number | undefined;
     setQuoteLoading(true);
     setQuoteError("");
     setServerQuote(null);
     const prepareTotal = async () => {
       try {
+        quoteTimeout = window.setTimeout(() => {
+          quoteTimedOut = true;
+          controller.abort();
+        }, 20000);
         const response = await fetch(API_BASE_URL + "/checkout/quote", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify(quotePayload), signal: controller.signal,
@@ -388,13 +408,15 @@ function CheckoutContent() {
         setServerQuote(quote);
         acceptQuote(quote);
       } catch (error: any) {
-        if (!controller.signal.aborted) setQuoteError(error.message || "Unable to calculate your total.");
+        if (quoteTimedOut) setQuoteError("Calculating your total took too long. Check your connection and retry.");
+        else if (!controller.signal.aborted) setQuoteError(error.message || "Unable to calculate your total.");
       } finally {
-        if (!controller.signal.aborted) setQuoteLoading(false);
+        if (quoteTimeout !== undefined) window.clearTimeout(quoteTimeout);
+        if (!controller.signal.aborted || quoteTimedOut) setQuoteLoading(false);
       }
     };
     const quoteTimer = window.setTimeout(() => { void prepareTotal(); }, 350);
-    return () => { window.clearTimeout(quoteTimer); controller.abort(); };
+    return () => { window.clearTimeout(quoteTimer); if (quoteTimeout !== undefined) window.clearTimeout(quoteTimeout); controller.abort(); };
   }, [step, quoteInputKey, quoteReload]);
 
   useEffect(() => {
