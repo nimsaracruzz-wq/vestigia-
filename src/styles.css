@@ -6712,13 +6712,20 @@ img {
 
 @media (max-width: 600px) {
   .size-chart-modal {
-    left: 50%;
-    width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px);
-    max-height: 85dvh;
-    overflow-x: hidden;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    max-height: none;
+    transform: none;
+    translate: none;
+    overflow-x: clip;
     overflow-y: auto;
     box-sizing: border-box;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .size-chart-header {
@@ -6746,6 +6753,8 @@ img {
     padding: 16px;
     min-width: 0;
     max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
   }
