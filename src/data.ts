@@ -47,6 +47,8 @@ export type Product = {
   alt: string;
   sizes: string[];
   description: string;
+  fitDescription?: string;
+  fabricDetails?: string;
   details: string[];
   care: string[];
   rating: number;

@@ -66,6 +66,8 @@ model Product {
   alt         String
   sizes       String   // stored as JSON array string
   description String
+  fitDescription String?
+  fabricDetails String?
   details     String   // stored as JSON array string
   care        String   // stored as JSON array string
   sizeChart   String?  // stored as JSON string

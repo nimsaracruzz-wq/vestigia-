@@ -139,6 +139,8 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     modelImage: initialData?.modelImage || initialData?.image || "",
     productImage: initialData?.productImage || initialData?.image || "",
     description: initialData?.description || "",
+    fitDescription: initialData?.fitDescription || "",
+    fabricDetails: initialData?.fabricDetails || "",
     sizes: initialData?.sizes.join(", ") || "",
     colors: initialData?.colors.join(", ") || "",
     seoTitle: initialData?.seoTitle || "",
@@ -160,6 +162,8 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     imageTitle: initialData?.imageTitle || "",
     alt: initialData?.alt || "",
   });
+
+  const [careText, setCareText] = useState(() => initialData?.care?.join("\n") || "");
 
   const [prices, setPrices] = useState(() => ({
     USD: initialData?.prices?.USD ?? { priceMinor: 0, compareAtMinor: null },
@@ -373,7 +377,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       images: galleryImages,
       alt: formData.alt || formData.name,
       details: initialData?.details || [],
-      care: initialData?.care || [],
+      care: careText.split(/\r?\n/).map(item => item.trim()).filter(Boolean),
       rating: initialData?.rating || 0,
       reviews: initialData?.reviews || [],
       id: initialData?.id,
@@ -739,6 +743,41 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       <div className="admin-form-group">
         <label>Description</label>
         <textarea name="description" value={formData.description} onChange={handleChange} rows={4} required />
+      </div>
+
+      <div className="admin-form-row">
+        <div className="admin-form-group">
+          <label htmlFor="product-fit-description">Fit description</label>
+          <textarea
+            id="product-fit-description"
+            name="fitDescription"
+            value={formData.fitDescription}
+            onChange={handleChange}
+            rows={3}
+            placeholder="Describe the intended fit and sizing guidance."
+          />
+        </div>
+        <div className="admin-form-group">
+          <label htmlFor="product-fabric-details">Fabric details</label>
+          <textarea
+            id="product-fabric-details"
+            name="fabricDetails"
+            value={formData.fabricDetails}
+            onChange={handleChange}
+            rows={3}
+            placeholder="Describe fabric composition, weight, and construction."
+          />
+        </div>
+      </div>
+      <div className="admin-form-group">
+        <label htmlFor="product-care-instructions">Care instructions (one per line)</label>
+        <textarea
+          id="product-care-instructions"
+          value={careText}
+          onChange={event => setCareText(event.target.value)}
+          rows={4}
+          placeholder="Add a separate care instruction on each line."
+        />
       </div>
 
       {/* ── Size Chart Section ──────────────────────────────────────────────── */}

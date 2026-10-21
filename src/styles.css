@@ -2363,6 +2363,11 @@ img {
   margin-bottom: 6px;
 }
 
+.pdp-accordion-copy {
+  margin: 0 0 12px;
+  white-space: pre-line;
+}
+
 .pdp-reviews-section {
   margin-top: 60px;
   border-top: 1px solid #ddd5cc;

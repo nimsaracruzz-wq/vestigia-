@@ -9,7 +9,7 @@ import { customerClaims } from './utils/customerClaims.js';
 import { createRateLimiter, requestSafety, safeErrorHandler, validateRequestShape, PublicError } from './utils/requestSafety.js';
 import { serializeProduct } from './utils/publicProduct.js';
 import { slug as seoSlug, productWarnings } from '../shared/seo/product.js';
-import { merchantFeed } from './utils/merchantFeed.js';
+import { installMerchantFeedRoutes } from './utils/merchantFeed.js';
 import { installStorefront } from './utils/storefrontRoutes.js';
 import { installHomepageRoutes } from './utils/homepageRoutes.js';
 import { normalizeCountryTaxRate } from './utils/countryTax.js';
@@ -516,6 +516,8 @@ const mapProductInput = (body: any) => ({
   alt: String(body.alt ?? body.name ?? ''),
   sizes: JSON.stringify(Array.isArray(body.sizes) ? body.sizes : []),
   description: String(body.description ?? ''),
+  ...(body.fitDescription !== undefined ? { fitDescription: body.fitDescription ? String(body.fitDescription) : null } : {}),
+  ...(body.fabricDetails !== undefined ? { fabricDetails: body.fabricDetails ? String(body.fabricDetails) : null } : {}),
   details: JSON.stringify(Array.isArray(body.details) ? body.details : []),
   care: JSON.stringify(Array.isArray(body.care) ? body.care : []),
   sizeChart: body.sizeChart
@@ -695,6 +697,8 @@ const getProductPayload = (body: any, file?: Express.Multer.File) => ({
   alt: body.alt,
   sizes: parseArrayField(body.sizes),
   description: body.description,
+  fitDescription: body.fitDescription,
+  fabricDetails: body.fabricDetails,
   details: parseArrayField(body.details),
   care: parseArrayField(body.care),
   sizeChart: body.sizeChart,
@@ -1965,19 +1969,10 @@ app.post('/api/admin/security/totp/verify', authenticateAdmin, adminWriteRateLim
 // ─── ENTERPRISE SEO: ROBOTS.TXT & SITEMAPS SUITE ────────────────────────────
 
 // --- PRODUCTS ---
-const googleShoppingFeedHandler = async (_req: express.Request, res: express.Response) => {
- try { const rows=await prisma.product.findMany({include:{inventory:true,prices:true}});
- const result=merchantFeed(rows.map(serializeProduct),publicSiteUrl());
- for(const warning of result.warnings) console.warn('[Merchant]',warning);
- res.set('Cache-Control','no-cache').type('xml').send(result.xml);
- } catch {res.status(503).json({error:'Product feed temporarily unavailable'});}
-};
-
-app.get('/api/feeds/google-shopping', googleShoppingFeedHandler);
-app.get('/api/products/google-feed', googleShoppingFeedHandler);
-app.get('/feeds/google-shopping.xml', googleShoppingFeedHandler);
-app.get('/feeds/google-shopping', googleShoppingFeedHandler);
-app.get('/feeds/products.xml', googleShoppingFeedHandler);
+installMerchantFeedRoutes(app, async () => {
+ const rows=await prisma.product.findMany({include:{inventory:true,prices:true}});
+ return rows.map(serializeProduct);
+}, publicSiteUrl);
 
 app.get('/api/admin/products', authenticateAdmin, async (_req,res)=>{try{res.set('Cache-Control','private, no-store').json((await prisma.product.findMany({include:{reviews:true,inventory:true,prices:true},orderBy:{id:'asc'}})).map(serializeProduct));}catch{res.status(503).json({error:'Products unavailable'});}});
 

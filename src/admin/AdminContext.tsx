@@ -217,6 +217,8 @@ function buildProductFormData(product: any) {
   formData.append("productImage", String(product.productImage ?? ""));
   formData.append("alt", String(product.alt ?? product.name ?? ""));
   formData.append("description", String(product.description ?? ""));
+  formData.append("fitDescription", String(product.fitDescription ?? ""));
+  formData.append("fabricDetails", String(product.fabricDetails ?? ""));
   formData.append("sizes", JSON.stringify(product.sizes ?? []));
   formData.append("colors", JSON.stringify(product.colors ?? []));
   formData.append("images", JSON.stringify(product.images ?? []));

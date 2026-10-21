@@ -18,6 +18,8 @@ export const serializeProduct = (product: {
   alt: string;
   sizes: string;
   description: string;
+  fitDescription?: string | null;
+  fabricDetails?: string | null;
   details: string;
   care: string;
   sizeChart?: string | null;

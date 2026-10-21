@@ -497,11 +497,14 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                   >
-                    <ul>
-                      {product.details.map((detail, i) => (
-                        <li key={i}>{detail}</li>
-                      ))}
-                    </ul>
+                    {product.fitDescription && <p className="pdp-accordion-copy">{product.fitDescription}</p>}
+                    {!!product.details.length && (
+                      <ul>
+                        {product.details.map((detail, i) => (
+                          <li key={i}>{detail}</li>
+                        ))}
+                      </ul>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -526,11 +529,15 @@ export default function ProductDetail({ onQuickShop }: ProductDetailProps) {
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                   >
-                    <ul>
-                      {product.care.map((careItem, i) => (
-                        <li key={i}>{careItem}</li>
-                      ))}
-                    </ul>
+                    {product.material && <p><strong>Material:</strong> {product.material}</p>}
+                    {product.fabricDetails && <p className="pdp-accordion-copy">{product.fabricDetails}</p>}
+                    {!!product.care.length && (
+                      <ul>
+                        {product.care.map((careItem, i) => (
+                          <li key={i}>{careItem}</li>
+                        ))}
+                      </ul>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
