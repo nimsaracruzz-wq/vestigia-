@@ -81,7 +81,7 @@ export default function PrivacyPolicy() {
           </Reveal>
 
           <Reveal as="section" id="data-use" className="policy-section">
-            <p>With your optional analytics consent, we measure public page views, random browser and session identifiers, viewport category, referring website hostname, and visit times. This traffic dataset excludes account and checkout pages, URL queries, names, email addresses, and stored IP addresses. Traffic records are retained for up to 90 days and removed on subsequent collection. Declining analytics, Do Not Track, or Global Privacy Control prevents this optional collection. You can withdraw consent in Cookie Preferences.</p>
+            <p>With your optional analytics consent, we measure public page views, random browser and session identifiers, viewport category, referring website hostname, visit times, and successful product search terms. Search terms are stored without account or session identifiers and retained for up to 90 days to show aggregate popular searches. This traffic dataset excludes account and checkout pages, URL queries, names, email addresses, and stored IP addresses. Declining analytics, Do Not Track, or Global Privacy Control prevents this optional collection. You can withdraw consent in Cookie Preferences.</p>
             <h2>3. How We Use Your Data</h2>
             <p>Your data is used strictly to deliver an exceptional luxury shopping experience:</p>
             <ul className="policy-checklist">

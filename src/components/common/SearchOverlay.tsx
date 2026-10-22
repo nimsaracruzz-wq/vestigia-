@@ -9,6 +9,8 @@ import { useCurrency } from "../../context/CurrencyContext";
 import { useAdmin } from "../../admin/AdminContext";
 import ProductImage from "./ProductImage";
 import { getProductPrice } from "../../utils/productMedia";
+import { API_BASE_URL } from "../../config/api";
+import { useCookieConsent } from "../../context/CookieConsentContext";
 
 type SearchOverlayProps = {
   open: boolean;
@@ -24,6 +26,23 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { formatPrice: money, currency } = useCurrency();
   const { products } = useAdmin();
+  const { consent } = useCookieConsent();
+  const [popularSearches, setPopularSearches] = useState<string[]>([]);
+  const [bestSellerIds, setBestSellerIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    fetch(`${API_BASE_URL}/search/popular`, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : [])
+      .then((items: Array<{ query?: string }>) => setPopularSearches(items.map(item => item.query || '').filter(Boolean).slice(0, 6)))
+      .catch(() => {});
+    fetch(`${API_BASE_URL}/storefront/homepage/best-sellers`, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : [])
+      .then((ids: number[]) => setBestSellerIds(Array.isArray(ids) ? ids : []))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [open]);
 
   // Focus input on open, reset on close
   useEffect(() => {
@@ -49,17 +68,27 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const results = useMemo(() => {
     if (query.trim().length > 1) {
       const lowerQuery = query.toLowerCase();
-      return products.filter(
-        (product) =>
-          product.name.toLowerCase().includes(lowerQuery) ||
-          product.category.toLowerCase().includes(lowerQuery) ||
-          product.description.toLowerCase().includes(lowerQuery)
-      );
+      return products.map(product => ({ product, score:
+        (product.name.toLowerCase().includes(lowerQuery) ? 4 : 0) +
+        (product.category.toLowerCase().includes(lowerQuery) ? 2 : 0) +
+        (product.description.toLowerCase().includes(lowerQuery) ? 1 : 0)
+      })).filter(item => item.score > 0).sort((a, b) => b.score - a.score || a.product.name.localeCompare(b.product.name)).map(item => item.product);
     }
     return [];
   }, [query, products]);
 
-  const popularSearches = ["signature", "origin", "essential", "vestigia", "tee"];
+  const recommendations = [...products].sort((a, b) => {
+    const aRank = bestSellerIds.indexOf(a.id), bRank = bestSellerIds.indexOf(b.id);
+    return (aRank < 0 ? Number.MAX_SAFE_INTEGER : aRank) - (bRank < 0 ? Number.MAX_SAFE_INTEGER : bRank) || a.name.localeCompare(b.name);
+  }).slice(0, 3);
+  const recordSearch = (value: string) => {
+    const clean = value.trim().replace(/\s+/g, ' ');
+    if (!consent?.analytics || clean.length < 2 || !results.length) return;
+    void fetch(`${API_BASE_URL}/search/query`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: clean, consent: true }), keepalive: true,
+    }).catch(() => {});
+  };
 
   return (
     <AnimatePresence onExitComplete={() => { setQuery(""); overlayNavigation.onExitComplete(); }}>
@@ -105,6 +134,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                   autoComplete="off"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') recordSearch(query); }}
                 />
                 {query && (
                   <button
@@ -130,6 +160,21 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                       {tag}
                     </button>
                   ))}
+                  {!popularSearches.length && <small>Popular searches will appear as shoppers search the collection.</small>}
+                </div>
+              )}
+
+              {results.length === 0 && !query.trim() && recommendations.length > 0 && (
+                <div className="search-results-container">
+                  <h3>Recommended pieces</h3>
+                  <div className="search-results-grid">
+                    {recommendations.map(product => (
+                      <Link key={product.id} to={`/product/${product.slug || product.id}`} onClick={onClose} className="search-result-item">
+                        <ProductImage product={product} variant="product" />
+                        <div><h4>{product.name}</h4><p>{product.category}</p><strong>{money(getProductPrice(product, currency))}</strong></div>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -141,7 +186,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                       <Link
                         key={product.id}
                         to={`/product/${product.slug || product.id}`}
-                        onClick={onClose}
+                        onClick={() => { recordSearch(query); onClose(); }}
                         className="search-result-item"
                       >
                         <ProductImage product={product} variant="product" />

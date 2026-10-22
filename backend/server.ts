@@ -2,6 +2,7 @@ import { stripeConfiguration } from './utils/stripeConfiguration.js';
 import { installCouponRoutes, reserveCoupon, redeemCoupon, releaseAbandonedCoupons } from './utils/coupons.js';
 import { validatePassword } from '../shared/passwordPolicy.js';
 import { installSiteTraffic } from './utils/siteTraffic.js';
+import { installProductSearchRoutes } from './utils/productSearch.js';
 import { correctUnverifiedEmail, verifyCustomerEmail, confirmUnverifiedEmailChange } from './utils/customerEmail.js';
 import { adminCustomerDirectory } from './utils/adminCustomers.js';
 import { saveInventory } from './utils/inventoryManagement.js';
@@ -4600,6 +4601,7 @@ async function maybeRunScheduledBackup() {
 
 const publishedStorefront=installHomepageRoutes(app, prisma, authenticateAdmin, adminWriteRateLimit, serializeProduct);
 installSiteTraffic(app, prisma, authenticateAdmin);
+installProductSearchRoutes(app, prisma);
 installCouponRoutes(app, prisma, authenticateAdmin);
 installPricingRoutes(app, prisma, authenticateAdmin, stripe, allowMockPayments);
 

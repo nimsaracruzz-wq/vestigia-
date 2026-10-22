@@ -741,3 +741,11 @@ model TrafficPageView {
   createdAt DateTime @default(now())
   @@index([createdAt])
 }
+
+model ProductSearchQuery {
+  id        Int      @id @default(autoincrement())
+  query     String
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+  @@index([query, createdAt])
+}
